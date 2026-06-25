@@ -2912,7 +2912,7 @@
             await saveCurrentOffer(button);
           } catch (error) {
             console.error(error);
-            alert("Kayıt sırasında hata oluştu. Railway veritabanı ve API ayarlarını kontrol edin.");
+            alert(`Kayıt sırasında hata oluştu: ${error.message}`);
             button.textContent = originalText;
           } finally {
             button.disabled = false;
