@@ -1440,9 +1440,9 @@
                 <p class="subtitle">Daha önce açtığın müşteri ve teklif çalışmalarını buradan takip edebilir, yeni teklif akışını başlatabilirsin.</p>
               </div>
               <div class="stat-grid">
-                <div class="metric"><span>Toplam çalışma</span><b>3</b><small>2 draft, 1 review</small></div>
-                <div class="metric"><span>Bu ay oluşturulan</span><b>3</b><small>tüm aktif kayıtlar</small></div>
-                <div class="metric"><span>Onay bekleyen</span><b>1</b><small>Satış direktörü kuyruğu</small></div>
+                <div class="metric"><span>Toplam çalışma</span><b id="homeTotalWorks">0</b><small id="homeStatusBreakdown">aktif kayıt yok</small></div>
+                <div class="metric"><span>Bu ay oluşturulan</span><b id="homeMonthWorks">0</b><small>tüm aktif kayıtlar</small></div>
+                <div class="metric"><span>Onay bekleyen</span><b id="homeReviewWorks">0</b><small>Satış direktörü kuyruğu</small></div>
               </div>
             </div>
             <div class="panel">
@@ -2407,6 +2407,18 @@
       const target = document.getElementById("allWorksRows");
       const recentTarget = document.getElementById("recentWorkGrid");
       const visibleRows = cachedOffers.slice(0, 20);
+      const now = new Date();
+      const currentMonthCount = cachedOffers.filter(row => {
+        if (!row.created_at && !row.updated_at) return false;
+        const date = new Date(row.created_at || row.updated_at);
+        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+      }).length;
+      const draftCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "DRAFT").length;
+      const reviewCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "REVIEW").length;
+      setText("homeTotalWorks", cachedOffers.length);
+      setText("homeMonthWorks", currentMonthCount);
+      setText("homeReviewWorks", reviewCount);
+      setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} draft, ${reviewCount} review` : "aktif kayıt yok");
       if (target) {
         target.innerHTML = visibleRows.map(row => `
           <tr>
