@@ -22,20 +22,60 @@ function normalizeEmail(email = "") {
   return String(email).trim().toLowerCase();
 }
 
+function publicBaseUrl() {
+  const raw = String(appPublicUrl || "").trim().replace(/\/$/, "");
+  if (!raw) return "";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
 async function sendApprovalMail(user) {
   const approverEmail = process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
   if (!approverEmail) {
     console.log(`Approval requested for ${user.email}. No APPROVER_EMAIL configured.`);
     return;
   }
-  const approvalUrl = appPublicUrl
-    ? `${String(appPublicUrl).replace(/\/$/, "")}/api/admin/users/${user.id}/approve?token=${encodeURIComponent(approvalToken)}`
+  const approvalUrl = publicBaseUrl()
+    ? `${publicBaseUrl()}/api/admin/users/${user.id}/approve?token=${encodeURIComponent(approvalToken)}`
     : "";
   const subject = "NTT Effort Estimator kullanıcı onayı";
   const text = [
     `${user.display_name} (${user.email}) uygulamaya erişim talep etti.`,
     approvalUrl ? `Onay linki: ${approvalUrl}` : "Onay için admin ekranındaki Kullanıcı Onayları bölümünü kullanın."
   ].join("\n\n");
+  if (!process.env.SMTP_HOST) {
+    console.log(text);
+    return;
+  }
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || approverEmail,
+    to: approverEmail,
+    subject,
+    text
+  });
+}
+
+async function sendOfferApprovalMail(offer) {
+  const approverEmail = process.env.OFFER_APPROVER_EMAIL || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
+  if (!approverEmail) {
+    console.log(`Offer approval requested for ${offer.offer_no}. No OFFER_APPROVER_EMAIL configured.`);
+    return;
+  }
+  const approvalUrl = publicBaseUrl()
+    ? `${publicBaseUrl()}/api/offers/${offer.id}/approve?token=${encodeURIComponent(approvalToken)}`
+    : "";
+  const subject = `Teklif onayı: ${offer.offer_no || offer.title}`;
+  const text = [
+    `${offer.offer_no || ""} numaralı teklif onaya gönderildi.`,
+    `Müşteri: ${offer.customer_name || "-"}`,
+    `Proje: ${offer.project_name || offer.title || "-"}`,
+    approvalUrl ? `Onay linki: ${approvalUrl}` : "Onay için uygulamadaki admin ekranını kullanın."
+  ].join("\n");
   if (!process.env.SMTP_HOST) {
     console.log(text);
     return;
@@ -256,6 +296,7 @@ app.put("/api/offers/:id", async (req, res, next) => {
         final_effort = coalesce($16::jsonb, final_effort),
         updated_at = now()
        where id = $1
+         and status <> 'APPROVED'
        returning *`,
       [
         req.params.id,
@@ -276,6 +317,49 @@ app.put("/api/offers/:id", async (req, res, next) => {
         payload.finalEffort == null ? null : JSON.stringify(payload.finalEffort)
       ]
     );
+    if (!result.rowCount) return res.status(409).json({ error: "Onaylanmış teklif güncellenemez veya teklif bulunamadı" });
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/offers/:id/submit", async (req, res, next) => {
+  try {
+    const userId = req.body?.userId || null;
+    const result = await query(
+      `update offer
+       set status = 'SUBMITTED',
+           submitted_by = $2,
+           submitted_at = now(),
+           updated_at = now()
+       where id = $1
+         and status <> 'APPROVED'
+       returning *`,
+      [req.params.id, userId]
+    );
+    if (!result.rowCount) return res.status(409).json({ error: "Onaylanmış teklif tekrar onaya gönderilemez veya teklif bulunamadı" });
+    await sendOfferApprovalMail(result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/offers/:id/approve", async (req, res, next) => {
+  try {
+    const adminUserId = req.body?.adminUserId;
+    if (!(await isAdminUser(adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const result = await query(
+      `update offer
+       set status = 'APPROVED',
+           approved_by = $2,
+           approved_at = now(),
+           updated_at = now()
+       where id = $1
+       returning *`,
+      [req.params.id, adminUserId]
+    );
     if (!result.rowCount) return res.status(404).json({ error: "Offer not found" });
     res.json(result.rows[0]);
   } catch (error) {
@@ -283,9 +367,28 @@ app.put("/api/offers/:id", async (req, res, next) => {
   }
 });
 
+app.get("/api/offers/:id/approve", async (req, res, next) => {
+  try {
+    if (req.query.token !== approvalToken) return res.status(403).send("Invalid approval token");
+    const result = await query(
+      `update offer
+       set status = 'APPROVED',
+           approved_at = now(),
+           updated_at = now()
+       where id = $1
+       returning offer_no, customer_name, project_name, status`,
+      [req.params.id]
+    );
+    if (!result.rowCount) return res.status(404).send("Offer not found");
+    res.send(`Approved: ${result.rows[0].offer_no}`);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.delete("/api/offers/:id", async (req, res, next) => {
   try {
-    await query(`delete from offer where id = $1`, [req.params.id]);
+    await query(`delete from offer where id = $1 and status <> 'APPROVED'`, [req.params.id]);
     res.status(204).end();
   } catch (error) {
     next(error);
