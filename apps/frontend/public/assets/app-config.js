@@ -1,4 +1,4 @@
 window.APP_CONFIG = {
   API_BASE_URL: "https://ntt-effort-estimator-production.up.railway.app",
-  VERSION: "2026-06-25-save-sync-2"
+  VERSION: "2026-06-25-new-offer-fixed-days"
 };
