@@ -299,6 +299,11 @@
       border-color: var(--ink);
     }
 
+    .button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
     .login-shell {
       min-height: 100vh;
       display: grid;
@@ -1391,7 +1396,8 @@
           </div>
           <img class="mobile-logo" src="assets/ntt-data-logo.png" alt="NTT DATA" />
           <div class="title-line">
-            <h2>SAP Satış Bütçelendirme Cockpit</h2>
+            <h2>SAP Satış Bütçelendirme Kokpiti</h2>
+            <button class="button home-action" id="dashboardButton" type="button">Dashboard</button>
             <button class="button home-action" id="allWorksButton" type="button">Tüm Çalışmalarım</button>
             <button class="button home-action" id="newOfferButton" type="button">+ Yeni Teklif</button>
             <button class="button home-action admin-only" id="topAdminButton" type="button" style="display:none">Admin</button>
@@ -1448,7 +1454,7 @@
           <section class="dashboard-top">
             <div class="welcome">
               <div>
-                <h3>Çalışmalarım</h3>
+                <h3>Dashboard</h3>
                 <p class="subtitle">Daha önce açtığın müşteri ve teklif çalışmalarını buradan takip edebilir, yeni teklif akışını başlatabilirsin.</p>
               </div>
               <div class="stat-grid">
@@ -1983,6 +1989,7 @@
     let pendingNavigation = null;
     let currentUser = null;
     let currentOfferId = null;
+    let currentOfferStatus = "DRAFT";
     let cachedOffers = [];
 
     const phases = [
@@ -2054,6 +2061,22 @@
 
     function sumPhases(values) {
       return phaseHeaders.reduce((total, phase) => total + (Number(values?.[phase]) || 0), 0);
+    }
+
+    function statusLabel(status) {
+      const normalized = String(status || "DRAFT").toUpperCase();
+      const labels = {
+        DRAFT: "Taslak",
+        REVIEW: "Onayda",
+        SUBMITTED: "Onayda",
+        APPROVED: "Onaylandı",
+        REFERENCE: "Referans"
+      };
+      return labels[normalized] || normalized;
+    }
+
+    function isCurrentOfferApproved() {
+      return String(currentOfferStatus || "").toUpperCase() === "APPROVED";
     }
 
     function setText(id, value) {
@@ -2257,14 +2280,13 @@
       const fixedRows = window.fixedDaysByImplementation?.[implementation] || window.fixedDaysByImplementation?.Conversion || {};
       const size = projectSizeFromScore(currentScopeScore());
       const sizeRow = fixedRows[size.fixedKey] || {};
-      const hasSizeRow = phaseHeaders.some(phase => Number(sizeRow[phase]) || 0);
       return selectedModuleNames().map(name => {
         const base = fixedRows[name] || finalEffortBase[name] || {};
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
         const values = Object.fromEntries(phaseHeaders.map(phase => {
           const baseValue = Number(base[phase]) || 0;
           const sizeValue = Number(sizeRow[phase]) || 0;
-          const calculated = hasSizeRow ? baseValue + sizeValue : baseValue * size.multiplier;
+          const calculated = baseValue + sizeValue;
           return [phase, calculated * teamMultiplier];
         }));
         return { module: name, values, total: sumValues(values) };
@@ -2443,7 +2465,7 @@
         return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
       }).length;
       const draftCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "DRAFT").length;
-      const reviewCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "REVIEW").length;
+      const reviewCount = cachedOffers.filter(row => ["REVIEW", "SUBMITTED"].includes((row.status || "").toUpperCase())).length;
       const referenceCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "REFERENCE").length;
       const totalEffort = cachedOffers.reduce((sum, row) => sum + (Number(row.total_effort) || 0), 0);
       const categoryCounts = cachedOffers.reduce((map, row) => {
@@ -2481,7 +2503,7 @@
             <td>${row.project_name || row.title || "Yeni teklif"}</td>
             <td>${row.customer_name || ""}</td>
             <td>${row.industry || ""}</td>
-            <td><span class="status">${row.status || "DRAFT"}</span></td>
+            <td><span class="status">${statusLabel(row.status)}</span></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
             <td><button class="button" data-open-existing data-offer-id="${row.id}" type="button">Görüntüle</button></td>
           </tr>
@@ -2493,7 +2515,7 @@
       if (recentTarget) {
         recentTarget.innerHTML = cachedOffers.slice(0, 3).map(row => `
           <article class="work-card">
-            <span class="status">${row.status || "DRAFT"}</span>
+            <span class="status">${statusLabel(row.status)}</span>
             <h4>${row.project_name || row.title || "Yeni teklif"}</h4>
             <div class="work-meta">
               <span>${row.offer_no || ""}</span>
@@ -2501,8 +2523,8 @@
               <span>Son güncelleme: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</span>
             </div>
             <div class="work-actions">
-              <button class="button primary" data-open-existing data-offer-id="${row.id}" type="button">Görüntüle / Devam Et</button>
-              <button class="button danger" data-delete-work data-offer-id="${row.id}" type="button">Sil</button>
+              <button class="button primary" data-open-existing data-offer-id="${row.id}" type="button">${String(row.status || "").toUpperCase() === "APPROVED" ? "Görüntüle" : "Görüntüle / Devam Et"}</button>
+              <button class="button danger" data-delete-work data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Sil</button>
             </div>
           </article>
         `).join("") || `<div class="empty-state">Henüz kayıtlı teklif bulunmuyor.</div>`;
@@ -2727,7 +2749,7 @@
         industry: document.getElementById("projectIndustry")?.value || "",
         implementationType,
         systemType: document.getElementById("projectSystem")?.value || "",
-        status: "DRAFT",
+        status: currentOfferStatus || "DRAFT",
         totalEffort: numericText("finalGrandTotal"),
         projectDefinition: {
           customer: customerName,
@@ -2766,6 +2788,7 @@
         ? await window.EffortApi.updateOffer(currentOfferId, payload)
         : await window.EffortApi.saveOffer(payload);
       currentOfferId = saved.id;
+      currentOfferStatus = saved.status || currentOfferStatus || "DRAFT";
       currentOfferMode = "existing";
       cachedOffers = [saved, ...cachedOffers.filter(offer => offer.id !== saved.id)];
       renderAllWorks();
@@ -2775,7 +2798,47 @@
         setTimeout(() => { button.textContent = "Kaydet"; }, 1200);
       }
       await loadOffers();
+      applyOfferReadOnlyState();
       return saved;
+    }
+
+    async function submitCurrentOffer(button) {
+      if (isCurrentOfferApproved()) return;
+      const originalText = button?.textContent;
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Onaya gönderiliyor";
+      }
+      try {
+        const saved = await saveCurrentOffer();
+        const submitted = await window.EffortApi.submitOffer(saved.id, currentUser?.id);
+        currentOfferId = submitted.id;
+        currentOfferStatus = submitted.status || "SUBMITTED";
+        cachedOffers = [submitted, ...cachedOffers.filter(offer => offer.id !== submitted.id)];
+        renderAllWorks();
+        markClean();
+        applyOfferReadOnlyState();
+        alert("Teklif onaya gönderildi. Onaylayacak kişiye mail bildirimi tetiklendi.");
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalText || "Onaya Gönder";
+        }
+      }
+    }
+
+    function applyOfferReadOnlyState() {
+      const locked = isCurrentOfferApproved();
+      ["project", "modules", "scope", "developments", "localization", "hypercare"].forEach(screenId => {
+        const screen = document.getElementById(screenId);
+        if (!screen) return;
+        screen.querySelectorAll("input, select, textarea").forEach(control => {
+          control.disabled = locked;
+        });
+      });
+      document.querySelectorAll("[data-save-offer], [data-submit-offer]").forEach(button => {
+        button.disabled = locked;
+      });
     }
 
     function applyUserPermissions() {
@@ -2902,6 +2965,7 @@
         nav.innerHTML = `
           <button class="button" type="button" data-flow-target="${prev ? prev[0] : "overview"}">${prev ? `‹ ${prev[1]}` : "‹ İlk Ekran"}</button>
           <button class="button primary" type="button" data-save-offer>Kaydet</button>
+          <button class="button" type="button" data-submit-offer>Onaya Gönder</button>
           ${next ? `<button class="button primary" type="button" data-flow-target="${next[0]}">${next[1]} ›</button>` : `<button class="button primary" type="button" data-flow-target="overview">İlk Ekrana Dön</button>`}
         `;
         screen.appendChild(nav);
@@ -2933,12 +2997,26 @@
           }
         });
       });
+      document.querySelectorAll("[data-submit-offer]").forEach(button => {
+        if (button.dataset.submitBound) return;
+        button.dataset.submitBound = "true";
+        button.addEventListener("click", async () => {
+          try {
+            await submitCurrentOffer(button);
+          } catch (error) {
+            console.error(error);
+            alert(`Onaya gönderim sırasında hata oluştu: ${error.message}`);
+          }
+        });
+      });
+      applyOfferReadOnlyState();
     }
 
     function openExistingWork(offerId) {
       const offer = cachedOffers.find(item => item.id === offerId);
       const definition = offer?.project_definition || {};
       currentOfferId = offer?.id || null;
+      currentOfferStatus = offer?.status || "DRAFT";
       setProjectForm(offer ? {
         customer: offer.customer_name || definition.customer || "",
         project: offer.project_name || definition.project || "",
@@ -2962,6 +3040,7 @@
       resetSelectableState("existing");
       markClean();
       openWork("project");
+      applyOfferReadOnlyState();
     }
 
     function openNewOffer() {
@@ -2976,10 +3055,12 @@
         effort: "0"
       }, { preserveAnswers: false });
       currentOfferId = null;
+      currentOfferStatus = "DRAFT";
       currentOfferMode = "new";
       resetSelectableState("new");
       markClean();
       openWork("project");
+      applyOfferReadOnlyState();
     }
 
     document.getElementById("showRegisterButton").addEventListener("click", () => {
@@ -3056,6 +3137,10 @@
         const card = button.closest(".work-card");
         if (card) card.remove();
       });
+    });
+
+    document.getElementById("dashboardButton").addEventListener("click", () => {
+      guardedOpenScreen("overview");
     });
 
     document.getElementById("allWorksButton").addEventListener("click", async () => {
