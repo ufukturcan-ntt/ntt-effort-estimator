@@ -10,7 +10,11 @@ window.EffortApi = {
     });
     if (!response.ok) {
       const message = await response.text();
-      throw new Error(message || `API error ${response.status}`);
+      let parsedMessage = message;
+      try {
+        parsedMessage = JSON.parse(message).error || message;
+      } catch (_error) {}
+      throw new Error(parsedMessage || `API error ${response.status}`);
     }
     return response.status === 204 ? null : response.json();
   },
