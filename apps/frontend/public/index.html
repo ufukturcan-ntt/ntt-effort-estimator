@@ -1971,6 +1971,13 @@
       const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] = hypercareDefaults[item.module] || ["","","","",""];
       return [item.module, { weeks, daysPerWeek, shifts, locations, goliveDays }];
     }));
+    function resetHypercareState(mode) {
+      moduleCatalog.forEach(item => {
+        const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] =
+          mode === "existing" ? (hypercareDefaults[item.module] || ["","","","",""]) : ["","","","",""];
+        hypercareState.set(item.module, { weeks, daysPerWeek, shifts, locations, goliveDays });
+      });
+    }
     let currentOfferMode = "existing";
     let hasUnsavedChanges = false;
     let pendingNavigation = null;
@@ -2249,11 +2256,17 @@
       const implementation = document.getElementById("projectImplementation")?.value || "Conversion";
       const fixedRows = window.fixedDaysByImplementation?.[implementation] || window.fixedDaysByImplementation?.Conversion || {};
       const size = projectSizeFromScore(currentScopeScore());
+      const sizeRow = fixedRows[size.fixedKey] || {};
+      const hasSizeRow = phaseHeaders.some(phase => Number(sizeRow[phase]) || 0);
       return selectedModuleNames().map(name => {
         const base = fixedRows[name] || finalEffortBase[name] || {};
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
-        const multiplier = teamMultiplier * size.multiplier;
-        const values = Object.fromEntries(phaseHeaders.map(phase => [phase, (Number(base[phase]) || 0) * multiplier]));
+        const values = Object.fromEntries(phaseHeaders.map(phase => {
+          const baseValue = Number(base[phase]) || 0;
+          const sizeValue = Number(sizeRow[phase]) || 0;
+          const calculated = hasSizeRow ? baseValue + sizeValue : baseValue * size.multiplier;
+          return [phase, calculated * teamMultiplier];
+        }));
         return { module: name, values, total: sumValues(values) };
       });
     }
@@ -2565,10 +2578,10 @@
     }
 
     function projectSizeFromScore(score) {
-      if (score <= 40) return { code: "S", label: "Small (S)", hint: "Small eşiği: 0-40", multiplier: 1 };
-      if (score <= 80) return { code: "M", label: "Medium (M)", hint: "Medium eşiği: 41-80", multiplier: 1.25 };
-      if (score <= 120) return { code: "L", label: "Large (L)", hint: "Large eşiği: 81-120", multiplier: 1.5 };
-      return { code: "XL", label: "X-Large (XL)", hint: "X-Large eşiği: 121+", multiplier: 1.75 };
+      if (score <= 40) return { code: "S", fixedKey: "SMALL", label: "Small (S)", hint: "Small eşiği: 0-40", multiplier: 1 };
+      if (score <= 70) return { code: "M", fixedKey: "MEDIUM", label: "Medium (M)", hint: "Medium eşiği: 41-70", multiplier: 1.25 };
+      if (score <= 100) return { code: "L", fixedKey: "LARGE", label: "Large (L)", hint: "Large eşiği: 71-100", multiplier: 1.5 };
+      return { code: "XL", fixedKey: "X-LARGE", label: "X-Large (XL)", hint: "X-Large eşiği: 101+", multiplier: 1.75 };
     }
 
     function updateQuestionMetrics() {
@@ -2611,10 +2624,10 @@
       return answers;
     }
 
-    function renderQuestionList(targetId, questions) {
+    function renderQuestionList(targetId, questions, options = {}) {
       const target = document.getElementById(targetId);
       if (!target) return;
-      const previousAnswers = collectVisibleAnswers(targetId);
+      const previousAnswers = options.preserveAnswers === false ? {} : collectVisibleAnswers(targetId);
       const applicable = questions.filter(isQuestionApplicable);
       questionAnswers[targetId] = {};
       applicable.forEach(item => {
@@ -2661,9 +2674,9 @@
       updateQuestionMetrics();
     }
 
-    function refreshQuestionLists() {
-      renderQuestionList("scopeQuestions", window.scopeQuestions || []);
-      renderQuestionList("developmentQuestions", window.developmentQuestions || []);
+    function refreshQuestionLists(options = {}) {
+      renderQuestionList("scopeQuestions", window.scopeQuestions || [], options);
+      renderQuestionList("developmentQuestions", window.developmentQuestions || [], options);
     }
 
     function filterRows() {
@@ -2805,12 +2818,13 @@
           ? ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country)
           : false;
       });
+      resetHypercareState(mode);
       renderModuleGroups();
       renderLocalizationControls();
       renderWorkbookDrivenScreens();
     }
 
-    function setProjectForm(values) {
+    function setProjectForm(values, options = {}) {
       const fields = {
         projectCustomer: values.customer || "",
         projectName: values.project || "",
@@ -2827,7 +2841,7 @@
       questionAnswers.scopeQuestions = {};
       questionAnswers.developmentQuestions = {};
       updateProjectSummary(values);
-      refreshQuestionLists();
+      refreshQuestionLists({ preserveAnswers: options.preserveAnswers !== false });
       ["projectCustomer", "projectName", "projectIndustry", "projectImplementation", "projectSystem", "projectVersion", "projectNotes"].forEach(id => {
         const el = document.getElementById(id);
         if (!el || el.dataset.dirtyBound) return;
@@ -2960,7 +2974,7 @@
         version: "",
         notes: "",
         effort: "0"
-      });
+      }, { preserveAnswers: false });
       currentOfferId = null;
       currentOfferMode = "new";
       resetSelectableState("new");
