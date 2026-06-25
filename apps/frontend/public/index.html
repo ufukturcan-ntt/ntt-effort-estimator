@@ -1460,7 +1460,7 @@
 
           <section class="panel">
             <div class="panel-head"><h3 class="panel-title">Son Ã§alÄ±ÅŸmalar</h3></div>
-            <div class="work-grid">
+            <div class="work-grid" id="recentWorkGrid">
               <article class="work-card">
                 <span class="status">DRAFT</span>
                 <h4>Ufuk Enerji AÅž - S4 DÃ¶nÃ¼ÅŸÃ¼m</h4>
@@ -1958,6 +1958,9 @@
     let currentOfferMode = "existing";
     let hasUnsavedChanges = false;
     let pendingNavigation = null;
+    let currentUser = null;
+    let currentOfferId = null;
+    let cachedOffers = [];
 
     const phases = [
       ["CanlÄ± Destek", 662, "#276ef1"],
@@ -2402,25 +2405,73 @@
 
     function renderAllWorks() {
       const target = document.getElementById("allWorksRows");
-      if (!target) return;
-      const visibleRows = allWorks.slice(0, 20);
-      target.innerHTML = visibleRows.map(row => `
-        <tr>
-          <td>${row[0]}</td>
-          <td>${row[1]}</td>
-          <td>${row[2]}</td>
-          <td>${row[3]}</td>
-          <td><span class="status">${row[4]}</span></td>
-          <td>${row[5]}</td>
-          <td><button class="button" data-open-existing type="button">GÃ¶rÃ¼ntÃ¼le</button></td>
-        </tr>
-      `).join("");
-      setText("allWorksFooterText", visibleRows.length
-        ? `1-${visibleRows.length} arasÄ± kayÄ±tlar gÃ¶steriliyor`
-        : "KayÄ±t bulunamadÄ±");
-      target.querySelectorAll("[data-open-existing]").forEach(button => {
-        button.addEventListener("click", () => confirmNavigation(openExistingWork));
+      const recentTarget = document.getElementById("recentWorkGrid");
+      const visibleRows = cachedOffers.slice(0, 20);
+      if (target) {
+        target.innerHTML = visibleRows.map(row => `
+          <tr>
+            <td>${row.offer_no || ""}</td>
+            <td>${row.project_name || row.title || "Yeni teklif"}</td>
+            <td>${row.customer_name || ""}</td>
+            <td>${row.industry || ""}</td>
+            <td><span class="status">${row.status || "DRAFT"}</span></td>
+            <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
+            <td><button class="button" data-open-existing data-offer-id="${row.id}" type="button">GÃ¶rÃ¼ntÃ¼le</button></td>
+          </tr>
+        `).join("");
+        setText("allWorksFooterText", visibleRows.length
+          ? `1-${visibleRows.length} arasÄ± kayÄ±tlar gÃ¶steriliyor`
+          : "KayÄ±t bulunamadÄ±");
+      }
+      if (recentTarget) {
+        recentTarget.innerHTML = cachedOffers.slice(0, 3).map(row => `
+          <article class="work-card">
+            <span class="status">${row.status || "DRAFT"}</span>
+            <h4>${row.project_name || row.title || "Yeni teklif"}</h4>
+            <div class="work-meta">
+              <span>${row.offer_no || ""}</span>
+              <span>${fmt(row.total_effort || 0)} gÃ¼n Â· ${row.implementation_type || ""}</span>
+              <span>Son gÃ¼ncelleme: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</span>
+            </div>
+            <div class="work-actions">
+              <button class="button primary" data-open-existing data-offer-id="${row.id}" type="button">GÃ¶rÃ¼ntÃ¼le / Devam Et</button>
+              <button class="button danger" data-delete-work data-offer-id="${row.id}" type="button">Sil</button>
+            </div>
+          </article>
+        `).join("") || `<div class="empty-state">HenÃ¼z kayÄ±tlÄ± teklif bulunmuyor.</div>`;
+      }
+      document.querySelectorAll("[data-open-existing]").forEach(button => {
+        if (button.dataset.openBound) return;
+        button.dataset.openBound = "true";
+        button.addEventListener("click", () => confirmNavigation(() => openExistingWork(button.dataset.offerId)));
       });
+      document.querySelectorAll("[data-delete-work]").forEach(button => {
+        if (button.dataset.deleteBound) return;
+        button.dataset.deleteBound = "true";
+        button.addEventListener("click", async event => {
+          event.stopPropagation();
+          const offerId = button.dataset.offerId;
+          if (offerId && window.EffortApi) {
+            await window.EffortApi.deleteOffer(offerId);
+            await loadOffers();
+          }
+        });
+      });
+    }
+
+    async function loadOffers() {
+      if (!window.EffortApi || !currentUser?.id) {
+        cachedOffers = [];
+        renderAllWorks();
+        return;
+      }
+      try {
+        cachedOffers = await window.EffortApi.listOffers(currentUser.id);
+        renderAllWorks();
+      } catch (error) {
+        console.error(error);
+        alert("KayÄ±t listesi backend'den alÄ±namadÄ±. Railway Variables ve DATABASE_URL ayarlarÄ±nÄ± kontrol edin.");
+      }
     }
 
     const questionAnswers = { scopeQuestions: {}, developmentQuestions: {} };
@@ -2589,6 +2640,74 @@
       if (effortEl) effortEl.textContent = effort || "0";
     }
 
+    function numericText(id) {
+      const raw = document.getElementById(id)?.textContent || "0";
+      return Number(raw.replace(/\./g, "").replace(",", ".")) || 0;
+    }
+
+    function collectOfferPayload() {
+      const customerName = document.getElementById("projectCustomer")?.value || "";
+      const projectName = document.getElementById("projectName")?.value || "";
+      const implementationType = document.getElementById("projectImplementation")?.value || "";
+      const moduleSelection = Object.fromEntries([...moduleState.entries()]);
+      const localizationSelection = Object.fromEntries(localizationCatalog.map(item => [item.country, item.selected]));
+      const hypercareInputs = Object.fromEntries([...hypercareState.entries()]);
+      return {
+        userId: currentUser?.id,
+        title: projectName || customerName || "Yeni Teklif",
+        customerName,
+        projectName,
+        industry: document.getElementById("projectIndustry")?.value || "",
+        implementationType,
+        systemType: document.getElementById("projectSystem")?.value || "",
+        status: "DRAFT",
+        totalEffort: numericText("finalGrandTotal"),
+        projectDefinition: {
+          customer: customerName,
+          project: projectName,
+          industry: document.getElementById("projectIndustry")?.value || "",
+          implementation: implementationType,
+          system: document.getElementById("projectSystem")?.value || "",
+          version: document.getElementById("projectVersion")?.value || "",
+          notes: document.getElementById("projectNotes")?.value || ""
+        },
+        scopeAnswers: questionAnswers.scopeQuestions,
+        developmentAnswers: questionAnswers.developmentQuestions,
+        moduleSelection,
+        localizationSelection,
+        hypercareInputs,
+        finalEffort: {
+          projectTotal: numericText("projectEffortTotal"),
+          developmentTotal: numericText("developmentEffortTotal"),
+          localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
+          hypercareTotal: selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
+          grandTotal: numericText("finalGrandTotal")
+        }
+      };
+    }
+
+    async function saveCurrentOffer(button) {
+      if (!window.EffortApi) throw new Error("API client bulunamadÄ±.");
+      if (!currentUser) {
+        currentUser = await window.EffortApi.login({ username: "ufuk.turcan", displayName: "Ufuk Turcan" });
+      }
+      const payload = collectOfferPayload();
+      const saved = currentOfferId
+        ? await window.EffortApi.updateOffer(currentOfferId, payload)
+        : await window.EffortApi.saveOffer(payload);
+      currentOfferId = saved.id;
+      currentOfferMode = "existing";
+      cachedOffers = [saved, ...cachedOffers.filter(offer => offer.id !== saved.id)];
+      renderAllWorks();
+      markClean();
+      if (button) {
+        button.textContent = saved.offer_no ? `Kaydedildi ${saved.offer_no}` : "API Kaydedildi";
+        setTimeout(() => { button.textContent = "Kaydet"; }, 1200);
+      }
+      await loadOffers();
+      return saved;
+    }
+
     function resetSelectableState(mode) {
       const teamSplit = document.getElementById("teamSplitSelect");
       if (teamSplit) teamSplit.value = "no";
@@ -2702,16 +2821,37 @@
       document.querySelectorAll("[data-save-offer]").forEach(button => {
         if (button.dataset.saveBound) return;
         button.dataset.saveBound = "true";
-        button.addEventListener("click", () => {
-          markClean();
-          button.textContent = "Kaydedildi";
-          setTimeout(() => { button.textContent = "Kaydet"; }, 1200);
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          const originalText = button.textContent;
+          button.textContent = "Kaydediliyor";
+          try {
+            await saveCurrentOffer(button);
+          } catch (error) {
+            console.error(error);
+            alert("KayÄ±t sÄ±rasÄ±nda hata oluÅŸtu. Railway veritabanÄ± ve API ayarlarÄ±nÄ± kontrol edin.");
+            button.textContent = originalText;
+          } finally {
+            button.disabled = false;
+          }
         });
       });
     }
 
-    function openExistingWork() {
-      setProjectForm({
+    function openExistingWork(offerId) {
+      const offer = cachedOffers.find(item => item.id === offerId);
+      const definition = offer?.project_definition || {};
+      currentOfferId = offer?.id || null;
+      setProjectForm(offer ? {
+        customer: offer.customer_name || definition.customer || "",
+        project: offer.project_name || definition.project || "",
+        industry: offer.industry || definition.industry || "",
+        implementation: offer.implementation_type || definition.implementation || "",
+        system: offer.system_type || definition.system || "",
+        version: definition.version || "",
+        notes: definition.notes || "",
+        effort: offer.total_effort || "0"
+      } : {
         customer: "Ufuk Enerji AÅž",
         project: "S4 DÃ¶nÃ¼ÅŸÃ¼m",
         industry: "Konfeksiyon",
@@ -2738,18 +2878,26 @@
         notes: "",
         effort: "0"
       });
+      currentOfferId = null;
       currentOfferMode = "new";
       resetSelectableState("new");
       markClean();
       openWork("project");
     }
 
-    document.getElementById("loginForm").addEventListener("submit", event => {
+    document.getElementById("loginForm").addEventListener("submit", async event => {
       event.preventDefault();
-      document.getElementById("loginShell").classList.add("is-hidden");
-      document.getElementById("appShell").classList.remove("is-locked");
-      setWorkMode(false);
-      openScreen("overview");
+      try {
+        currentUser = await window.EffortApi.login({ username: "ufuk.turcan", displayName: "Ufuk Turcan" });
+        await loadOffers();
+        document.getElementById("loginShell").classList.add("is-hidden");
+        document.getElementById("appShell").classList.remove("is-locked");
+        setWorkMode(false);
+        openScreen("overview");
+      } catch (error) {
+        console.error(error);
+        alert("GiriÅŸ sÄ±rasÄ±nda backend baÄŸlantÄ±sÄ± kurulamadÄ±. Railway /health ve DATABASE_URL ayarlarÄ±nÄ± kontrol edin.");
+      }
     });
 
     document.querySelectorAll(".nav-item").forEach(button => {
@@ -2764,18 +2912,25 @@
     });
 
     document.querySelectorAll("[data-open-existing]").forEach(button => {
-      button.addEventListener("click", () => confirmNavigation(openExistingWork));
+      button.addEventListener("click", () => confirmNavigation(() => openExistingWork(button.dataset.offerId)));
     });
 
     document.querySelectorAll("[data-delete-work]").forEach(button => {
-      button.addEventListener("click", event => {
+      button.addEventListener("click", async event => {
         event.stopPropagation();
+        const offerId = button.dataset.offerId;
+        if (offerId && window.EffortApi) {
+          await window.EffortApi.deleteOffer(offerId);
+          await loadOffers();
+          return;
+        }
         const card = button.closest(".work-card");
         if (card) card.remove();
       });
     });
 
-    document.getElementById("allWorksButton").addEventListener("click", () => {
+    document.getElementById("allWorksButton").addEventListener("click", async () => {
+      await loadOffers();
       guardedOpenScreen("allworks");
     });
 
@@ -2791,8 +2946,8 @@
       guardedOpenScreen("overview");
     });
 
-    document.getElementById("saveAndContinueButton").addEventListener("click", () => {
-      markClean();
+    document.getElementById("saveAndContinueButton").addEventListener("click", async () => {
+      await saveCurrentOffer();
       continuePendingNavigation();
     });
 
