@@ -1,0 +1,14 @@
+{
+  "name": "ntt-effort-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve public -l 5173",
+    "start": "npx serve public",
+    "build": "node -e \"console.log('Static frontend: no build step required')\""
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  },
+  "devDependencies": {}
+}
