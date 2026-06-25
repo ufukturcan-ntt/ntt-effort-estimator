@@ -1460,7 +1460,7 @@
 
           <section class="panel">
             <div class="panel-head"><h3 class="panel-title">Son Ã§alÄ±ÅŸmalar</h3></div>
-            <div class="work-grid">
+            <div class="work-grid" id="recentWorkGrid">
               <article class="work-card">
                 <span class="status">DRAFT</span>
                 <h4>Ufuk Enerji AÅž - S4 DÃ¶nÃ¼ÅŸÃ¼m</h4>
@@ -2405,24 +2405,57 @@
 
     function renderAllWorks() {
       const target = document.getElementById("allWorksRows");
-      if (!target) return;
+      const recentTarget = document.getElementById("recentWorkGrid");
       const visibleRows = cachedOffers.slice(0, 20);
-      target.innerHTML = visibleRows.map(row => `
-        <tr>
-          <td>${row.offer_no || ""}</td>
-          <td>${row.project_name || row.title || "Yeni teklif"}</td>
-          <td>${row.customer_name || ""}</td>
-          <td>${row.industry || ""}</td>
-          <td><span class="status">${row.status || "DRAFT"}</span></td>
-          <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
-          <td><button class="button" data-open-existing data-offer-id="${row.id}" type="button">GÃ¶rÃ¼ntÃ¼le</button></td>
-        </tr>
-      `).join("");
-      setText("allWorksFooterText", visibleRows.length
-        ? `1-${visibleRows.length} arasÄ± kayÄ±tlar gÃ¶steriliyor`
-        : "KayÄ±t bulunamadÄ±");
-      target.querySelectorAll("[data-open-existing]").forEach(button => {
+      if (target) {
+        target.innerHTML = visibleRows.map(row => `
+          <tr>
+            <td>${row.offer_no || ""}</td>
+            <td>${row.project_name || row.title || "Yeni teklif"}</td>
+            <td>${row.customer_name || ""}</td>
+            <td>${row.industry || ""}</td>
+            <td><span class="status">${row.status || "DRAFT"}</span></td>
+            <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
+            <td><button class="button" data-open-existing data-offer-id="${row.id}" type="button">GÃ¶rÃ¼ntÃ¼le</button></td>
+          </tr>
+        `).join("");
+        setText("allWorksFooterText", visibleRows.length
+          ? `1-${visibleRows.length} arasÄ± kayÄ±tlar gÃ¶steriliyor`
+          : "KayÄ±t bulunamadÄ±");
+      }
+      if (recentTarget) {
+        recentTarget.innerHTML = cachedOffers.slice(0, 3).map(row => `
+          <article class="work-card">
+            <span class="status">${row.status || "DRAFT"}</span>
+            <h4>${row.project_name || row.title || "Yeni teklif"}</h4>
+            <div class="work-meta">
+              <span>${row.offer_no || ""}</span>
+              <span>${fmt(row.total_effort || 0)} gÃ¼n Â· ${row.implementation_type || ""}</span>
+              <span>Son gÃ¼ncelleme: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</span>
+            </div>
+            <div class="work-actions">
+              <button class="button primary" data-open-existing data-offer-id="${row.id}" type="button">GÃ¶rÃ¼ntÃ¼le / Devam Et</button>
+              <button class="button danger" data-delete-work data-offer-id="${row.id}" type="button">Sil</button>
+            </div>
+          </article>
+        `).join("") || `<div class="empty-state">HenÃ¼z kayÄ±tlÄ± teklif bulunmuyor.</div>`;
+      }
+      document.querySelectorAll("[data-open-existing]").forEach(button => {
+        if (button.dataset.openBound) return;
+        button.dataset.openBound = "true";
         button.addEventListener("click", () => confirmNavigation(() => openExistingWork(button.dataset.offerId)));
+      });
+      document.querySelectorAll("[data-delete-work]").forEach(button => {
+        if (button.dataset.deleteBound) return;
+        button.dataset.deleteBound = "true";
+        button.addEventListener("click", async event => {
+          event.stopPropagation();
+          const offerId = button.dataset.offerId;
+          if (offerId && window.EffortApi) {
+            await window.EffortApi.deleteOffer(offerId);
+            await loadOffers();
+          }
+        });
       });
     }
 
