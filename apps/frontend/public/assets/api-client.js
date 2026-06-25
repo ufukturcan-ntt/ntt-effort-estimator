@@ -17,6 +17,9 @@ window.EffortApi = {
   login(payload) {
     return this.request("/api/login", { method: "POST", body: JSON.stringify(payload) });
   },
+  register(payload) {
+    return this.request("/api/register", { method: "POST", body: JSON.stringify(payload) });
+  },
   listOffers(userId) {
     return this.request(`/api/offers?userId=${encodeURIComponent(userId)}`);
   },
@@ -34,5 +37,14 @@ window.EffortApi = {
   },
   adminData() {
     return this.request("/api/admin");
+  },
+  pendingUsers(adminUserId) {
+    return this.request(`/api/admin/users/pending?adminUserId=${encodeURIComponent(adminUserId)}`);
+  },
+  approveUser(id, adminUserId) {
+    return this.request(`/api/admin/users/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ adminUserId })
+    });
   }
 };
