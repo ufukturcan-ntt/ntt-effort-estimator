@@ -3,10 +3,25 @@ create extension if not exists pgcrypto;
 create table if not exists app_user (
   id uuid primary key default gen_random_uuid(),
   username text not null unique,
+  email text unique,
   display_name text not null,
   role text not null default 'USER',
+  is_admin boolean not null default false,
+  status text not null default 'PENDING',
+  password_hash text,
+  approved_by uuid references app_user(id) on delete set null,
+  approved_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+alter table app_user add column if not exists email text;
+alter table app_user add column if not exists is_admin boolean not null default false;
+alter table app_user add column if not exists status text not null default 'PENDING';
+alter table app_user add column if not exists password_hash text;
+alter table app_user add column if not exists approved_by uuid references app_user(id) on delete set null;
+alter table app_user add column if not exists approved_at timestamptz;
+
+create unique index if not exists app_user_email_unique_idx on app_user (lower(email)) where email is not null;
 
 create sequence if not exists offer_no_seq start 1;
 
@@ -49,8 +64,13 @@ create table if not exists admin_config (
   updated_at timestamptz not null default now()
 );
 
-insert into app_user (username, display_name, role)
-values ('ufuk.turcan', 'Ufuk Turcan', 'ADMIN')
+insert into app_user (username, email, display_name, role, is_admin, status, password_hash, approved_at)
+values ('ufuk.turcan', 'ufuk.turcan@nttdata.com', 'Ufuk Turcan', 'ADMIN', true, 'APPROVED', crypt('admin123', gen_salt('bf')), now())
 on conflict (username) do update
 set display_name = excluded.display_name,
-    role = excluded.role;
+    email = coalesce(app_user.email, excluded.email),
+    role = excluded.role,
+    is_admin = true,
+    status = 'APPROVED',
+    password_hash = coalesce(app_user.password_hash, excluded.password_hash),
+    approved_at = coalesce(app_user.approved_at, now());
