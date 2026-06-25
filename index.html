@@ -2465,8 +2465,13 @@
         renderAllWorks();
         return;
       }
-      cachedOffers = await window.EffortApi.listOffers(currentUser.id);
-      renderAllWorks();
+      try {
+        cachedOffers = await window.EffortApi.listOffers(currentUser.id);
+        renderAllWorks();
+      } catch (error) {
+        console.error(error);
+        alert("KayÄ±t listesi backend'den alÄ±namadÄ±. Railway Variables ve DATABASE_URL ayarlarÄ±nÄ± kontrol edin.");
+      }
     }
 
     const questionAnswers = { scopeQuestions: {}, developmentQuestions: {} };
@@ -2692,6 +2697,8 @@
         : await window.EffortApi.saveOffer(payload);
       currentOfferId = saved.id;
       currentOfferMode = "existing";
+      cachedOffers = [saved, ...cachedOffers.filter(offer => offer.id !== saved.id)];
+      renderAllWorks();
       markClean();
       if (button) {
         button.textContent = "Kaydedildi";
