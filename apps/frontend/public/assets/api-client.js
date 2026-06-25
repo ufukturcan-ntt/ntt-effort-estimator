@@ -36,6 +36,18 @@ window.EffortApi = {
   updateOffer(id, payload) {
     return this.request(`/api/offers/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(payload) });
   },
+  submitOffer(id, userId) {
+    return this.request(`/api/offers/${encodeURIComponent(id)}/submit`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    });
+  },
+  approveOffer(id, adminUserId) {
+    return this.request(`/api/offers/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ adminUserId })
+    });
+  },
   deleteOffer(id) {
     return this.request(`/api/offers/${encodeURIComponent(id)}`, { method: "DELETE" });
   },
