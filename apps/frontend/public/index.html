@@ -1329,11 +1329,11 @@
         <p>NTT DATA Business Solutions TR ekipleri için müşteri, teklif, kapsam ve modül eforlarını tek akışta yöneten cockpit.</p>
       </div>
       <form class="login-form" id="loginForm">
-        <label>Kullanıcı adı
-          <input value="ufuk.turcan" autocomplete="username" />
+        <label>Email
+          <input id="loginEmail" type="email" value="ufuk.turcan@nttdata.com" autocomplete="email" />
         </label>
         <label>Şifre
-          <input type="password" value="••••••••" autocomplete="current-password" />
+          <input id="loginPassword" type="password" value="admin123" autocomplete="current-password" />
         </label>
         <label>Dil
           <select id="languageSelect">
@@ -1342,6 +1342,20 @@
           </select>
         </label>
         <button class="button primary" type="submit">Giriş Yap</button>
+        <button class="button" id="showRegisterButton" type="button">Kayıt Ol</button>
+      </form>
+      <form class="login-form" id="registerForm" style="display:none">
+        <label>Ad Soyad
+          <input id="registerDisplayName" autocomplete="name" />
+        </label>
+        <label>Email
+          <input id="registerEmail" type="email" autocomplete="email" />
+        </label>
+        <label>Şifre
+          <input id="registerPassword" type="password" autocomplete="new-password" />
+        </label>
+        <button class="button primary" type="submit">Onay Talebi Gönder</button>
+        <button class="button" id="showLoginButton" type="button">Girişe Dön</button>
       </form>
     </div>
     <div class="login-visual">
@@ -1380,6 +1394,7 @@
             <h2>SAP Satış Bütçelendirme Cockpit</h2>
             <button class="button home-action" id="allWorksButton" type="button">Tüm Çalışmalarım</button>
             <button class="button home-action" id="newOfferButton" type="button">+ Yeni Teklif</button>
+            <button class="button home-action admin-only" id="topAdminButton" type="button" style="display:none">Admin</button>
           </div>
           <p class="subtitle" id="headerSubtitle">Hoş geldin Ufuk Turcan · NTT DATA Business Solutions TR</p>
         </div>
@@ -1419,9 +1434,6 @@
             </button>
             <button class="nav-item detail-nav" data-screen="effort" title="Efor">
               <span class="nav-icon">E</span><span>Efor Analizi</span><span class="nav-count">16</span>
-            </button>
-            <button class="nav-item detail-nav" data-screen="admin" title="Admin">
-              <span class="nav-icon">A</span><span>Admin</span><span class="nav-count">Data</span>
             </button>
           </nav>
 
@@ -1799,6 +1811,10 @@
 
         <div class="screen" id="admin">
           <div class="effort-stack">
+            <section class="panel">
+              <div class="panel-head"><h3 class="panel-title">Kullanıcı Onayları</h3><span class="pill">Admin</span></div>
+              <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Talep Tarihi</th><th>İşlem</th></tr></thead><tbody id="pendingUsersRows"></tbody></table></div>
+            </section>
             <section class="panel">
               <div class="panel-head"><h3 class="panel-title">Admin - Tanım Bakımı</h3><span class="pill">Endüstri / İmplementasyon / Sistem / Modül</span></div>
               <div class="list-table"><table><thead><tr><th>Endüstri</th><th>İmplementasyon türü</th><th>Sistem türü</th><th>Modül</th></tr></thead><tbody id="adminDefinitionsRows"></tbody></table></div>
@@ -2727,7 +2743,10 @@
     async function saveCurrentOffer(button) {
       if (!window.EffortApi) throw new Error("API client bulunamadı.");
       if (!currentUser) {
-        currentUser = await window.EffortApi.login({ username: "ufuk.turcan", displayName: "Ufuk Turcan" });
+        currentUser = await window.EffortApi.login({
+          email: document.getElementById("loginEmail")?.value || "ufuk.turcan@nttdata.com",
+          password: document.getElementById("loginPassword")?.value || "admin123"
+        });
       }
       const payload = collectOfferPayload();
       const saved = currentOfferId
@@ -2744,6 +2763,33 @@
       }
       await loadOffers();
       return saved;
+    }
+
+    function applyUserPermissions() {
+      const isAdmin = Boolean(currentUser?.is_admin || currentUser?.role === "ADMIN");
+      document.querySelectorAll(".admin-only").forEach(el => {
+        el.style.display = isAdmin ? "" : "none";
+      });
+    }
+
+    async function loadPendingUsers() {
+      const body = document.getElementById("pendingUsersRows");
+      if (!body || !currentUser?.is_admin) return;
+      const rows = await window.EffortApi.pendingUsers(currentUser.id);
+      body.innerHTML = rows.map(row => `
+        <tr>
+          <td>${row.email}</td>
+          <td>${row.display_name}</td>
+          <td>${row.created_at ? new Date(row.created_at).toLocaleString("tr-TR") : ""}</td>
+          <td><button class="button primary" data-approve-user="${row.id}" type="button">Onayla</button></td>
+        </tr>
+      `).join("") || `<tr><td colspan="4">Bekleyen kullanıcı talebi yok.</td></tr>`;
+      body.querySelectorAll("[data-approve-user]").forEach(button => {
+        button.addEventListener("click", async () => {
+          await window.EffortApi.approveUser(button.dataset.approveUser, currentUser.id);
+          await loadPendingUsers();
+        });
+      });
     }
 
     function resetSelectableState(mode) {
@@ -2828,8 +2874,7 @@
       ["developments", "Developments"],
       ["localization", "Localization"],
       ["hypercare", "Hypercare"],
-      ["effort", "Efor Analizi"],
-      ["admin", "Admin"]
+      ["effort", "Efor Analizi"]
     ];
 
     function renderScreenNavigation() {
@@ -2923,18 +2968,50 @@
       openWork("project");
     }
 
+    document.getElementById("showRegisterButton").addEventListener("click", () => {
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("registerForm").style.display = "";
+    });
+
+    document.getElementById("showLoginButton").addEventListener("click", () => {
+      document.getElementById("registerForm").style.display = "none";
+      document.getElementById("loginForm").style.display = "";
+    });
+
+    document.getElementById("registerForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      try {
+        await window.EffortApi.register({
+          displayName: document.getElementById("registerDisplayName").value,
+          email: document.getElementById("registerEmail").value,
+          password: document.getElementById("registerPassword").value
+        });
+        alert("Kayıt talebin alındı. Admin onayı sonrası giriş yapabilirsin.");
+        document.getElementById("registerForm").reset();
+        document.getElementById("registerForm").style.display = "none";
+        document.getElementById("loginForm").style.display = "";
+      } catch (error) {
+        console.error(error);
+        alert("Kayıt talebi oluşturulamadı. Email daha önce kullanılmış olabilir.");
+      }
+    });
+
     document.getElementById("loginForm").addEventListener("submit", async event => {
       event.preventDefault();
       try {
-        currentUser = await window.EffortApi.login({ username: "ufuk.turcan", displayName: "Ufuk Turcan" });
+        currentUser = await window.EffortApi.login({
+          email: document.getElementById("loginEmail").value,
+          password: document.getElementById("loginPassword").value
+        });
         await loadOffers();
+        applyUserPermissions();
         document.getElementById("loginShell").classList.add("is-hidden");
         document.getElementById("appShell").classList.remove("is-locked");
         setWorkMode(false);
         openScreen("overview");
       } catch (error) {
         console.error(error);
-        alert("Giriş sırasında backend bağlantısı kurulamadı. Railway /health ve DATABASE_URL ayarlarını kontrol edin.");
+        alert("Giriş yapılamadı. Email/şifre hatalı olabilir veya kullanıcı henüz onaylanmamış olabilir.");
       }
     });
 
@@ -2974,6 +3051,11 @@
 
     document.getElementById("newOfferButton").addEventListener("click", () => {
       confirmNavigation(openNewOffer);
+    });
+
+    document.getElementById("topAdminButton").addEventListener("click", async () => {
+      await loadPendingUsers();
+      guardedOpenWork("admin");
     });
 
     document.getElementById("backHomeButton").addEventListener("click", () => {
