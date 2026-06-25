@@ -51,6 +51,10 @@ create table if not exists offer (
   localization_selection jsonb not null default '{}'::jsonb,
   hypercare_inputs jsonb not null default '{}'::jsonb,
   final_effort jsonb not null default '{}'::jsonb,
+  submitted_by uuid references app_user(id) on delete set null,
+  submitted_at timestamptz,
+  approved_by uuid references app_user(id) on delete set null,
+  approved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -61,6 +65,11 @@ create index if not exists offer_status_idx on offer (status);
 alter table offer
   alter column total_effort type numeric
   using total_effort::numeric;
+
+alter table offer add column if not exists submitted_by uuid references app_user(id) on delete set null;
+alter table offer add column if not exists submitted_at timestamptz;
+alter table offer add column if not exists approved_by uuid references app_user(id) on delete set null;
+alter table offer add column if not exists approved_at timestamptz;
 
 create table if not exists admin_config (
   entity text primary key,
