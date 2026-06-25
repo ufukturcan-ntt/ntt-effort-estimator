@@ -2701,7 +2701,7 @@
       renderAllWorks();
       markClean();
       if (button) {
-        button.textContent = "Kaydedildi";
+        button.textContent = saved.offer_no ? `Kaydedildi ${saved.offer_no}` : "API Kaydedildi";
         setTimeout(() => { button.textContent = "Kaydet"; }, 1200);
       }
       await loadOffers();
