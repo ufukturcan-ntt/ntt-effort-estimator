@@ -58,6 +58,10 @@ create table if not exists offer (
 create index if not exists offer_user_updated_idx on offer (user_id, updated_at desc);
 create index if not exists offer_status_idx on offer (status);
 
+alter table offer
+  alter column total_effort type numeric
+  using total_effort::numeric;
+
 create table if not exists admin_config (
   entity text primary key,
   payload jsonb not null default '{}'::jsonb,
