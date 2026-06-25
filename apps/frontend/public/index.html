@@ -1494,7 +1494,7 @@
           <section class="grid home-only">
             <div class="panel">
               <div class="panel-head"><h3 class="panel-title">Portföy analizi</h3></div>
-              <div class="phase-list">
+              <div class="phase-list" id="portfolioAnalysisList">
                 <div class="phase-item">
                   <div class="phase-name"><span class="swatch" style="background:var(--blue)"></span><span>Draft teklifler</span></div>
                   <div class="phase-value">2</div>
@@ -1515,8 +1515,8 @@
             <div class="panel">
               <div class="panel-head"><h3 class="panel-title">Hızlı analiz</h3><span class="pill">Bu ay</span></div>
               <div class="phase-list">
-                <div class="metric"><span>Toplam potansiyel efor</span><b>4.8k</b><small>gün</small></div>
-                <div class="metric"><span>En yoğun kategori</span><b style="font-size:24px">Conversion</b><small>aktif tekliflerde</small></div>
+                <div class="metric"><span>Toplam potansiyel efor</span><b id="quickTotalEffort">0</b><small>gün</small></div>
+                <div class="metric"><span>En yoğun kategori</span><b id="quickTopCategory" style="font-size:24px">-</b><small>aktif tekliflerde</small></div>
               </div>
             </div>
           </section>
@@ -2415,10 +2415,36 @@
       }).length;
       const draftCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "DRAFT").length;
       const reviewCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "REVIEW").length;
+      const referenceCount = cachedOffers.filter(row => (row.status || "").toUpperCase() === "REFERENCE").length;
+      const totalEffort = cachedOffers.reduce((sum, row) => sum + (Number(row.total_effort) || 0), 0);
+      const categoryCounts = cachedOffers.reduce((map, row) => {
+        const key = row.implementation_type || "Tanımsız";
+        map.set(key, (map.get(key) || 0) + 1);
+        return map;
+      }, new Map());
+      const topCategory = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
       setText("homeTotalWorks", cachedOffers.length);
       setText("homeMonthWorks", currentMonthCount);
       setText("homeReviewWorks", reviewCount);
       setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} draft, ${reviewCount} review` : "aktif kayıt yok");
+      setText("quickTotalEffort", fmt(totalEffort));
+      setText("quickTopCategory", topCategory);
+      const portfolioTarget = document.getElementById("portfolioAnalysisList");
+      if (portfolioTarget) {
+        const max = Math.max(cachedOffers.length, 1);
+        const rows = [
+          ["Draft teklifler", draftCount, "var(--blue)"],
+          ["Review bekleyen", reviewCount, "var(--amber)"],
+          ["Referans olarak kullanılabilir", referenceCount, "var(--green)"]
+        ];
+        portfolioTarget.innerHTML = rows.map(([label, value, color]) => `
+          <div class="phase-item">
+            <div class="phase-name"><span class="swatch" style="background:${color}"></span><span>${label}</span></div>
+            <div class="phase-value">${value}</div>
+            <div class="phase-track"><i style="--w:${Math.max(value / max * 100, value ? 4 : 0)}%;--c:${color}"></i></div>
+          </div>
+        `).join("");
+      }
       if (target) {
         target.innerHTML = visibleRows.map(row => `
           <tr>
