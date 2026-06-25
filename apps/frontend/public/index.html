@@ -2853,7 +2853,7 @@
     }
 
     function openScreen(screenId, options = {}) {
-      const homeScreens = new Set(["overview", "allworks"]);
+      const homeScreens = new Set(["overview", "allworks", "admin"]);
       if (homeScreens.has(screenId) && !options.workMode) setWorkMode(false);
       if (!homeScreens.has(screenId) || options.workMode) setWorkMode(true);
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
@@ -3068,8 +3068,14 @@
     });
 
     document.getElementById("topAdminButton").addEventListener("click", async () => {
-      await loadPendingUsers();
-      guardedOpenWork("admin");
+      guardedOpenScreen("admin");
+      try {
+        await loadPendingUsers();
+      } catch (error) {
+        console.error(error);
+        const body = document.getElementById("pendingUsersRows");
+        if (body) body.innerHTML = `<tr><td colspan="4">Kullanıcı onay listesi şu an yüklenemedi.</td></tr>`;
+      }
     });
 
     document.getElementById("backHomeButton").addEventListener("click", () => {
