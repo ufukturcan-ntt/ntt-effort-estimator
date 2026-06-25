@@ -769,6 +769,126 @@
       background: var(--c);
     }
 
+    .admin-shell {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .admin-tree {
+      position: sticky;
+      top: 104px;
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .admin-tree-item {
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 12px;
+      text-align: left;
+      font: inherit;
+      font-weight: 740;
+      cursor: pointer;
+    }
+
+    .admin-tree-item.active {
+      background: #eaf3ff;
+      color: var(--blue);
+    }
+
+    .admin-content { min-width: 0; }
+    .admin-section { display: none; }
+    .admin-section.active { display: block; }
+
+    .definition-list {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .definition-row,
+    .admin-module-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 10px;
+    }
+
+    .admin-edit {
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      border: 1px solid transparent;
+      border-radius: 7px;
+      padding: 7px 9px;
+      background: #fff;
+      outline: none;
+      font-weight: 700;
+    }
+
+    .admin-edit:focus {
+      border-color: rgba(0,114,188,.5);
+      box-shadow: 0 0 0 3px rgba(0,114,188,.1);
+    }
+
+    .admin-module-board {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .admin-module-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      overflow: hidden;
+    }
+
+    .admin-module-group h4 {
+      margin: 0;
+      padding: 12px 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .admin-module-list {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      max-height: 560px;
+      overflow: auto;
+    }
+
+    .admin-module-card {
+      background: #fff;
+    }
+
+    .admin-question-table table {
+      min-width: 1180px;
+    }
+
+    .admin-question-table table th,
+    .admin-question-table table td {
+      text-align: left;
+      vertical-align: top;
+    }
+
     .compact-table input,
     .compact-table select {
       width: 84px;
@@ -1330,8 +1450,8 @@
     <div class="login-panel">
       <img src="assets/ntt-data-logo.png" alt="NTT DATA" />
       <div>
-        <h1>SAP teklif ve efor yönetimi</h1>
-        <p>NTT DATA Business Solutions TR ekipleri için müşteri, teklif, kapsam ve modül eforlarını tek akışta yöneten cockpit.</p>
+        <h1>SAP Proje Teklif ve Bütçe Yönetimi</h1>
+        <p>NDBS TR yeni projelerine ait teklif ve bütçe çalışmalarını yöneten, kapsam ve eforları tek akışta belirleyen kokpit.</p>
       </div>
       <form class="login-form" id="loginForm">
         <label>Email
@@ -1364,7 +1484,7 @@
       </form>
     </div>
     <div class="login-visual">
-      <span class="pill" style="width:max-content;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.22)">Business Solutions TR</span>
+      <span class="pill" style="width:max-content;background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.22)">NDBS TR</span>
       <h2>Satıştan teslimata kadar teklif eforunu görünür hale getir.</h2>
       <div class="secure-list" aria-label="Güvenli giriş bilgilendirmesi">
         <div class="secure-item">
@@ -1390,19 +1510,18 @@
           <div class="top-brand">
             <div class="top-brand-logo"><img src="assets/ntt-data-logo.png" alt="NTT DATA" /></div>
             <div class="top-brand-text">
-              <strong>NTT DATA Business Solutions TR</strong>
-              <span>SAP effort estimator</span>
+              <strong>Hoş geldin Ufuk Turcan</strong>
+              <span>NDBS TR</span>
             </div>
           </div>
           <img class="mobile-logo" src="assets/ntt-data-logo.png" alt="NTT DATA" />
           <div class="title-line">
-            <h2>SAP Satış Bütçelendirme Kokpiti</h2>
             <button class="button home-action" id="dashboardButton" type="button">Dashboard</button>
             <button class="button home-action" id="allWorksButton" type="button">Tüm Çalışmalarım</button>
             <button class="button home-action" id="newOfferButton" type="button">+ Yeni Teklif</button>
             <button class="button home-action admin-only" id="topAdminButton" type="button" style="display:none">Admin</button>
           </div>
-          <p class="subtitle" id="headerSubtitle">Hoş geldin Ufuk Turcan · NTT DATA Business Solutions TR</p>
+          <p class="subtitle" id="headerSubtitle">Hoş geldin Ufuk Turcan</p>
         </div>
         <div class="actions">
           <input class="search" id="search" placeholder="Modül veya faz ara" />
@@ -1414,8 +1533,8 @@
           <div class="brand">
             <div class="mark logo-mark"><img src="assets/ntt-data-logo.png" alt="NTT DATA" /></div>
             <div>
-              <h1>NTT DATA Business Solutions TR</h1>
-              <span>SAP effort estimator</span>
+              <h1>NDBS TR</h1>
+              <span>Hoş geldin Ufuk Turcan</span>
             </div>
           </div>
 
@@ -1619,7 +1738,6 @@
           <section class="panel">
             <div class="panel-head">
               <h3 class="panel-title">Tüm Çalışmalarım</h3>
-              <button class="button primary" id="backHomeButton" type="button">İlk Ekrana Dön</button>
             </div>
             <div class="list-table">
               <table>
@@ -1642,7 +1760,6 @@
               <div class="quick-actions">
                 <button class="button" type="button">‹ Önceki</button>
                 <button class="button" type="button">Sonraki ›</button>
-                <button class="button primary" id="backHomeFooterButton" type="button">İlk Ekrana Dön</button>
               </div>
             </div>
           </section>
@@ -1816,40 +1933,67 @@
         </div>
 
         <div class="screen" id="admin">
-          <div class="effort-stack">
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Kullanıcı Onayları</h3><span class="pill">Admin</span></div>
-              <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Talep Tarihi</th><th>İşlem</th></tr></thead><tbody id="pendingUsersRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Admin - Tanım Bakımı</h3><span class="pill">Endüstri / İmplementasyon / Sistem / Modül</span></div>
-              <div class="list-table"><table><thead><tr><th>Endüstri</th><th>İmplementasyon türü</th><th>Sistem türü</th><th>Modül</th></tr></thead><tbody id="adminDefinitionsRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-              <div class="list-table"><table><thead><tr><th>No</th><th>Tanım</th><th>Açıklama</th><th>Cevap Tipi</th><th>Puan</th><th>Size etkiler mi?</th><th>Değişken tipi</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-              <div class="list-table"><table><thead><tr><th>No</th><th>Tanım</th><th>Açıklama</th><th>Cevap Tipi</th><th>Puan</th><th>Size etkiler mi?</th><th>Değişken tipi</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><span class="pill">Filtre kuralları</span></div>
-              <div class="list-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><span class="pill">İmplementasyon bazlı</span></div>
-              <div class="list-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Localization Efforts</h3><span class="pill">Modül/Faz bazlı efor</span></div>
-              <div class="list-table"><table><thead id="adminLocalizationHead"></thead><tbody id="adminLocalizationRows"></tbody></table></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Variable + Module + Phase</h3><span class="pill">Etkisel efor</span></div>
-              <div class="list-table"><table><thead id="adminVmpHead"></thead><tbody id="adminVmpRows"></tbody></table></div>
-            </section>
-          </div>
+          <section class="admin-shell">
+            <aside class="admin-tree" aria-label="Admin menüsü">
+              <button class="admin-tree-item active" data-admin-section="users" type="button">Kullanıcı Onayları</button>
+              <button class="admin-tree-item" data-admin-section="industries" type="button">Endüstri</button>
+              <button class="admin-tree-item" data-admin-section="implementations" type="button">İmplementasyon Türü</button>
+              <button class="admin-tree-item" data-admin-section="systems" type="button">Sistem Türü</button>
+              <button class="admin-tree-item" data-admin-section="modules" type="button">Modüller</button>
+              <button class="admin-tree-item" data-admin-section="scope" type="button">Kapsam Soruları</button>
+              <button class="admin-tree-item" data-admin-section="development" type="button">Geliştirme Soruları</button>
+              <button class="admin-tree-item" data-admin-section="restrictions" type="button">Question Restrictions</button>
+              <button class="admin-tree-item" data-admin-section="fixed" type="button">Fixed Days</button>
+              <button class="admin-tree-item" data-admin-section="localization" type="button">Localization Efforts</button>
+              <button class="admin-tree-item" data-admin-section="vmp" type="button">Variable + Module + Phase</button>
+            </aside>
+            <div class="admin-content">
+              <section class="panel admin-section active" data-admin-panel="users">
+                <div class="panel-head"><h3 class="panel-title">Kullanıcı Onayları</h3><span class="pill">Admin</span></div>
+                <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Talep Tarihi</th><th>İşlem</th></tr></thead><tbody id="pendingUsersRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="industries">
+                <div class="panel-head"><h3 class="panel-title">Endüstri Tanımları</h3><button class="button primary" data-admin-add-list="adminIndustryList" type="button">+ Endüstri</button></div>
+                <div class="definition-list" id="adminIndustryList"></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="implementations">
+                <div class="panel-head"><h3 class="panel-title">İmplementasyon Türleri</h3><button class="button primary" data-admin-add-list="adminImplementationList" type="button">+ İmplementasyon</button></div>
+                <div class="definition-list" id="adminImplementationList"></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="systems">
+                <div class="panel-head"><h3 class="panel-title">Sistem Türleri</h3><button class="button primary" data-admin-add-list="adminSystemList" type="button">+ Sistem</button></div>
+                <div class="definition-list" id="adminSystemList"></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="modules">
+                <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleButton" type="button">+ Modül</button></div>
+                <div class="admin-module-board" id="adminModuleBoard"></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="scope">
+                <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Tanım</th><th>Açıklama</th><th>Cevap Tipi</th><th>Puan</th><th>Size etkiler mi?</th><th>Değişken tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="development">
+                <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Tanım</th><th>Açıklama</th><th>Cevap Tipi</th><th>Puan</th><th>Size etkiler mi?</th><th>Değişken tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="restrictions">
+                <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><span class="pill">Filtre kuralları</span></div>
+                <div class="list-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="fixed">
+                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><span class="pill">İmplementasyon bazlı</span></div>
+                <div class="list-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="localization">
+                <div class="panel-head"><h3 class="panel-title">Localization Efforts</h3><span class="pill">Modül/Faz bazlı efor</span></div>
+                <div class="list-table"><table><thead id="adminLocalizationHead"></thead><tbody id="adminLocalizationRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="vmp">
+                <div class="panel-head"><h3 class="panel-title">Variable + Module + Phase</h3><span class="pill">Etkisel efor</span></div>
+                <div class="list-table"><table><thead id="adminVmpHead"></thead><tbody id="adminVmpRows"></tbody></table></div>
+              </section>
+            </div>
+          </section>
         </div>
       </section>
       </div>
@@ -2128,6 +2272,14 @@
       if (action) action();
     }
 
+    function confirmAction(message, action) {
+      if (!confirm(message)) return;
+      Promise.resolve(action()).catch(error => {
+        console.error(error);
+        alert(error.message || "İşlem sırasında hata oluştu.");
+      });
+    }
+
     function renderModuleGroups() {
       const target = document.getElementById("moduleGroups");
       if (!target) return;
@@ -2384,6 +2536,10 @@
       return `<td contenteditable="true">${value || ""}</td>`;
     }
 
+    function editableDiv(value = "") {
+      return `<div class="admin-edit" contenteditable="true">${value || ""}</div>`;
+    }
+
     function renderEditableMatrix(headId, bodyId, rows) {
       const head = document.getElementById(headId);
       const body = document.getElementById(bodyId);
@@ -2391,6 +2547,83 @@
       if (head) head.innerHTML = `<tr>${rows[0].map(value => `<th>${value}</th>`).join("")}</tr>`;
       body.innerHTML = rows.slice(1).map(row => `<tr>${row.map(editableCell).join("")}</tr>`).join("");
       body.querySelectorAll("[contenteditable]").forEach(cell => cell.addEventListener("input", markDirty));
+    }
+
+    function bindAdminEditable(root = document) {
+      root.querySelectorAll("[contenteditable]").forEach(cell => {
+        if (cell.dataset.editBound) return;
+        cell.dataset.editBound = "true";
+        cell.addEventListener("input", markDirty);
+      });
+      root.querySelectorAll("[data-admin-remove]").forEach(button => {
+        if (button.dataset.removeBound) return;
+        button.dataset.removeBound = "true";
+        button.addEventListener("click", () => {
+          if (!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
+          button.closest("tr, .definition-row, .admin-module-card")?.remove();
+          markDirty();
+        });
+      });
+    }
+
+    function renderDefinitionList(targetId, values, fallbackText) {
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      const cleanValues = [...new Set(values.filter(Boolean))];
+      target.innerHTML = cleanValues.map(value => `
+        <div class="definition-row">
+          ${editableDiv(value)}
+          <button class="button danger" data-admin-remove type="button">Sil</button>
+        </div>
+      `).join("") || `<div class="empty-state">${fallbackText}</div>`;
+      bindAdminEditable(target);
+    }
+
+    function addDefinitionItem(targetId, label) {
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      target.querySelector(".empty-state")?.remove();
+      target.insertAdjacentHTML("beforeend", `
+        <div class="definition-row">
+          ${editableDiv(label)}
+          <button class="button danger" data-admin-remove type="button">Sil</button>
+        </div>
+      `);
+      bindAdminEditable(target);
+      markDirty();
+    }
+
+    function renderAdminModules() {
+      const target = document.getElementById("adminModuleBoard");
+      if (!target) return;
+      const groups = ["S4Core", "NTT Own IP", "Advanced Solution"];
+      target.innerHTML = groups.map(group => `
+        <section class="admin-module-group" data-admin-module-group="${group}">
+          <h4>${group}</h4>
+          <div class="admin-module-list">
+            ${moduleCatalog.filter(item => item.group === group).map(item => `
+              <article class="admin-module-card">
+                ${editableDiv(item.module)}
+                <button class="button danger" data-admin-remove type="button">Sil</button>
+              </article>
+            `).join("")}
+          </div>
+        </section>
+      `).join("");
+      bindAdminEditable(target);
+    }
+
+    function addAdminModule() {
+      const target = document.querySelector('[data-admin-module-group="S4Core"] .admin-module-list');
+      if (!target) return;
+      target.insertAdjacentHTML("beforeend", `
+        <article class="admin-module-card">
+          ${editableDiv("Yeni Modül")}
+          <button class="button danger" data-admin-remove type="button">Sil</button>
+        </article>
+      `);
+      bindAdminEditable(target);
+      markDirty();
     }
 
     function renderQuestionAdmin(targetId, questions) {
@@ -2405,27 +2638,28 @@
           ${editableCell(item.score || "")}
           ${editableCell(item.score ? "Evet" : "Hayır")}
           ${editableCell(item.answerType === "number" ? "Adet" : "Evet/Hayır")}
+          <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
       `).join("");
-      target.querySelectorAll("[contenteditable]").forEach(cell => cell.addEventListener("input", markDirty));
+      bindAdminEditable(target);
     }
 
     function addAdminQuestion(targetId) {
       const target = document.getElementById(targetId);
       if (!target) return;
       const no = target.querySelectorAll("tr").length + 1;
-      target.insertAdjacentHTML("beforeend", `<tr>${[no, "Yeni soru", "Açıklama", "yesno", 0, "Evet", "Evet/Hayır"].map(editableCell).join("")}</tr>`);
-      target.querySelectorAll("tr:last-child [contenteditable]").forEach(cell => cell.addEventListener("input", markDirty));
+      target.insertAdjacentHTML("beforeend", `<tr>${[no, "Yeni soru", "Açıklama", "yesno", 0, "Evet", "Evet/Hayır"].map(editableCell).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      bindAdminEditable(target);
       markDirty();
     }
 
     function renderAdminPage() {
       const data = window.adminSeedData || {};
-      const defBody = document.getElementById("adminDefinitionsRows");
-      if (defBody) {
-        defBody.innerHTML = (data.projectDefinitions || []).slice(1).map(row => `<tr>${row.slice(0,4).map(editableCell).join("")}</tr>`).join("");
-        defBody.querySelectorAll("[contenteditable]").forEach(cell => cell.addEventListener("input", markDirty));
-      }
+      const projectDefinitions = (data.projectDefinitions || []).slice(1);
+      renderDefinitionList("adminIndustryList", projectDefinitions.map(row => row[0]), "Endüstri tanımı yok.");
+      renderDefinitionList("adminImplementationList", projectDefinitions.map(row => row[1]), "İmplementasyon türü yok.");
+      renderDefinitionList("adminSystemList", projectDefinitions.map(row => row[2]), "Sistem türü yok.");
+      renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", data.restrictions || []);
@@ -2436,6 +2670,20 @@
         if (button.dataset.bound) return;
         button.dataset.bound = "true";
         button.addEventListener("click", () => addAdminQuestion(button.dataset.adminAdd));
+      });
+      document.querySelectorAll("[data-admin-add-list]").forEach(button => {
+        if (button.dataset.bound) return;
+        button.dataset.bound = "true";
+        button.addEventListener("click", () => addDefinitionItem(button.dataset.adminAddList, "Yeni tanım"));
+      });
+      document.getElementById("addAdminModuleButton")?.addEventListener("click", addAdminModule);
+      document.querySelectorAll(".admin-tree-item").forEach(button => {
+        if (button.dataset.bound) return;
+        button.dataset.bound = "true";
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".admin-tree-item").forEach(item => item.classList.toggle("active", item === button));
+          document.querySelectorAll(".admin-section").forEach(panel => panel.classList.toggle("active", panel.dataset.adminPanel === button.dataset.adminSection));
+        });
       });
     }
 
@@ -2505,7 +2753,14 @@
             <td>${row.industry || ""}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
-            <td><button class="button" data-open-existing data-offer-id="${row.id}" type="button">Görüntüle</button></td>
+            <td>
+              <div class="quick-actions">
+                <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">Görüntüle</button>
+                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Değiştir</button>
+                <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Sil</button>
+                <button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Onaya Gönder</button>
+              </div>
+            </td>
           </tr>
         `).join("");
         setText("allWorksFooterText", visibleRows.length
@@ -2541,8 +2796,37 @@
           event.stopPropagation();
           const offerId = button.dataset.offerId;
           if (offerId && window.EffortApi) {
+            if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
             await window.EffortApi.deleteOffer(offerId);
             await loadOffers();
+          }
+        });
+      });
+      document.querySelectorAll("[data-work-action]").forEach(button => {
+        if (button.dataset.workActionBound) return;
+        button.dataset.workActionBound = "true";
+        button.addEventListener("click", async () => {
+          const offerId = button.dataset.offerId;
+          const action = button.dataset.workAction;
+          if (action === "view") {
+            confirmAction("Bu çalışmayı görüntülemek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId)));
+          }
+          if (action === "edit") {
+            confirmAction("Bu çalışmayı değiştirmek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId)));
+          }
+          if (action === "delete") {
+            confirmAction("Bu çalışmayı silmek istediğinize emin misiniz?", async () => {
+              await window.EffortApi.deleteOffer(offerId);
+              await loadOffers();
+            });
+          }
+          if (action === "submit") {
+            confirmAction("Bu çalışmayı onaya göndermek istediğinize emin misiniz?", async () => {
+              const submitted = await window.EffortApi.submitOffer(offerId, currentUser?.id);
+              cachedOffers = [submitted, ...cachedOffers.filter(offer => offer.id !== submitted.id)];
+              await loadOffers();
+              alert("Teklif onaya gönderildi.");
+            });
           }
         });
       });
@@ -2714,7 +2998,7 @@
       if (subtitle) {
         subtitle.textContent = isOpen
           ? "Aktif çalışma: Ufuk Enerji AŞ / S4 Dönüşüm · Teklif detayları ve giriş adımları"
-          : "Hoş geldin Ufuk Turcan · NTT DATA Business Solutions TR";
+          : "Hoş geldin Ufuk Turcan";
       }
       const search = document.getElementById("search");
       if (search) search.placeholder = isOpen ? "Modül veya faz ara" : "Çalışma, müşteri veya teklif ara";
@@ -2916,6 +3200,9 @@
     }
 
     function openScreen(screenId, options = {}) {
+      if (screenId === "admin" && !currentUser?.is_admin) {
+        screenId = "overview";
+      }
       const homeScreens = new Set(["overview", "allworks", "admin"]);
       if (homeScreens.has(screenId) && !options.workMode) setWorkMode(false);
       if (!homeScreens.has(screenId) || options.workMode) setWorkMode(true);
@@ -3130,10 +3417,12 @@
         event.stopPropagation();
         const offerId = button.dataset.offerId;
         if (offerId && window.EffortApi) {
+          if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
           await window.EffortApi.deleteOffer(offerId);
           await loadOffers();
           return;
         }
+        if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
         const card = button.closest(".work-card");
         if (card) card.remove();
       });
@@ -3163,11 +3452,11 @@
       }
     });
 
-    document.getElementById("backHomeButton").addEventListener("click", () => {
+    document.getElementById("backHomeButton")?.addEventListener("click", () => {
       guardedOpenScreen("overview");
     });
 
-    document.getElementById("backHomeFooterButton").addEventListener("click", () => {
+    document.getElementById("backHomeFooterButton")?.addEventListener("click", () => {
       guardedOpenScreen("overview");
     });
 
