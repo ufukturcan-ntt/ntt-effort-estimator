@@ -203,7 +203,7 @@ app.post("/api/offers", async (req, res, next) => {
         final_effort
       ) values (
         $1, coalesce($2, next_offer_no()), $3, $4, $5, $6, $7, $8, coalesce($9, 'DRAFT'),
-        coalesce($10, 0), coalesce($11::jsonb, '{}'::jsonb), coalesce($12::jsonb, '{}'::jsonb),
+        coalesce($10::numeric, 0), coalesce($11::jsonb, '{}'::jsonb), coalesce($12::jsonb, '{}'::jsonb),
         coalesce($13::jsonb, '{}'::jsonb), coalesce($14::jsonb, '{}'::jsonb), coalesce($15::jsonb, '{}'::jsonb),
         coalesce($16::jsonb, '{}'::jsonb), coalesce($17::jsonb, '{}'::jsonb)
       )
@@ -246,7 +246,7 @@ app.put("/api/offers/:id", async (req, res, next) => {
         implementation_type = coalesce($6, implementation_type),
         system_type = coalesce($7, system_type),
         status = coalesce($8, status),
-        total_effort = coalesce($9, total_effort),
+        total_effort = coalesce($9::numeric, total_effort),
         project_definition = coalesce($10::jsonb, project_definition),
         scope_answers = coalesce($11::jsonb, scope_answers),
         development_answers = coalesce($12::jsonb, development_answers),
