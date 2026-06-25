@@ -1,11 +1,15 @@
 import "dotenv/config";
+import fs from "node:fs/promises";
 import express from "express";
 import cors from "cors";
+import nodemailer from "nodemailer";
 import { query } from "./db.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
 const frontendOrigin = process.env.FRONTEND_ORIGIN || "*";
+const appPublicUrl = process.env.APP_PUBLIC_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "";
+const approvalToken = process.env.ADMIN_APPROVAL_TOKEN || "change-me";
 
 app.use(cors({ origin: frontendOrigin === "*" ? true : frontendOrigin }));
 app.use(express.json({ limit: "5mb" }));
@@ -14,17 +18,147 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "ntt-effort-backend" });
 });
 
+function normalizeEmail(email = "") {
+  return String(email).trim().toLowerCase();
+}
+
+async function sendApprovalMail(user) {
+  const approverEmail = process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
+  if (!approverEmail) {
+    console.log(`Approval requested for ${user.email}. No APPROVER_EMAIL configured.`);
+    return;
+  }
+  const approvalUrl = appPublicUrl
+    ? `${String(appPublicUrl).replace(/\/$/, "")}/api/admin/users/${user.id}/approve?token=${encodeURIComponent(approvalToken)}`
+    : "";
+  const subject = "NTT Effort Estimator kullanıcı onayı";
+  const text = [
+    `${user.display_name} (${user.email}) uygulamaya erişim talep etti.`,
+    approvalUrl ? `Onay linki: ${approvalUrl}` : "Onay için admin ekranındaki Kullanıcı Onayları bölümünü kullanın."
+  ].join("\n\n");
+  if (!process.env.SMTP_HOST) {
+    console.log(text);
+    return;
+  }
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || approverEmail,
+    to: approverEmail,
+    subject,
+    text
+  });
+}
+
 app.post("/api/login", async (req, res, next) => {
   try {
-    const { username = "ufuk.turcan", displayName = "Ufuk Turcan" } = req.body || {};
+    const { email, password } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || !password) return res.status(400).json({ error: "Email and password required" });
     const result = await query(
-      `insert into app_user (username, display_name)
-       values ($1, $2)
-       on conflict (username) do update set display_name = excluded.display_name
-       returning id, username, display_name`,
-      [username, displayName]
+      `select id, username, email, display_name, role, is_admin, status
+       from app_user
+       where lower(email) = $1
+         and status = 'APPROVED'
+         and password_hash = crypt($2, password_hash)`,
+      [normalizedEmail, password]
     );
+    if (!result.rowCount) return res.status(401).json({ error: "User is not approved or credentials are invalid" });
     res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/register", async (req, res, next) => {
+  try {
+    const { email, password, displayName } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail || !password || !displayName) {
+      return res.status(400).json({ error: "Email, password and display name required" });
+    }
+    const existing = await query(`select id, email, display_name, status from app_user where lower(email) = $1`, [normalizedEmail]);
+    let result;
+    if (existing.rowCount) {
+      if (existing.rows[0].status !== "PENDING") return res.status(409).json({ error: "User already exists" });
+      result = await query(
+        `update app_user
+         set display_name = $2,
+             password_hash = crypt($3, gen_salt('bf'))
+         where id = $1
+         returning id, email, display_name, status`,
+        [existing.rows[0].id, displayName, password]
+      );
+    } else {
+      result = await query(
+        `insert into app_user (username, email, display_name, role, is_admin, status, password_hash)
+         values ($1, $1, $2, 'USER', false, 'PENDING', crypt($3, gen_salt('bf')))
+         returning id, email, display_name, status`,
+        [normalizedEmail, displayName, password]
+      );
+    }
+    await sendApprovalMail(result.rows[0]);
+    res.status(202).json({ ok: true, status: result.rows[0].status });
+  } catch (error) {
+    next(error);
+  }
+});
+
+async function isAdminUser(userId) {
+  if (!userId) return false;
+  const result = await query(`select is_admin from app_user where id = $1 and status = 'APPROVED'`, [userId]);
+  return Boolean(result.rows[0]?.is_admin);
+}
+
+app.get("/api/admin/users/pending", async (req, res, next) => {
+  try {
+    if (!(await isAdminUser(req.query.adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const result = await query(
+      `select id, email, display_name, status, created_at
+       from app_user
+       where status = 'PENDING'
+       order by created_at asc`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/admin/users/:id/approve", async (req, res, next) => {
+  try {
+    const adminUserId = req.body?.adminUserId;
+    if (!(await isAdminUser(adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const result = await query(
+      `update app_user
+       set status = 'APPROVED', approved_by = $2, approved_at = now()
+       where id = $1
+       returning id, email, display_name, role, is_admin, status`,
+      [req.params.id, adminUserId]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: "User not found" });
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/admin/users/:id/approve", async (req, res, next) => {
+  try {
+    if (req.query.token !== approvalToken) return res.status(403).send("Invalid approval token");
+    const result = await query(
+      `update app_user
+       set status = 'APPROVED', approved_at = now()
+       where id = $1
+       returning email, display_name, status`,
+      [req.params.id]
+    );
+    if (!result.rowCount) return res.status(404).send("User not found");
+    res.send(`Approved: ${result.rows[0].email}`);
   } catch (error) {
     next(error);
   }
@@ -187,6 +321,18 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: error.message || "Unexpected error" });
 });
 
-app.listen(port, () => {
-  console.log(`Backend listening on ${port}`);
-});
+async function ensureDatabase() {
+  const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
+  await query(schema);
+}
+
+ensureDatabase()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Backend listening on ${port}`);
+    });
+  })
+  .catch(error => {
+    console.error("Database initialization failed", error);
+    process.exit(1);
+  });
