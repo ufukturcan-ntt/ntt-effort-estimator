@@ -783,7 +783,7 @@
 
     .admin-shell {
       display: grid;
-      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-columns: 268px minmax(0, 1fr);
       gap: 20px;
       align-items: start;
     }
@@ -793,28 +793,49 @@
       top: 104px;
       display: grid;
       gap: 6px;
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: var(--radius);
+      padding: 18px;
+      border: 0;
+      border-radius: 0;
       background: linear-gradient(180deg, var(--nav), var(--nav-2));
-      box-shadow: var(--shadow);
+      box-shadow: none;
+      min-height: calc(100vh - 146px);
+      align-content: start;
     }
 
     .admin-tree-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 10px;
+      align-items: center;
       border: 0;
-      border-radius: 7px;
+      border-radius: 8px;
       background: transparent;
-      color: #d7e8f8;
-      padding: 10px 12px;
+      color: #dbe7f4;
+      padding: 11px 10px;
       text-align: left;
       font: inherit;
-      font-weight: 740;
+      font-weight: 500;
       cursor: pointer;
     }
 
-    .admin-tree-item.active {
-      background: rgba(255,255,255,.16);
+    .admin-tree-item.active,
+    .admin-tree-item:hover {
+      background: rgba(255,255,255,.11);
       color: #fff;
+    }
+
+    .admin-tree-item .nav-icon {
+      background: rgba(255,255,255,.12);
+    }
+
+    .admin-tree-item .nav-count {
+      color: #a7bdd2;
+    }
+
+    #saveAdminConfigButton {
+      width: 100%;
+      margin-top: 14px;
+      justify-content: center;
     }
 
     .admin-content { min-width: 0; }
@@ -1429,8 +1450,8 @@
       .workspace { grid-template-columns: 82px minmax(0, 1fr); }
       aside { padding: 18px 12px; }
       .brand { grid-template-columns: 1fr; justify-items: center; }
-      .brand div:last-child, .nav-item span:not(.nav-icon), .nav-count, .side-card { display: none; }
-      .nav-item { grid-template-columns: 1fr; justify-items: center; padding: 10px; }
+      .brand div:last-child, .nav-item span:not(.nav-icon), .admin-tree-item span:not(.nav-icon), .nav-count, .side-card { display: none; }
+      .nav-item, .admin-tree-item { grid-template-columns: 1fr; justify-items: center; padding: 10px; }
       .hero, .grid, .dashboard-top { grid-template-columns: 1fr; }
       .project-grid, .work-grid, .module-groups, .summary-grid, .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .login-shell { grid-template-columns: 1fr; }
@@ -1453,7 +1474,7 @@
       .top-brand-logo { width: 138px; height: 40px; }
       .app:not(.work-open) .top-brand { flex-wrap: wrap; }
       .nav-group { display: flex; flex-direction: row; }
-      .nav-item { width: 46px; }
+      .nav-item, .admin-tree-item { width: 46px; }
       header {
         grid-template-columns: 1fr;
         padding: 16px;
@@ -1935,17 +1956,17 @@
         <div class="screen" id="admin">
           <section class="admin-shell">
             <aside class="admin-tree" aria-label="Admin menüsü">
-              <button class="admin-tree-item active" data-admin-section="users" type="button">Kullanıcı Onayları</button>
-              <button class="admin-tree-item" data-admin-section="industries" type="button">Endüstri</button>
-              <button class="admin-tree-item" data-admin-section="implementations" type="button">İmplementasyon Türü</button>
-              <button class="admin-tree-item" data-admin-section="systems" type="button">Sistem Türü</button>
-              <button class="admin-tree-item" data-admin-section="modules" type="button">Modüller</button>
-              <button class="admin-tree-item" data-admin-section="scope" type="button">Kapsam Soruları</button>
-              <button class="admin-tree-item" data-admin-section="development" type="button">Geliştirme Soruları</button>
-              <button class="admin-tree-item" data-admin-section="restrictions" type="button">Question Restrictions</button>
-              <button class="admin-tree-item" data-admin-section="fixed" type="button">Fixed Days</button>
-              <button class="admin-tree-item" data-admin-section="localization" type="button">Localization Efforts</button>
-              <button class="admin-tree-item" data-admin-section="vmp" type="button">Variable + Module + Phase</button>
+              <button class="admin-tree-item active" data-admin-section="users" type="button"><span class="nav-icon">K</span><span>Kullanıcı Onayları</span><span class="nav-count">A</span></button>
+              <button class="admin-tree-item" data-admin-section="industries" type="button"><span class="nav-icon">E</span><span>Endüstri</span><span class="nav-count">D</span></button>
+              <button class="admin-tree-item" data-admin-section="implementations" type="button"><span class="nav-icon">İ</span><span>İmplementasyon Türü</span><span class="nav-count">I</span></button>
+              <button class="admin-tree-item" data-admin-section="systems" type="button"><span class="nav-icon">S</span><span>Sistem Türü</span><span class="nav-count">S</span></button>
+              <button class="admin-tree-item" data-admin-section="modules" type="button"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
+              <button class="admin-tree-item" data-admin-section="scope" type="button"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
+              <button class="admin-tree-item" data-admin-section="development" type="button"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
+              <button class="admin-tree-item" data-admin-section="restrictions" type="button"><span class="nav-icon">R</span><span>Question Restrictions</span><span class="nav-count">R</span></button>
+              <button class="admin-tree-item" data-admin-section="fixed" type="button"><span class="nav-icon">F</span><span>Fixed Days</span><span class="nav-count">FD</span></button>
+              <button class="admin-tree-item" data-admin-section="localization" type="button"><span class="nav-icon">L</span><span>Localization Efforts</span><span class="nav-count">LE</span></button>
+              <button class="admin-tree-item" data-admin-section="vmp" type="button"><span class="nav-icon">V</span><span>Variable + Module + Phase</span><span class="nav-count">VMP</span></button>
               <button class="button primary" id="saveAdminConfigButton" type="button">Admin Ayarlarını Kaydet</button>
             </aside>
             <div class="admin-content">
@@ -2239,6 +2260,18 @@
         exists: "Var",
         none: "Yok",
         countPlaceholder: "Adet",
+        adminUsers: "Kullanıcı Onayları",
+        adminIndustries: "Endüstri",
+        adminImplementations: "İmplementasyon Türü",
+        adminSystems: "Sistem Türü",
+        adminModules: "Modüller",
+        adminScope: "Kapsam Soruları",
+        adminDevelopment: "Geliştirme Soruları",
+        adminRestrictions: "Question Restrictions",
+        adminFixed: "Fixed Days",
+        adminLocalization: "Localization Efforts",
+        adminVmp: "Variable + Module + Phase",
+        saveAdmin: "Admin Ayarlarını Kaydet",
         baseInfo: "Temel bilgiler",
         customerName: "Müşteri adı",
         projectNameField: "Proje adı",
@@ -2354,6 +2387,18 @@
         exists: "Yes",
         none: "No",
         countPlaceholder: "Qty",
+        adminUsers: "User Approvals",
+        adminIndustries: "Industries",
+        adminImplementations: "Implementation Types",
+        adminSystems: "System Types",
+        adminModules: "Modules",
+        adminScope: "Scope Questions",
+        adminDevelopment: "Development Questions",
+        adminRestrictions: "Question Restrictions",
+        adminFixed: "Fixed Days",
+        adminLocalization: "Localization Efforts",
+        adminVmp: "Variable + Module + Phase",
+        saveAdmin: "Save Admin Settings",
         baseInfo: "Base information",
         customerName: "Customer name",
         projectNameField: "Project name",
@@ -2401,6 +2446,28 @@
     function setLabelText(inputId, value) {
       const label = document.getElementById(inputId)?.closest("label");
       if (label?.firstChild) label.firstChild.textContent = value;
+    }
+
+    function setAdminMenuLabels() {
+      const labels = {
+        users: "adminUsers",
+        industries: "adminIndustries",
+        implementations: "adminImplementations",
+        systems: "adminSystems",
+        modules: "adminModules",
+        scope: "adminScope",
+        development: "adminDevelopment",
+        restrictions: "adminRestrictions",
+        fixed: "adminFixed",
+        localization: "adminLocalization",
+        vmp: "adminVmp"
+      };
+      Object.entries(labels).forEach(([section, key]) => {
+        const label = document.querySelector(`[data-admin-section="${section}"] span:nth-child(2)`);
+        if (label) label.textContent = t(key);
+      });
+      const saveButton = document.getElementById("saveAdminConfigButton");
+      if (saveButton && !hasAdminUnsavedChanges) saveButton.textContent = t("saveAdmin");
     }
 
     function applyLanguage() {
@@ -2498,6 +2565,7 @@
       document.querySelectorAll("[data-save-offer]").forEach(button => {
         if (!button.disabled) button.textContent = t("save");
       });
+      setAdminMenuLabels();
       renderAllWorks?.();
       renderModuleGroups?.();
       renderLocalizationControls?.();
