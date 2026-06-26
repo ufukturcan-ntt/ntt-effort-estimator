@@ -2148,6 +2148,362 @@
     let currentOfferStatus = "DRAFT";
     let currentOfferAccessMode = "edit";
     let cachedOffers = [];
+    let currentLanguage = localStorage.getItem("effortLanguage") || document.getElementById("languageSelect")?.value || "tr";
+
+    const i18n = {
+      tr: {
+        pageTitle: "SAP Satış Bütçelendirme | UI Prototype",
+        loginTitle: "SAP Proje Teklif ve Bütçe Yönetimi",
+        loginLead: "NDBS TR yeni projelerine ait teklif ve bütçe çalışmalarını yöneten, kapsam ve eforları tek akışta belirleyen kokpit.",
+        email: "Email",
+        password: "Şifre",
+        language: "Dil",
+        loginButton: "Giriş Yap",
+        registerButton: "Kayıt Ol",
+        registerName: "Ad Soyad",
+        sendApproval: "Onay Talebi Gönder",
+        backToLogin: "Girişe Dön",
+        visualTitle: "Satıştan teslimata kadar teklif eforunu görünür hale getir.",
+        secureTitle: "Güvenli erişim",
+        secureText: "Çalışmalar ve teklif detayları yalnızca oturum açıldıktan sonra görüntülenir.",
+        roleTitle: "Rol bazlı görünüm",
+        roleText: "Kullanıcılar sadece yetkili oldukları müşteri ve teklif kayıtlarına erişir.",
+        flowTitle: "Adım adım teklif akışı",
+        flowText: "Project Definition, Scope, Developments, Modules, Localization ve Hypercare girişleri oturum sonrası açılır.",
+        dashboard: "Dashboard",
+        allWorks: "Tüm Çalışmalarım",
+        newOffer: "+ Yeni Teklif",
+        admin: "Admin",
+        searchOpen: "Modül veya faz ara",
+        searchHome: "Çalışma, müşteri veya teklif ara",
+        welcome: "Hoş geldin Ufuk Turcan",
+        activeWork: "Aktif çalışma: Ufuk Enerji AŞ / S4 Dönüşüm · Teklif detayları ve giriş adımları",
+        overviewLead: "Daha önce açtığın müşteri ve teklif çalışmalarını buradan takip edebilir, yeni teklif akışını başlatabilirsin.",
+        totalWork: "Toplam çalışma",
+        thisMonth: "Bu ay oluşturulan",
+        pendingApproval: "Onay bekleyen",
+        noActiveRecords: "aktif kayıt yok",
+        allActiveRecords: "tüm aktif kayıtlar",
+        salesQueue: "Satış direktörü kuyruğu",
+        recentWorks: "Son çalışmalar",
+        loadingRecords: "Kayıtlar yükleniyor.",
+        noRecords: "Kayıt bulunamadı",
+        portfolio: "Portföy analizi",
+        quickAnalysis: "Hızlı analiz",
+        month: "Bu ay",
+        totalPotentialEffort: "Toplam potansiyel efor",
+        days: "gün",
+        topCategory: "En yoğun kategori",
+        activeOffers: "aktif tekliflerde",
+        projectNo: "Proje No",
+        projectName: "Proje İsmi",
+        customer: "Müşteri",
+        industry: "Endüstri",
+        status: "Durum",
+        updated: "Son Güncelleme",
+        action: "İşlem",
+        previous: "‹ Önceki",
+        next: "Sonraki ›",
+        view: "Görüntüle",
+        edit: "Düzenle",
+        change: "Değiştir",
+        delete: "Sil",
+        submit: "Onaya Gönder",
+        save: "Kaydet",
+        saving: "Kaydediliyor",
+        saved: "Kaydedildi",
+        backHome: "İlk Ekrana Dön",
+        firstScreen: "İlk Ekran",
+        draft: "Taslak",
+        review: "Onayda",
+        approved: "Onaylandı",
+        reference: "Referans",
+        offerSteps: "Teklif adımları",
+        sections7: "7 bölüm",
+        ready: "Hazır",
+        projectInfo: "Müşteri, sektör, sistem, implementasyon",
+        scopeInfo: "Size skoru ve kapsam soruları",
+        developmentInfo: "Ek geliştirme ve entegrasyonlar",
+        moduleInfo: "SAP modül seçimi",
+        localizationInfo: "Ülke bazlı lokalizasyon",
+        hypercareInfo: "Go-live sonrası destek parametreleri",
+        projectDefinition: "Project Definition",
+        modules: "Modüller",
+        scope: "Kapsam",
+        developments: "Developments",
+        localization: "Localization",
+        hypercare: "Hypercare",
+        effortAnalysis: "Efor Analizi",
+        yes: "Evet",
+        no: "Hayır",
+        exists: "Var",
+        none: "Yok",
+        countPlaceholder: "Adet",
+        baseInfo: "Temel bilgiler",
+        customerName: "Müşteri adı",
+        projectNameField: "Proje adı",
+        implementationType: "Implementasyon türü",
+        systemType: "Sistem türü",
+        version: "Versiyon",
+        notes: "Notlar",
+        offerSummary: "Teklif özeti",
+        estimatedEffort: "Tahmini efor",
+        continueModules: "Modüllere devam et",
+        scopeQuestions: "Kapsam Soruları",
+        item: "madde",
+        projectSize: "Proje Size",
+        scopeScore: "Hesaplanan kapsam puanı",
+        continueDevelopments: "Developments'a devam et",
+        developmentImpact: "Geliştirme etkisi",
+        selectedDevelopment: "Seçili geliştirme",
+        answeredDevelopment: "cevaplanan geliştirme maddesi",
+        extraEffort: "Ek efor",
+        potentialImpact: "gün potansiyel etki",
+        moduleSelection: "Modül Seçimi",
+        teamSplit: "Ekip ayrıştırma gerekli mi?",
+        countrySelection: "Ülke seçimi",
+        localizationEffort: "Lokalizasyon eforu",
+        supportPlan: "Destek planı",
+        selected: "seçili"
+      },
+      en: {
+        pageTitle: "SAP Sales Budgeting | UI Prototype",
+        loginTitle: "SAP Project Offer and Budget Management",
+        loginLead: "A cockpit for NDBS TR new project offers and budget studies, defining scope and efforts in one flow.",
+        email: "Email",
+        password: "Password",
+        language: "Language",
+        loginButton: "Sign In",
+        registerButton: "Register",
+        registerName: "Full Name",
+        sendApproval: "Send Approval Request",
+        backToLogin: "Back to Sign In",
+        visualTitle: "Make offer effort visible from sales to delivery.",
+        secureTitle: "Secure access",
+        secureText: "Work records and offer details are shown only after sign-in.",
+        roleTitle: "Role-based view",
+        roleText: "Users can access only authorized customer and offer records.",
+        flowTitle: "Step-by-step offer flow",
+        flowText: "Project Definition, Scope, Developments, Modules, Localization and Hypercare inputs open after sign-in.",
+        dashboard: "Dashboard",
+        allWorks: "All My Works",
+        newOffer: "+ New Offer",
+        admin: "Admin",
+        searchOpen: "Search module or phase",
+        searchHome: "Search work, customer or offer",
+        welcome: "Welcome Ufuk Turcan",
+        activeWork: "Active work: Ufuk Energy Inc. / S4 Transformation · Offer details and input steps",
+        overviewLead: "Track your previous customer and offer works here, and start a new offer flow.",
+        totalWork: "Total works",
+        thisMonth: "Created this month",
+        pendingApproval: "Pending approval",
+        noActiveRecords: "no active records",
+        allActiveRecords: "all active records",
+        salesQueue: "Sales director queue",
+        recentWorks: "Recent works",
+        loadingRecords: "Loading records.",
+        noRecords: "No records found",
+        portfolio: "Portfolio analysis",
+        quickAnalysis: "Quick analysis",
+        month: "This month",
+        totalPotentialEffort: "Total potential effort",
+        days: "days",
+        topCategory: "Top category",
+        activeOffers: "in active offers",
+        projectNo: "Project No",
+        projectName: "Project Name",
+        customer: "Customer",
+        industry: "Industry",
+        status: "Status",
+        updated: "Last Update",
+        action: "Action",
+        previous: "‹ Previous",
+        next: "Next ›",
+        view: "View",
+        edit: "Edit",
+        change: "Edit",
+        delete: "Delete",
+        submit: "Submit for Approval",
+        save: "Save",
+        saving: "Saving",
+        saved: "Saved",
+        backHome: "Back to Dashboard",
+        firstScreen: "Dashboard",
+        draft: "Draft",
+        review: "In Approval",
+        approved: "Approved",
+        reference: "Reference",
+        offerSteps: "Offer steps",
+        sections7: "7 sections",
+        ready: "Ready",
+        projectInfo: "Customer, industry, system, implementation",
+        scopeInfo: "Size score and scope questions",
+        developmentInfo: "Additional developments and integrations",
+        moduleInfo: "SAP module selection",
+        localizationInfo: "Country-based localization",
+        hypercareInfo: "Post go-live support parameters",
+        projectDefinition: "Project Definition",
+        modules: "Modules",
+        scope: "Scope",
+        developments: "Developments",
+        localization: "Localization",
+        hypercare: "Hypercare",
+        effortAnalysis: "Effort Analysis",
+        yes: "Yes",
+        no: "No",
+        exists: "Yes",
+        none: "No",
+        countPlaceholder: "Qty",
+        baseInfo: "Base information",
+        customerName: "Customer name",
+        projectNameField: "Project name",
+        implementationType: "Implementation type",
+        systemType: "System type",
+        version: "Version",
+        notes: "Notes",
+        offerSummary: "Offer summary",
+        estimatedEffort: "Estimated effort",
+        continueModules: "Continue to modules",
+        scopeQuestions: "Scope Questions",
+        item: "items",
+        projectSize: "Project Size",
+        scopeScore: "Calculated scope score",
+        continueDevelopments: "Continue to Developments",
+        developmentImpact: "Development impact",
+        selectedDevelopment: "Selected development",
+        answeredDevelopment: "answered development items",
+        extraEffort: "Extra effort",
+        potentialImpact: "days potential impact",
+        moduleSelection: "Module Selection",
+        teamSplit: "Need team split?",
+        countrySelection: "Country selection",
+        localizationEffort: "Localization effort",
+        supportPlan: "Support plan",
+        selected: "selected"
+      }
+    };
+
+    function t(key) {
+      return i18n[currentLanguage]?.[key] || i18n.tr[key] || key;
+    }
+
+    function setTextContent(selector, value) {
+      const el = document.querySelector(selector);
+      if (el) el.textContent = value;
+    }
+
+    function setTexts(selector, values) {
+      document.querySelectorAll(selector).forEach((el, index) => {
+        if (values[index] !== undefined) el.textContent = values[index];
+      });
+    }
+
+    function setLabelText(inputId, value) {
+      const label = document.getElementById(inputId)?.closest("label");
+      if (label?.firstChild) label.firstChild.textContent = value;
+    }
+
+    function applyLanguage() {
+      const languageSelect = document.getElementById("languageSelect");
+      if (languageSelect) languageSelect.value = currentLanguage;
+      document.documentElement.lang = currentLanguage;
+      document.title = t("pageTitle");
+      setTextContent(".login-panel h1", t("loginTitle"));
+      setTextContent(".login-panel p", t("loginLead"));
+      setLabelText("loginEmail", t("email"));
+      setLabelText("loginPassword", t("password"));
+      setLabelText("languageSelect", t("language"));
+      setLabelText("registerDisplayName", t("registerName"));
+      setLabelText("registerEmail", t("email"));
+      setLabelText("registerPassword", t("password"));
+      setTextContent("#loginForm .button.primary", t("loginButton"));
+      setTextContent("#showRegisterButton", t("registerButton"));
+      setTextContent("#registerForm .button.primary", t("sendApproval"));
+      setTextContent("#showLoginButton", t("backToLogin"));
+      setTextContent(".login-visual h2", t("visualTitle"));
+      setTexts(".secure-item strong", [t("secureTitle"), t("roleTitle"), t("flowTitle")]);
+      setTexts(".secure-item span", [t("secureText"), t("roleText"), t("flowText")]);
+      setTextContent(".top-brand-text strong", t("welcome"));
+      setTextContent("aside .brand span", t("welcome"));
+      setTextContent("#dashboardButton", t("dashboard"));
+      setTextContent("#allWorksButton", t("allWorks"));
+      setTextContent("#newOfferButton", t("newOffer"));
+      setTextContent("#topAdminButton", t("admin"));
+      setTexts(".detail-nav span:nth-child(2)", [
+        t("projectDefinition"),
+        t("modules"),
+        t("scope"),
+        t("developments"),
+        t("localization"),
+        t("hypercare"),
+        t("effortAnalysis")
+      ]);
+      setTextContent("#overview .welcome h3", t("dashboard"));
+      setTextContent("#overview .welcome .subtitle", t("overviewLead"));
+      setTexts("#overview .welcome .metric span", [t("totalWork"), t("thisMonth"), t("pendingApproval")]);
+      setTextContent("#homeStatusBreakdown", t("noActiveRecords"));
+      setTexts("#overview .welcome .metric small", [t("noActiveRecords"), t("allActiveRecords"), t("salesQueue")]);
+      setTextContent("#overview .dashboard-top .panel-title", t("offerSteps"));
+      setTextContent("#overview .dashboard-top .pill", t("sections7"));
+      setTexts("#overview .wizard-step span:not(.step-no)", [
+        t("projectInfo"),
+        t("scopeInfo"),
+        t("developmentInfo"),
+        t("moduleInfo"),
+        t("localizationInfo"),
+        t("hypercareInfo")
+      ]);
+      setTexts("#overview .wizard-step b", [t("ready"), "L", "24", "33", "2", "268g"]);
+      setTextContent("#overview > .panel .panel-title", t("recentWorks"));
+      const empty = document.querySelector("#recentWorkGrid .empty-state");
+      if (empty) empty.textContent = cachedOffers.length ? "" : t("loadingRecords");
+      setTexts(".home-only .panel-title", [t("portfolio"), t("quickAnalysis")]);
+      setTextContent(".home-only .pill", t("month"));
+      setTexts(".home-only .metric span", [t("totalPotentialEffort"), t("topCategory")]);
+      setTexts(".home-only .metric small", [t("days"), t("activeOffers")]);
+      setTextContent("#allworks .panel-title", t("allWorks"));
+      setTexts("#allworks th", [t("projectNo"), t("projectName"), t("customer"), t("industry"), t("status"), t("updated"), t("action")]);
+      setTextContent("#allWorksFooterText", cachedOffers.length ? document.getElementById("allWorksFooterText")?.textContent || "" : t("noRecords"));
+      setTexts("#allworks .list-footer .button", [t("previous"), t("next")]);
+      setTextContent("#project .panel-title", t("projectDefinition"));
+      setTextContent("#project .pill", t("baseInfo"));
+      setTexts("#project .input-field label", [t("customerName"), t("projectNameField"), t("industry"), t("implementationType"), t("systemType"), t("version"), t("notes")]);
+      setTexts("#project .phase-list .metric span", [t("customer"), t("estimatedEffort")]);
+      setTextContent("#project [data-screen-jump='modules']", t("continueModules"));
+      setTextContent("#project .grid > .panel:nth-child(2) .panel-title", t("offerSummary"));
+      setTextContent("#scope .grid > .panel:nth-child(1) .panel-title", t("scopeQuestions"));
+      setTextContent("#scope .grid > .panel:nth-child(1) .pill", `${document.getElementById("scopeVisibleCount")?.textContent || "0"} ${t("item")}`);
+      setTextContent("#scope .grid > .panel:nth-child(2) .panel-title", t("projectSize"));
+      setTextContent("#scope .metric span", t("scopeScore"));
+      setTextContent("#scope [data-screen-jump='developments']", t("continueDevelopments"));
+      setTextContent("#developments .grid > .panel:nth-child(1) .panel-title", t("developments"));
+      setTextContent("#developments .grid > .panel:nth-child(1) .pill", `${document.getElementById("developmentVisibleCount")?.textContent || "0"} ${t("item")}`);
+      setTextContent("#developments .grid > .panel:nth-child(2) .panel-title", t("developmentImpact"));
+      setTextContent("#developmentSelectedPill", `${document.getElementById("selectedDevelopmentCount")?.textContent || "0"} ${t("selected")}`);
+      setTexts("#developments .metric span", [t("selectedDevelopment"), t("extraEffort")]);
+      setTexts("#developments .metric small", [t("answeredDevelopment"), t("potentialImpact")]);
+      setTextContent("#modules .panel-title", t("moduleSelection"));
+      setTextContent("#modules .input-field label", t("teamSplit"));
+      setTextContent("#teamSplitSelect option[value='no']", t("no"));
+      setTextContent("#teamSplitSelect option[value='yes']", t("yes"));
+      setTextContent("#localization .grid > .panel:nth-child(1) .panel-title", t("localization"));
+      setTextContent("#localization .grid > .panel:nth-child(1) .pill", t("countrySelection"));
+      setTextContent("#localization .grid > .panel:nth-child(2) .panel-title", t("localizationEffort"));
+      setTextContent("#hypercare .panel-title", "Hypercare & Go-live Support");
+      setTextContent("#hypercare .pill", t("supportPlan"));
+      const search = document.getElementById("search");
+      if (search) search.placeholder = document.getElementById("appShell")?.classList.contains("work-open") ? t("searchOpen") : t("searchHome");
+      const subtitle = document.getElementById("headerSubtitle");
+      if (subtitle) subtitle.textContent = document.getElementById("appShell")?.classList.contains("work-open") ? t("activeWork") : t("welcome");
+      document.querySelectorAll("[data-save-offer]").forEach(button => {
+        if (!button.disabled) button.textContent = t("save");
+      });
+      renderAllWorks?.();
+      renderModuleGroups?.();
+      renderLocalizationControls?.();
+      refreshQuestionLists?.();
+      rerenderScreenNavigation?.();
+    }
 
     const phases = [
       ["Canlı Destek", 662, "#276ef1"],
@@ -2223,11 +2579,11 @@
     function statusLabel(status) {
       const normalized = String(status || "DRAFT").toUpperCase();
       const labels = {
-        DRAFT: "Taslak",
-        REVIEW: "Onayda",
-        SUBMITTED: "Onayda",
-        APPROVED: "Onaylandı",
-        REFERENCE: "Referans"
+        DRAFT: t("draft"),
+        REVIEW: t("review"),
+        SUBMITTED: t("review"),
+        APPROVED: t("approved"),
+        REFERENCE: t("reference")
       };
       return labels[normalized] || normalized;
     }
@@ -2324,7 +2680,7 @@
               <label class="module-choice">
                 <input type="checkbox" data-module-toggle="${item.module}" ${state.selected ? "checked" : ""} />
                 <span>${item.module}</span>
-                <input type="number" min="1" step="1" placeholder="Adet" data-module-team="${item.module}" value="${state.team || ""}" ${showTeam ? "" : "hidden"} />
+                <input type="number" min="1" step="1" placeholder="${t("countPlaceholder")}" data-module-team="${item.module}" value="${state.team || ""}" ${showTeam ? "" : "hidden"} />
               </label>
             `;
           }).join("")}
@@ -2353,8 +2709,8 @@
         <div class="input-field">
           <label>${item.country}</label>
           <select data-localization-index="${index}">
-            <option value="true" ${item.selected ? "selected" : ""}>Var</option>
-            <option value="false" ${!item.selected ? "selected" : ""}>Yok</option>
+            <option value="true" ${item.selected ? "selected" : ""}>${t("exists")}</option>
+            <option value="false" ${!item.selected ? "selected" : ""}>${t("none")}</option>
           </select>
         </div>
       `).join("");
@@ -3009,16 +3365,16 @@
       setText("homeTotalWorks", cachedOffers.length);
       setText("homeMonthWorks", currentMonthCount);
       setText("homeReviewWorks", reviewCount);
-      setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} draft, ${reviewCount} review` : "aktif kayıt yok");
+      setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} draft, ${reviewCount} review` : t("noActiveRecords"));
       setText("quickTotalEffort", fmt(totalEffort));
       setText("quickTopCategory", topCategory);
       const portfolioTarget = document.getElementById("portfolioAnalysisList");
       if (portfolioTarget) {
         const max = Math.max(cachedOffers.length, 1);
         const rows = [
-          ["Draft teklifler", draftCount, "var(--blue)"],
-          ["Review bekleyen", reviewCount, "var(--amber)"],
-          ["Referans olarak kullanılabilir", referenceCount, "var(--green)"]
+          [currentLanguage === "en" ? "Draft offers" : "Draft teklifler", draftCount, "var(--blue)"],
+          [currentLanguage === "en" ? "Waiting review" : "Review bekleyen", reviewCount, "var(--amber)"],
+          [currentLanguage === "en" ? "Available as reference" : "Referans olarak kullanılabilir", referenceCount, "var(--green)"]
         ];
         portfolioTarget.innerHTML = rows.map(([label, value, color]) => `
           <div class="phase-item">
@@ -3032,42 +3388,42 @@
         target.innerHTML = visibleRows.map(row => `
           <tr>
             <td>${row.offer_no || ""}</td>
-            <td>${row.project_name || row.title || "Yeni teklif"}</td>
+            <td>${row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")}</td>
             <td>${row.customer_name || ""}</td>
             <td>${row.industry || ""}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
             <td>
               <div class="quick-actions">
-                <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">Görüntüle</button>
-                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Değiştir</button>
-                <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Sil</button>
-                <button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Onaya Gönder</button>
+                <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
+                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("change")}</button>
+                <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
+                <button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("submit")}</button>
               </div>
             </td>
           </tr>
         `).join("");
         setText("allWorksFooterText", visibleRows.length
-          ? `1-${visibleRows.length} arası kayıtlar gösteriliyor`
-          : "Kayıt bulunamadı");
+          ? (currentLanguage === "en" ? `Showing records 1-${visibleRows.length}` : `1-${visibleRows.length} arası kayıtlar gösteriliyor`)
+          : t("noRecords"));
       }
       if (recentTarget) {
         recentTarget.innerHTML = cachedOffers.slice(0, 3).map(row => `
           <article class="work-card">
             <span class="status">${statusLabel(row.status)}</span>
-            <h4>${row.project_name || row.title || "Yeni teklif"}</h4>
+            <h4>${row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")}</h4>
             <div class="work-meta">
               <span>${row.offer_no || ""}</span>
-              <span>${fmt(row.total_effort || 0)} gün · ${row.implementation_type || ""}</span>
-              <span>Son güncelleme: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</span>
+              <span>${fmt(row.total_effort || 0)} ${t("days")} · ${row.implementation_type || ""}</span>
+              <span>${currentLanguage === "en" ? "Last update" : "Son güncelleme"}: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</span>
             </div>
             <div class="work-actions">
-              <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">Görüntüle</button>
-              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Düzenle</button>
-              <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Sil</button>
+              <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
+              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("edit")}</button>
+              <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
             </div>
           </article>
-        `).join("") || `<div class="empty-state">Henüz kayıtlı teklif bulunmuyor.</div>`;
+        `).join("") || `<div class="empty-state">${currentLanguage === "en" ? "No saved offers yet." : "Henüz kayıtlı teklif bulunmuyor."}</div>`;
       }
       document.querySelectorAll("[data-open-existing]").forEach(button => {
         if (button.dataset.openBound) return;
@@ -3229,8 +3585,8 @@
         const key = String(item.no);
         const storedValue = questionAnswers[targetId][key] || "";
         const control = item.answerType === "number"
-          ? `<input type="number" placeholder="Sayı girin" value="${storedValue}" />`
-          : `<select><option ${storedValue === "" ? "selected" : ""}>Seçiniz</option><option ${storedValue === "Evet" ? "selected" : ""}>Evet</option><option ${storedValue === "Hayır" ? "selected" : ""}>Hayır</option></select>`;
+          ? `<input type="number" placeholder="${currentLanguage === "en" ? "Enter number" : "Sayı girin"}" value="${storedValue}" />`
+          : `<select><option value="Seçiniz" ${storedValue === "" ? "selected" : ""}>${currentLanguage === "en" ? "Select" : "Seçiniz"}</option><option value="Evet" ${storedValue === "Evet" ? "selected" : ""}>${t("yes")}</option><option value="Hayır" ${storedValue === "Hayır" ? "selected" : ""}>${t("no")}</option></select>`;
         return `
           <div class="question-card" data-question-key="${key}">
             <div>
@@ -3282,19 +3638,19 @@
       const subtitle = document.getElementById("headerSubtitle") || document.querySelector("header .subtitle");
       if (subtitle) {
         subtitle.textContent = isOpen
-          ? "Aktif çalışma: Ufuk Enerji AŞ / S4 Dönüşüm · Teklif detayları ve giriş adımları"
-          : "Hoş geldin Ufuk Turcan";
+          ? t("activeWork")
+          : t("welcome");
       }
       const search = document.getElementById("search");
-      if (search) search.placeholder = isOpen ? "Modül veya faz ara" : "Çalışma, müşteri veya teklif ara";
+      if (search) search.placeholder = isOpen ? t("searchOpen") : t("searchHome");
     }
 
     function updateProjectSummary({ customer, project, effort }) {
       const customerEl = document.getElementById("summaryCustomer");
       const projectEl = document.getElementById("summaryProject");
       const effortEl = document.getElementById("summaryEffort");
-      if (customerEl) customerEl.textContent = customer || "Yeni teklif";
-      if (projectEl) projectEl.textContent = project || "Proje bilgileri bekleniyor";
+      if (customerEl) customerEl.textContent = customer || (currentLanguage === "en" ? "New offer" : "Yeni teklif");
+      if (projectEl) projectEl.textContent = project || (currentLanguage === "en" ? "Project details pending" : "Proje bilgileri bekleniyor");
       if (effortEl) effortEl.textContent = effort || "0";
     }
 
@@ -3518,17 +3874,17 @@
     }
 
     const detailFlow = [
-      ["project", "Project Definition"],
-      ["modules", "Modüller"],
-      ["scope", "Kapsam"],
-      ["developments", "Developments"],
-      ["localization", "Localization"],
-      ["hypercare", "Hypercare"],
-      ["effort", "Efor Analizi"]
+      ["project", "projectDefinition"],
+      ["modules", "modules"],
+      ["scope", "scope"],
+      ["developments", "developments"],
+      ["localization", "localization"],
+      ["hypercare", "hypercare"],
+      ["effort", "effortAnalysis"]
     ];
 
     function renderScreenNavigation() {
-      detailFlow.forEach(([screenId], index) => {
+      detailFlow.forEach(([screenId, labelKey], index) => {
         const screen = document.getElementById(screenId);
         if (!screen || screen.querySelector(".screen-nav")) return;
         const prev = detailFlow[index - 1];
@@ -3536,9 +3892,9 @@
         const nav = document.createElement("div");
         nav.className = "screen-nav";
         nav.innerHTML = `
-          <button class="button" type="button" data-flow-target="${prev ? prev[0] : "overview"}">${prev ? `‹ ${prev[1]}` : "‹ İlk Ekran"}</button>
-          <button class="button primary" type="button" data-save-offer>Kaydet</button>
-          ${next ? `<button class="button primary" type="button" data-flow-target="${next[0]}">${next[1]} ›</button>` : `<button class="button primary" type="button" data-flow-target="overview">İlk Ekrana Dön</button>`}
+          <button class="button" type="button" data-flow-target="${prev ? prev[0] : "overview"}">${prev ? `‹ ${t(prev[1])}` : `‹ ${t("firstScreen")}`}</button>
+          <button class="button primary" type="button" data-save-offer>${t("save")}</button>
+          ${next ? `<button class="button primary" type="button" data-flow-target="${next[0]}">${t(next[1])} ›</button>` : `<button class="button primary" type="button" data-flow-target="overview">${t("backHome")}</button>`}
         `;
         screen.appendChild(nav);
       });
@@ -3557,7 +3913,7 @@
         button.addEventListener("click", async () => {
           button.disabled = true;
           const originalText = button.textContent;
-          button.textContent = "Kaydediliyor";
+          button.textContent = t("saving");
           try {
             await saveCurrentOffer(button);
           } catch (error) {
@@ -3582,6 +3938,11 @@
         });
       });
       applyOfferReadOnlyState();
+    }
+
+    function rerenderScreenNavigation() {
+      document.querySelectorAll(".screen-nav").forEach(nav => nav.remove());
+      renderScreenNavigation();
     }
 
     function openExistingWork(offerId, accessMode = "edit") {
@@ -3640,11 +4001,19 @@
     document.getElementById("showRegisterButton").addEventListener("click", () => {
       document.getElementById("loginForm").style.display = "none";
       document.getElementById("registerForm").style.display = "";
+      applyLanguage();
     });
 
     document.getElementById("showLoginButton").addEventListener("click", () => {
       document.getElementById("registerForm").style.display = "none";
       document.getElementById("loginForm").style.display = "";
+      applyLanguage();
+    });
+
+    document.getElementById("languageSelect")?.addEventListener("change", event => {
+      currentLanguage = event.target.value || "tr";
+      localStorage.setItem("effortLanguage", currentLanguage);
+      applyLanguage();
     });
 
     document.getElementById("registerForm").addEventListener("submit", async event => {
@@ -3683,6 +4052,7 @@
         document.getElementById("appShell").classList.remove("is-locked");
         setWorkMode(false);
         openScreen("overview");
+        applyLanguage();
       } catch (error) {
         console.error(error);
         alert("Giriş yapılamadı. Email/şifre hatalı olabilir veya kullanıcı henüz onaylanmamış olabilir.");
@@ -3804,6 +4174,7 @@
     renderAdminPage();
     renderAllWorks();
     refreshQuestionLists();
+    applyLanguage();
   </script>
 </body>
 </html>
