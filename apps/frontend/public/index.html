@@ -530,6 +530,10 @@
       display: none;
     }
 
+    .app:not(.work-open) .admin-tree {
+      display: grid;
+    }
+
     .app:not(.work-open) .detail-action,
     .app:not(.work-open) #overview > .hero,
     .app:not(.work-open) #overview > .grid.detail-preview,
@@ -2134,6 +2138,7 @@
     let currentUser = null;
     let currentOfferId = null;
     let currentOfferStatus = "DRAFT";
+    let currentOfferAccessMode = "edit";
     let cachedOffers = [];
 
     const phases = [
@@ -2223,12 +2228,17 @@
       return String(currentOfferStatus || "").toUpperCase() === "APPROVED";
     }
 
+    function isCurrentOfferReadOnly() {
+      return isCurrentOfferApproved() || currentOfferAccessMode === "view";
+    }
+
     function setText(id, value) {
       const el = document.getElementById(id);
       if (el) el.textContent = value;
     }
 
     function markDirty() {
+      if (isCurrentOfferReadOnly()) return;
       if (currentOfferMode) hasUnsavedChanges = true;
     }
 
@@ -2809,10 +2819,10 @@
           const offerId = button.dataset.offerId;
           const action = button.dataset.workAction;
           if (action === "view") {
-            confirmAction("Bu çalışmayı görüntülemek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId)));
+            confirmAction("Bu çalışmayı görüntülemek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId, "view")));
           }
           if (action === "edit") {
-            confirmAction("Bu çalışmayı değiştirmek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId)));
+            confirmAction("Bu çalışmayı değiştirmek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId, "edit")));
           }
           if (action === "delete") {
             confirmAction("Bu çalışmayı silmek istediğinize emin misiniz?", async () => {
@@ -3112,7 +3122,7 @@
     }
 
     function applyOfferReadOnlyState() {
-      const locked = isCurrentOfferApproved();
+      const locked = isCurrentOfferReadOnly();
       ["project", "modules", "scope", "developments", "localization", "hypercare"].forEach(screenId => {
         const screen = document.getElementById(screenId);
         if (!screen) return;
@@ -3122,6 +3132,7 @@
       });
       document.querySelectorAll("[data-save-offer], [data-submit-offer]").forEach(button => {
         button.disabled = locked;
+        button.style.display = locked ? "none" : "";
       });
     }
 
@@ -3299,11 +3310,12 @@
       applyOfferReadOnlyState();
     }
 
-    function openExistingWork(offerId) {
+    function openExistingWork(offerId, accessMode = "edit") {
       const offer = cachedOffers.find(item => item.id === offerId);
       const definition = offer?.project_definition || {};
       currentOfferId = offer?.id || null;
       currentOfferStatus = offer?.status || "DRAFT";
+      currentOfferAccessMode = accessMode;
       setProjectForm(offer ? {
         customer: offer.customer_name || definition.customer || "",
         project: offer.project_name || definition.project || "",
@@ -3343,6 +3355,7 @@
       }, { preserveAnswers: false });
       currentOfferId = null;
       currentOfferStatus = "DRAFT";
+      currentOfferAccessMode = "edit";
       currentOfferMode = "new";
       resetSelectableState("new");
       markClean();
