@@ -54,6 +54,12 @@ window.EffortApi = {
   adminData() {
     return this.request("/api/admin");
   },
+  saveAdminEntity(entity, payload) {
+    return this.request(`/api/admin/${encodeURIComponent(entity)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+  },
   pendingUsers(adminUserId) {
     return this.request(`/api/admin/users/pending?adminUserId=${encodeURIComponent(adminUserId)}`);
   },
