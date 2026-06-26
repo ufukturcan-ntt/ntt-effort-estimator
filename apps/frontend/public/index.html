@@ -482,6 +482,10 @@
       color: #c7d8e8;
     }
 
+    .app:not(.work-open) header .subtitle {
+      display: none;
+    }
+
     header .pill {
       background: rgba(255,255,255,.1);
       color: #eaf4ff;
@@ -517,6 +521,10 @@
     .app:not(.work-open) .top-brand {
       display: flex;
       margin-bottom: 18px;
+    }
+
+    .app:not(.work-open) header .subtitle {
+      display: none;
     }
 
     .app:not(.work-open) .workspace {
@@ -786,9 +794,9 @@
       display: grid;
       gap: 6px;
       padding: 12px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255,255,255,.12);
       border-radius: var(--radius);
-      background: #fff;
+      background: linear-gradient(180deg, var(--nav), var(--nav-2));
       box-shadow: var(--shadow);
     }
 
@@ -796,7 +804,7 @@
       border: 0;
       border-radius: 7px;
       background: transparent;
-      color: var(--muted);
+      color: #d7e8f8;
       padding: 10px 12px;
       text-align: left;
       font: inherit;
@@ -805,8 +813,8 @@
     }
 
     .admin-tree-item.active {
-      background: #eaf3ff;
-      color: var(--blue);
+      background: rgba(255,255,255,.16);
+      color: #fff;
     }
 
     .admin-content { min-width: 0; }
@@ -887,10 +895,24 @@
       min-width: 1180px;
     }
 
-    .admin-question-table table th,
-    .admin-question-table table td {
+    .admin-section table th,
+    .admin-section table td {
       text-align: left;
       vertical-align: top;
+    }
+
+    .admin-select {
+      min-width: 160px;
+      max-width: 260px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 7px 8px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .admin-select[multiple] {
+      min-height: 84px;
     }
 
     .compact-table input,
@@ -1602,33 +1624,7 @@
           <section class="panel">
             <div class="panel-head"><h3 class="panel-title">Son çalışmalar</h3></div>
             <div class="work-grid" id="recentWorkGrid">
-              <article class="work-card">
-                <span class="status">DRAFT</span>
-                <h4>Ufuk Enerji AŞ - S4 Dönüşüm</h4>
-                <div class="work-meta"><span>EST-2026-000014</span><span>1160 gün · Large · Conversion</span><span>Son güncelleme: bugün</span></div>
-                <div class="work-actions">
-                  <button class="button primary" data-open-existing type="button">Görüntüle / Devam Et</button>
-                  <button class="button danger" data-delete-work type="button">Sil</button>
-                </div>
-              </article>
-              <article class="work-card">
-                <span class="status">REVIEW</span>
-                <h4>Ufuk Tekstil Dönüşüm</h4>
-                <div class="work-meta"><span>EST-2026-000002</span><span>890 gün · Medium · Greenfield</span><span>Satış onayı bekliyor</span></div>
-                <div class="work-actions">
-                  <button class="button" data-open-existing type="button">Görüntüle</button>
-                  <button class="button danger" data-delete-work type="button">Sil</button>
-                </div>
-              </article>
-              <article class="work-card">
-                <span class="status">DRAFT</span>
-                <h4>Referans teklif kopyası</h4>
-                <div class="work-meta"><span>EST-2026-000001</span><span>520 gün · Small · Rollout</span><span>Referans olarak kullanılabilir</span></div>
-                <div class="work-actions">
-                  <button class="button" data-open-existing type="button">Görüntüle</button>
-                  <button class="button danger" data-delete-work type="button">Sil</button>
-                </div>
-              </article>
+              <div class="empty-state">Kayıtlar yükleniyor.</div>
             </div>
           </section>
 
@@ -1950,6 +1946,7 @@
               <button class="admin-tree-item" data-admin-section="fixed" type="button">Fixed Days</button>
               <button class="admin-tree-item" data-admin-section="localization" type="button">Localization Efforts</button>
               <button class="admin-tree-item" data-admin-section="vmp" type="button">Variable + Module + Phase</button>
+              <button class="button primary" id="saveAdminConfigButton" type="button">Admin Ayarlarını Kaydet</button>
             </aside>
             <div class="admin-content">
               <section class="panel admin-section active" data-admin-panel="users">
@@ -1974,26 +1971,26 @@
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Tanım</th><th>Açıklama</th><th>Cevap Tipi</th><th>Puan</th><th>Size etkiler mi?</th><th>Değişken tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etkiler mi?</th><th>Efor Etki Tipi</th><th>Cevap Tipi</th><th>Puan</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Tanım</th><th>Açıklama</th><th>Cevap Tipi</th><th>Puan</th><th>Size etkiler mi?</th><th>Değişken tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etkiler mi?</th><th>Efor Etki Tipi</th><th>Cevap Tipi</th><th>Puan</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="restrictions">
-                <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><span class="pill">Filtre kuralları</span></div>
+                <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><button class="button primary" data-admin-add-matrix="adminRestrictionsRows" type="button">+ Satır</button></div>
                 <div class="list-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="fixed">
-                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><span class="pill">İmplementasyon bazlı</span></div>
+                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><button class="button primary" data-admin-add-matrix="adminFixedRows" type="button">+ Satır</button></div>
                 <div class="list-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="localization">
-                <div class="panel-head"><h3 class="panel-title">Localization Efforts</h3><span class="pill">Modül/Faz bazlı efor</span></div>
+                <div class="panel-head"><h3 class="panel-title">Localization Efforts</h3><button class="button primary" data-admin-add-matrix="adminLocalizationRows" type="button">+ Ülke</button></div>
                 <div class="list-table"><table><thead id="adminLocalizationHead"></thead><tbody id="adminLocalizationRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="vmp">
-                <div class="panel-head"><h3 class="panel-title">Variable + Module + Phase</h3><span class="pill">Etkisel efor</span></div>
+                <div class="panel-head"><h3 class="panel-title">Variable + Module + Phase</h3><button class="button primary" data-admin-add-matrix="adminVmpRows" type="button">+ Satır</button></div>
                 <div class="list-table"><table><thead id="adminVmpHead"></thead><tbody id="adminVmpRows"></tbody></table></div>
               </section>
             </div>
@@ -2080,14 +2077,24 @@
       {module:"NTT Data POS", group:"NTT Own IP", selected:true, team:""}
     ];
 
-    const localizationCatalog = [
-      {country:"Rusya", selected:true, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-      {country:"Birleşik Arap Emirlikleri", selected:true, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-      {country:"Romanya", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-      {country:"Hollanda", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-      {country:"İngiltere", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-      {country:"İsviçre", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}}
-    ];
+    function buildLocalizationCatalog() {
+      const rows = window.adminSeedData?.localizationEfforts || [];
+      const headerIndex = rows.findIndex(row => row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke"));
+      const headers = rows[headerIndex] || [];
+      const parsed = (headerIndex >= 0 ? rows.slice(headerIndex + 1) : [])
+        .filter(row => row[0])
+        .map(row => ({
+          country: row[0],
+          selected: false,
+          values: Object.fromEntries(headers.slice(1).map((phase, index) => [phase, Number(row[index + 1]) || 0]))
+        }));
+      return parsed.length ? parsed : [
+        {country:"Rusya", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
+        {country:"Birleşik Arap Emirlikleri", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}}
+      ];
+    }
+
+    let localizationCatalog = buildLocalizationCatalog();
 
     const phaseHeaders = ["Analiz","Dokümantasyon","Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri","Internal Entegrasyon Testi","Entegrasyon Testi","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Anaveri Kontrol","Anaveri Aktarım"];
 
@@ -2134,6 +2141,7 @@
     }
     let currentOfferMode = "existing";
     let hasUnsavedChanges = false;
+    let hasAdminUnsavedChanges = false;
     let pendingNavigation = null;
     let currentUser = null;
     let currentOfferId = null;
@@ -2244,6 +2252,18 @@
 
     function markClean() {
       hasUnsavedChanges = false;
+    }
+
+    function markAdminDirty() {
+      hasAdminUnsavedChanges = true;
+      const button = document.getElementById("saveAdminConfigButton");
+      if (button) button.textContent = "Admin Ayarlarını Kaydet *";
+    }
+
+    function markAdminClean() {
+      hasAdminUnsavedChanges = false;
+      const button = document.getElementById("saveAdminConfigButton");
+      if (button) button.textContent = "Admin Ayarlarını Kaydet";
     }
 
     function hasEnteredDraftData() {
@@ -2550,20 +2570,93 @@
       return `<div class="admin-edit" contenteditable="true">${value || ""}</div>`;
     }
 
+    function escapeHtml(value = "") {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function adminDefinitionValues(index) {
+      return [...new Set((window.adminSeedData?.projectDefinitions || []).slice(1).map(row => row[index]).filter(Boolean))];
+    }
+
+    function adminQuestionNames() {
+      return [...new Set([...(window.scopeQuestions || []), ...(window.developmentQuestions || [])].map(item => item.name).filter(Boolean))];
+    }
+
+    function adminSelectCell(value = "", options = [], multiple = false) {
+      const selectedValues = String(value || "").split(",").map(item => item.trim()).filter(Boolean);
+      const rendered = options.map(option => {
+        const selected = selectedValues.includes(option) || value === option ? "selected" : "";
+        return `<option ${selected}>${escapeHtml(option)}</option>`;
+      }).join("");
+      return `<td><select class="admin-select" ${multiple ? "multiple" : ""}>${rendered}</select></td>`;
+    }
+
+    function adminMatrixOptions(header) {
+      const normalized = String(header || "").trim();
+      if (normalized === "Variable Type") return { options: ["Kapsam", "Geliştirme"], multiple: false };
+      if (normalized === "Allowed Industries") return { options: ["All", ...adminDefinitionValues(0)], multiple: true };
+      if (normalized === "Allowed Implementation Types") return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
+      if (normalized === "Implementation Type") return { options: adminDefinitionValues(1), multiple: false };
+      if (normalized === "Allowed System Types") return { options: ["All", ...adminDefinitionValues(2)], multiple: true };
+      if (normalized === "Active?") return { options: ["Yes", "No"], multiple: false };
+      if (normalized === "Kaynak Tipi") return { options: ["Değişken", "Modül"], multiple: false };
+      if (normalized === "Kaynak") return { options: adminQuestionNames(), multiple: false };
+      if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...moduleCatalog.map(item => item.module)], multiple: false };
+      if (["Efor Bazı", "Efor BazÄ±"].includes(normalized)) return { options: ["Sabit", "Katsayı", "1 Farklı Şirket Kurgusu", "1 Entegrasyon bazında"], multiple: false };
+      if (["Ülke", "Ulke", "Ãœlke"].includes(normalized)) return { options: localizationCatalog.map(item => item.country), multiple: false };
+      return null;
+    }
+
     function renderEditableMatrix(headId, bodyId, rows) {
       const head = document.getElementById(headId);
       const body = document.getElementById(bodyId);
       if (!body || !rows?.length) return;
-      if (head) head.innerHTML = `<tr>${rows[0].map(value => `<th>${value}</th>`).join("")}</tr>`;
-      body.innerHTML = rows.slice(1).map(row => `<tr>${row.map(editableCell).join("")}</tr>`).join("");
-      body.querySelectorAll("[contenteditable]").forEach(cell => cell.addEventListener("input", markDirty));
+      const headerIndex = rows.findIndex(row => {
+        if (bodyId === "adminFixedRows") return row.includes("Column1");
+        if (bodyId === "adminLocalizationRows") return row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke");
+        if (bodyId === "adminVmpRows") return row.includes("Kaynak Tipi");
+        return row.includes("No") || row.includes("Variable Type") || row.includes("Question");
+      });
+      const headers = rows[Math.max(headerIndex, 0)].filter((_, index) => !(bodyId === "adminVmpRows" && index === 0));
+      const dataRows = rows.slice(Math.max(headerIndex, 0) + 1).map(row => bodyId === "adminVmpRows" ? row.slice(1) : row);
+      if (head) head.innerHTML = `<tr>${headers.map(value => `<th>${value}</th>`).join("")}<th>İşlem</th></tr>`;
+      body.dataset.matrixHeaders = JSON.stringify(headers);
+      body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
+        const selectConfig = adminMatrixOptions(header);
+        return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
+      }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`).join("");
+      bindAdminEditable(body);
+    }
+
+    function addAdminMatrixRow(bodyId) {
+      const body = document.getElementById(bodyId);
+      if (!body) return;
+      const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
+      if (!headers.length) return;
+      body.insertAdjacentHTML("beforeend", `<tr>${headers.map(header => {
+        const selectConfig = adminMatrixOptions(header);
+        return selectConfig ? adminSelectCell("", selectConfig.options, selectConfig.multiple) : editableCell("");
+      }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      bindAdminEditable(body);
+      markAdminDirty();
     }
 
     function bindAdminEditable(root = document) {
       root.querySelectorAll("[contenteditable]").forEach(cell => {
         if (cell.dataset.editBound) return;
         cell.dataset.editBound = "true";
-        cell.addEventListener("input", markDirty);
+        cell.addEventListener("input", markAdminDirty);
+      });
+      root.querySelectorAll(".admin-select").forEach(select => {
+        if (select.dataset.selectBound) return;
+        select.dataset.selectBound = "true";
+        select.addEventListener("change", markAdminDirty);
       });
       root.querySelectorAll("[data-admin-remove]").forEach(button => {
         if (button.dataset.removeBound) return;
@@ -2571,7 +2664,7 @@
         button.addEventListener("click", () => {
           if (!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
           button.closest("tr, .definition-row, .admin-module-card")?.remove();
-          markDirty();
+          markAdminDirty();
         });
       });
     }
@@ -2600,7 +2693,7 @@
         </div>
       `);
       bindAdminEditable(target);
-      markDirty();
+      markAdminDirty();
     }
 
     function renderAdminModules() {
@@ -2633,7 +2726,7 @@
         </article>
       `);
       bindAdminEditable(target);
-      markDirty();
+      markAdminDirty();
     }
 
     function renderQuestionAdmin(targetId, questions) {
@@ -2642,12 +2735,14 @@
       target.innerHTML = questions.map(item => `
         <tr>
           ${editableCell(item.no)}
+          ${editableCell(item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme"))}
+          ${editableCell(item.variableType || item.answerType || "Evet/Hayır")}
           ${editableCell(item.name)}
           ${editableCell(item.description)}
-          ${editableCell(item.answerType)}
-          ${editableCell(item.score || "")}
           ${editableCell(item.score ? "Evet" : "Hayır")}
-          ${editableCell(item.answerType === "number" ? "Adet" : "Evet/Hayır")}
+          ${editableCell(item.effortImpactType || "Sabit")}
+          ${editableCell(item.answerType || "yesno")}
+          ${editableCell(item.score || "")}
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
       `).join("");
@@ -2658,9 +2753,171 @@
       const target = document.getElementById(targetId);
       if (!target) return;
       const no = target.querySelectorAll("tr").length + 1;
-      target.insertAdjacentHTML("beforeend", `<tr>${[no, "Yeni soru", "Açıklama", "yesno", 0, "Evet", "Evet/Hayır"].map(editableCell).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      const group = targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme";
+      target.insertAdjacentHTML("beforeend", `<tr>${[no, group, "Evet/Hayır", "Yeni soru", "Açıklama", "Evet", "Sabit", "yesno", 0].map(editableCell).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
       bindAdminEditable(target);
-      markDirty();
+      markAdminDirty();
+    }
+
+    function adminCellValue(cell) {
+      const select = cell.querySelector("select");
+      if (select) {
+        const values = [...select.selectedOptions].map(option => option.value);
+        return select.multiple ? values.join(", ") : (values[0] || "");
+      }
+      return cell.textContent.trim();
+    }
+
+    function collectDefinitionValues(targetId) {
+      return [...document.querySelectorAll(`#${targetId} .admin-edit`)]
+        .map(item => item.textContent.trim())
+        .filter(Boolean);
+    }
+
+    function collectAdminProjectDefinitions() {
+      const industries = collectDefinitionValues("adminIndustryList");
+      const implementations = collectDefinitionValues("adminImplementationList");
+      const systems = collectDefinitionValues("adminSystemList");
+      const moduleNames = collectAdminModules().map(item => item.module);
+      const max = Math.max(industries.length, implementations.length, systems.length, moduleNames.length, 1);
+      return [
+        ["Endüstri", "Implementation Type", "System Type", "Modüller"],
+        ...Array.from({ length: max }, (_, index) => [
+          industries[index] || "",
+          implementations[index] || "",
+          systems[index] || "",
+          moduleNames[index] || ""
+        ])
+      ];
+    }
+
+    function collectAdminModules() {
+      return [...document.querySelectorAll("[data-admin-module-group]")].flatMap(groupEl => {
+        const group = groupEl.dataset.adminModuleGroup;
+        return [...groupEl.querySelectorAll(".admin-module-card .admin-edit")]
+          .map(item => ({ module: item.textContent.trim(), group, selected: false, team: "" }))
+          .filter(item => item.module);
+      });
+    }
+
+    function collectQuestionAdminRows(targetId) {
+      return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
+        const cells = [...row.children].slice(0, 9).map(adminCellValue);
+        return {
+          no: Number(cells[0]) || cells[0],
+          group: cells[1],
+          variableType: cells[2],
+          name: cells[3],
+          description: cells[4],
+          sizeImpact: cells[5],
+          effortImpactType: cells[6],
+          answerType: cells[7],
+          score: Number(String(cells[8]).replace(",", ".")) || 0,
+          active: true
+        };
+      }).filter(item => item.name);
+    }
+
+    function collectMatrixRows(headId, bodyId) {
+      const headers = [...document.querySelectorAll(`#${headId} th`)]
+        .map(th => th.textContent.trim())
+        .filter(value => value && value !== "İşlem");
+      const rows = [...document.querySelectorAll(`#${bodyId} tr`)].map(row =>
+        [...row.children].slice(0, headers.length).map(adminCellValue)
+      ).filter(row => row.some(Boolean));
+      return [headers, ...rows];
+    }
+
+    function collectAdminConfig() {
+      return {
+        projectDefinitions: collectAdminProjectDefinitions(),
+        moduleCatalog: collectAdminModules(),
+        scopeQuestions: collectQuestionAdminRows("adminScopeRows"),
+        developmentQuestions: collectQuestionAdminRows("adminDevelopmentRows"),
+        restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
+        fixedDays: collectMatrixRows("adminFixedHead", "adminFixedRows"),
+        localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
+        variableModulePhase: collectMatrixRows("adminVmpHead", "adminVmpRows")
+      };
+    }
+
+    function replaceArray(target, values) {
+      target.splice(0, target.length, ...values);
+    }
+
+    function syncModuleStateWithCatalog() {
+      const names = new Set(moduleCatalog.map(item => item.module));
+      [...moduleState.keys()].forEach(name => {
+        if (!names.has(name)) moduleState.delete(name);
+      });
+      [...hypercareState.keys()].forEach(name => {
+        if (!names.has(name)) hypercareState.delete(name);
+      });
+      moduleCatalog.forEach(item => {
+        if (!moduleState.has(item.module)) moduleState.set(item.module, { selected: false, team: "" });
+        if (!hypercareState.has(item.module)) hypercareState.set(item.module, { weeks: "", daysPerWeek: "", shifts: "", locations: "", goliveDays: "" });
+      });
+    }
+
+    function setSelectOptions(id, values) {
+      const select = document.getElementById(id);
+      if (!select) return;
+      const current = select.value;
+      select.innerHTML = `<option value="">Seçiniz</option>${values.map(value => `<option>${escapeHtml(value)}</option>`).join("")}`;
+      if (values.includes(current)) select.value = current;
+    }
+
+    function refreshProjectDefinitionSelects() {
+      setSelectOptions("projectIndustry", adminDefinitionValues(0));
+      setSelectOptions("projectImplementation", adminDefinitionValues(1));
+      setSelectOptions("projectSystem", adminDefinitionValues(2));
+    }
+
+    function applyAdminConfig(config = {}) {
+      if (config.projectDefinitions) window.adminSeedData.projectDefinitions = config.projectDefinitions;
+      if (config.restrictions) window.adminSeedData.restrictions = config.restrictions;
+      if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
+      if (config.localizationEfforts) window.adminSeedData.localizationEfforts = config.localizationEfforts;
+      if (config.variableModulePhase) window.adminSeedData.variableModulePhase = config.variableModulePhase;
+      if (config.scopeQuestions) window.scopeQuestions = config.scopeQuestions;
+      if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
+      if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
+      syncModuleStateWithCatalog();
+      localizationCatalog = buildLocalizationCatalog();
+      refreshProjectDefinitionSelects();
+    }
+
+    async function loadAdminConfig() {
+      if (!window.EffortApi) return;
+      const config = await window.EffortApi.adminData();
+      applyAdminConfig(config);
+      renderLocalizationControls();
+      renderWorkbookDrivenScreens();
+      renderAdminPage();
+      markAdminClean();
+    }
+
+    async function saveAdminConfig(button) {
+      if (!currentUser?.is_admin) return;
+      const config = collectAdminConfig();
+      const originalText = button?.textContent;
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Kaydediliyor";
+      }
+      try {
+        await Promise.all(Object.entries(config).map(([entity, payload]) => window.EffortApi.saveAdminEntity(entity, payload)));
+        applyAdminConfig(config);
+        renderLocalizationControls();
+        renderWorkbookDrivenScreens();
+        markAdminClean();
+        alert("Admin ayarları kaydedildi.");
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = hasAdminUnsavedChanges ? (originalText || "Admin Ayarlarını Kaydet *") : "Admin Ayarlarını Kaydet";
+        }
+      }
     }
 
     function renderAdminPage() {
@@ -2686,6 +2943,11 @@
         button.dataset.bound = "true";
         button.addEventListener("click", () => addDefinitionItem(button.dataset.adminAddList, "Yeni tanım"));
       });
+      document.querySelectorAll("[data-admin-add-matrix]").forEach(button => {
+        if (button.dataset.bound) return;
+        button.dataset.bound = "true";
+        button.addEventListener("click", () => addAdminMatrixRow(button.dataset.adminAddMatrix));
+      });
       document.getElementById("addAdminModuleButton")?.addEventListener("click", addAdminModule);
       document.querySelectorAll(".admin-tree-item").forEach(button => {
         if (button.dataset.bound) return;
@@ -2695,6 +2957,18 @@
           document.querySelectorAll(".admin-section").forEach(panel => panel.classList.toggle("active", panel.dataset.adminPanel === button.dataset.adminSection));
         });
       });
+      const saveButton = document.getElementById("saveAdminConfigButton");
+      if (saveButton && !saveButton.dataset.bound) {
+        saveButton.dataset.bound = "true";
+        saveButton.addEventListener("click", async () => {
+          try {
+            await saveAdminConfig(saveButton);
+          } catch (error) {
+            console.error(error);
+            alert(`Admin ayarları kaydedilemedi: ${error.message}`);
+          }
+        });
+      }
     }
 
     function renderWorkbookDrivenScreens() {
@@ -2788,8 +3062,9 @@
               <span>Son güncelleme: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</span>
             </div>
             <div class="work-actions">
-              <button class="button primary" data-open-existing data-offer-id="${row.id}" type="button">${String(row.status || "").toUpperCase() === "APPROVED" ? "Görüntüle" : "Görüntüle / Devam Et"}</button>
-              <button class="button danger" data-delete-work data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Sil</button>
+              <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">Görüntüle</button>
+              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Düzenle</button>
+              <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Sil</button>
             </div>
           </article>
         `).join("") || `<div class="empty-state">Henüz kayıtlı teklif bulunmuyor.</div>`;
@@ -3263,7 +3538,6 @@
         nav.innerHTML = `
           <button class="button" type="button" data-flow-target="${prev ? prev[0] : "overview"}">${prev ? `‹ ${prev[1]}` : "‹ İlk Ekran"}</button>
           <button class="button primary" type="button" data-save-offer>Kaydet</button>
-          <button class="button" type="button" data-submit-offer>Onaya Gönder</button>
           ${next ? `<button class="button primary" type="button" data-flow-target="${next[0]}">${next[1]} ›</button>` : `<button class="button primary" type="button" data-flow-target="overview">İlk Ekrana Dön</button>`}
         `;
         screen.appendChild(nav);
@@ -3398,6 +3672,11 @@
           email: document.getElementById("loginEmail").value,
           password: document.getElementById("loginPassword").value
         });
+        try {
+          await loadAdminConfig();
+        } catch (adminError) {
+          console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
+        }
         await loadOffers();
         applyUserPermissions();
         document.getElementById("loginShell").classList.add("is-hidden");
@@ -3457,6 +3736,7 @@
     document.getElementById("topAdminButton").addEventListener("click", async () => {
       guardedOpenScreen("admin");
       try {
+        await loadAdminConfig();
         await loadPendingUsers();
       } catch (error) {
         console.error(error);
@@ -3516,6 +3796,7 @@
 
     renderRows("moduleRows", modules.slice(0, 12));
     renderPhases();
+    refreshProjectDefinitionSelects();
     renderModuleGroups();
     renderLocalizationControls();
     renderWorkbookDrivenScreens();
