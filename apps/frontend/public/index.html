@@ -1945,7 +1945,7 @@
                 <div class="metric"><span>Standart proje eforu</span><b id="projectEffortTotal">0</b><small>seçili modüller</small></div>
                 <div class="metric"><span>Geliştirme eforu</span><b id="developmentEffortTotal">0</b><small>geliştirme matrisi</small></div>
                 <div class="metric"><span>Lokalizasyon eforu</span><b id="finalLocalizationTotal">0</b><small>seçili ülkeler</small></div>
-                <div class="metric"><span>Hypercare eforu</span><b id="finalHypercareTotal">0</b><small>destek planı</small></div>
+                <div class="metric"><span>Hypercare + Go-Live eforu</span><b id="finalHypercareTotal">0</b><small>destek planı</small></div>
               </div>
             </section>
 
@@ -2035,6 +2035,7 @@
   <script src="assets/questions.js"></script>
   <script src="assets/fixed-days.js"></script>
   <script src="assets/admin-data.js"></script>
+  <script src="assets/xlsx.full.min.js"></script>
   <script>
     const modules = [
       {module:"SD",analysis:2,build:.5,test:1.75,hypercare:28,golive:80,total:113.5},
@@ -2888,9 +2889,10 @@
           const projectTotal = renderFinalEffort();
           const developmentTotal = numericText("developmentEffortTotal");
           const localizationTotal = activeLocalizations().reduce((sum, item) => sum + sumPhases(item.values), 0);
-          setText("finalHypercareTotal", fmt(support.hypercare));
-          setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + support.hypercare));
-          renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: support.hypercare });
+          const supportTotal = support.hypercare + support.golive;
+          setText("finalHypercareTotal", fmt(supportTotal));
+          setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + supportTotal));
+          renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
         });
       });
       return updateHypercareTotals();
@@ -2928,25 +2930,28 @@
     function renderFinalEffort() {
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
-      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Hypercare</th><th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Hypercare</th><th>Go-Live Support</th><th>Toplam</th></tr>`;
       const rows = finalRowsForSelectedModules();
       const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
       if (body) {
         const rowHtml = rows.map(row => {
           phaseHeaders.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
           const hypercare = hypercareValue(row.module);
+          const golive = Number(hypercareState.get(row.module)?.goliveDays) || 0;
           return `
             <tr>
               <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
               ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
               <td>${fmt(hypercare)}</td>
-              <td><strong>${fmt(row.total + hypercare)}</strong></td>
+              <td>${fmt(golive)}</td>
+              <td><strong>${fmt(row.total + hypercare + golive)}</strong></td>
             </tr>
           `;
         }).join("");
         const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
-        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + hypercareTotal)}</strong></td></tr>`;
-        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 3}">Modül seçimi yapılmadı.</td></tr>`;
+        const goliveTotal = rows.reduce((sum, row) => sum + (Number(hypercareState.get(row.module)?.goliveDays) || 0), 0);
+        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + hypercareTotal + goliveTotal)}</strong></td></tr>`;
+        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 4}">Modül seçimi yapılmadı.</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
       setText("projectEffortTotal", fmt(total));
@@ -2997,7 +3002,7 @@
       const mix = [
         ["Standart efor", projectTotal, "var(--blue)"],
         ["Geliştirme eforu", developmentTotal, "var(--amber)"],
-        ["Hypercare eforu", hypercareTotal, "var(--green)"],
+        ["Hypercare + Go-Live eforu", hypercareTotal, "var(--green)"],
         ["Lokalizasyon eforu", localizationTotal, "#6658d3"]
       ];
       renderMiniBars("effortMixDashboard", mix);
@@ -3461,11 +3466,186 @@
       const projectTotal = renderFinalEffort();
       const developmentTotal = renderDevelopmentEfforts();
       const support = renderHypercareRows();
+      const supportTotal = support.hypercare + support.golive;
       setText("localizationNavCount", activeLocalizations().length);
       setText("hypercareNavCount", `${fmt(support.hypercare)}g`);
-      setText("finalHypercareTotal", fmt(support.hypercare));
-      setText("finalGrandTotal", fmt(localizationTotal + projectTotal + developmentTotal + support.hypercare));
-      renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: support.hypercare });
+      setText("finalHypercareTotal", fmt(supportTotal));
+      setText("finalGrandTotal", fmt(localizationTotal + projectTotal + developmentTotal + supportTotal));
+      renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
+    }
+
+    function offerJson(value, fallback = {}) {
+      if (!value) return fallback;
+      if (typeof value === "object") return value;
+      try {
+        return JSON.parse(value);
+      } catch (_error) {
+        return fallback;
+      }
+    }
+
+    function offerSelectedModules(offer) {
+      const selection = offerJson(offer.module_selection);
+      return Object.entries(selection)
+        .filter(([, state]) => Boolean(state?.selected))
+        .map(([module, state]) => ({ module, team: Math.max(Number(state?.team) || 1, 1) }));
+    }
+
+    function offerScopeScore(offer) {
+      const answers = offerJson(offer.scope_answers);
+      return (window.scopeQuestions || []).reduce((total, item) => {
+        return total + answerImpact(item, answers[String(item.no)]);
+      }, 0);
+    }
+
+    function projectEffortRowsForOffer(offer) {
+      const implementation = offer.implementation_type || offerJson(offer.project_definition).implementation || "Conversion";
+      const fixedRows = window.fixedDaysByImplementation?.[implementation] || window.fixedDaysByImplementation?.Conversion || {};
+      const sizeRow = fixedRows[projectSizeFromScore(offerScopeScore(offer)).fixedKey] || {};
+      const support = offerJson(offer.hypercare_inputs);
+      return offerSelectedModules(offer).map(({ module, team }) => {
+        const base = fixedRows[module] || finalEffortBase[module] || {};
+        const values = Object.fromEntries(phaseHeaders.map(phase => [
+          phase,
+          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team
+        ]));
+        const supportRow = support[module] || {};
+        const factors = [supportRow.weeks, supportRow.daysPerWeek, supportRow.shifts, supportRow.locations].map(Number);
+        const hypercare = factors.every(value => Number.isFinite(value) && value > 0)
+          ? factors.reduce((total, value) => total * value, 1)
+          : 0;
+        const golive = Number(supportRow.goliveDays) || 0;
+        return { module, values, hypercare, golive };
+      });
+    }
+
+    function developmentEffortRowsForOffer(offer, moduleNames) {
+      const answers = offerJson(offer.development_answers);
+      const selectedDevelopments = new Map();
+      (window.developmentQuestions || []).forEach(item => {
+        const value = answers[String(item.no)];
+        if (!value || value === "Seçiniz" || value === "Hayır") return;
+        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
+        if (multiplier > 0) selectedDevelopments.set(item.name, multiplier);
+      });
+      const moduleSet = new Set(moduleNames);
+      const grouped = new Map();
+      developmentEfforts.forEach(([, name, moduleName, effort]) => {
+        const multiplier = selectedDevelopments.get(name);
+        if (!multiplier || (moduleName !== "Hepsi" && !moduleSet.has(moduleName))) return;
+        if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
+        const calculatedEffort = effort * multiplier;
+        if (moduleName === "Hepsi") moduleNames.forEach(module => grouped.get(name)[module] += calculatedEffort);
+        else grouped.get(name)[moduleName] += calculatedEffort;
+      });
+      return [...grouped.entries()].map(([name, values]) => ({ name, values }));
+    }
+
+    function backlogSheet(rows, widths) {
+      const sheet = XLSX.utils.aoa_to_sheet(rows);
+      sheet["!cols"] = widths.map(width => ({ wch: width }));
+      sheet["!autofilter"] = { ref: sheet["!ref"] };
+      return sheet;
+    }
+
+    function excelFormula(formula) {
+      return { t: "n", f: formula, v: 0 };
+    }
+
+    function buildBacklogWorkbook(offer) {
+      if (!window.XLSX) throw new Error("Excel bileşeni yüklenemedi.");
+      const projectRows = projectEffortRowsForOffer(offer);
+      const moduleNames = projectRows.map(row => row.module);
+      const projectHeaders = ["Modül", ...phaseHeaders, "Hypercare", "Go-Live Support", "Toplam"];
+      const projectLastValueColumn = XLSX.utils.encode_col(projectHeaders.length - 2);
+      const projectData = [
+        projectHeaders,
+        ...projectRows.map((row, index) => {
+          const excelRow = index + 2;
+          return [
+            row.module,
+            ...phaseHeaders.map(phase => row.values[phase] || 0),
+            row.hypercare,
+            row.golive,
+            excelFormula(`SUM(B${excelRow}:${projectLastValueColumn}${excelRow})`)
+          ];
+        })
+      ];
+      if (projectRows.length) {
+        const totalRow = projectRows.length + 2;
+        projectData.push([
+          "Toplam",
+          ...projectHeaders.slice(1).map((_, index) => {
+            const column = XLSX.utils.encode_col(index + 1);
+            return excelFormula(`SUM(${column}2:${column}${totalRow - 1})`);
+          })
+        ]);
+      }
+
+      const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
+      const developmentHeaders = ["Geliştirme", ...moduleNames, "Toplam"];
+      const developmentLastModuleColumn = XLSX.utils.encode_col(Math.max(moduleNames.length, 1));
+      const developmentData = [
+        developmentHeaders,
+        ...developmentRows.map((row, index) => {
+          const excelRow = index + 2;
+          return [
+            row.name,
+            ...moduleNames.map(module => row.values[module] || 0),
+            moduleNames.length ? excelFormula(`SUM(B${excelRow}:${developmentLastModuleColumn}${excelRow})`) : 0
+          ];
+        })
+      ];
+      if (moduleNames.length) {
+        const totalRow = developmentRows.length + 2;
+        developmentData.push([
+          "Toplam",
+          ...developmentHeaders.slice(1).map((_, index) => {
+            const column = XLSX.utils.encode_col(index + 1);
+            return developmentRows.length ? excelFormula(`SUM(${column}2:${column}${totalRow - 1})`) : 0;
+          })
+        ]);
+      }
+
+      const workbook = XLSX.utils.book_new();
+      workbook.Workbook = { CalcPr: { calcMode: "auto", fullCalcOnLoad: "true" } };
+      workbook.Props = {
+        Title: `${offer.offer_no || "Teklif"} Backlog`,
+        Subject: "Modül bazlı proje ve geliştirme eforları",
+        Author: currentUser?.display_name || "NDBS TR"
+      };
+      XLSX.utils.book_append_sheet(
+        workbook,
+        backlogSheet(projectData, [24, ...phaseHeaders.map(() => 18), 14, 18, 14]),
+        "Proje Eforlari"
+      );
+      XLSX.utils.book_append_sheet(
+        workbook,
+        backlogSheet(developmentData, [48, ...moduleNames.map(() => 14), 14]),
+        "Gelistirme Eforlari"
+      );
+      return workbook;
+    }
+
+    function exportBacklogWorkbook(offer) {
+      const workbook = buildBacklogWorkbook(offer);
+      const safeName = String(offer.offer_no || offer.project_name || "Teklif")
+        .replace(/[\\/:*?"<>|]+/g, "-")
+        .trim();
+      XLSX.writeFile(workbook, `${safeName}-Backlog.xlsx`, { compression: true });
+    }
+
+    window.BacklogExport = { buildWorkbook: buildBacklogWorkbook };
+
+    function workflowButtons(row) {
+      const status = String(row.status || "DRAFT").toUpperCase();
+      if (status === "DRAFT") {
+        return `<button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button">${t("submit")}</button>`;
+      }
+      if (["REVIEW", "SUBMITTED", "APPROVED"].includes(status)) {
+        return `<button class="button primary" data-work-action="backlog" data-offer-id="${row.id}" type="button" ${status === "APPROVED" ? "" : "disabled"}>Backlog</button>`;
+      }
+      return "";
     }
 
     function renderAllWorks() {
@@ -3524,7 +3704,7 @@
                 <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
                 <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("change")}</button>
                 <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
-                <button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("submit")}</button>
+                ${workflowButtons(row)}
               </div>
             </td>
           </tr>
@@ -3594,6 +3774,23 @@
               await loadOffers();
               alert("Teklif onaya gönderildi.");
             });
+          }
+          if (action === "backlog") {
+            const summary = cachedOffers.find(offer => offer.id === offerId);
+            if (String(summary?.status || "").toUpperCase() !== "APPROVED") return;
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = "Hazırlanıyor";
+            try {
+              const offer = await window.EffortApi.getOffer(offerId);
+              exportBacklogWorkbook(offer);
+            } catch (error) {
+              console.error(error);
+              alert(`Backlog Excel oluşturulamadı: ${error.message}`);
+            } finally {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
           }
         });
       });
@@ -3675,14 +3872,15 @@
       const developmentTotal = renderDevelopmentEfforts();
       const localizationTotal = activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
       const hypercareTotal = selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0);
+      const goliveTotal = selectedModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0);
       setText("selectedDevelopmentEffort", fmt(developmentTotal));
       setText("developmentEffortTotal", fmt(developmentTotal));
-      setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + hypercareTotal));
+      setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal));
       renderDashboards({
         projectTotal,
         developmentTotal,
         localizationTotal,
-        hypercareTotal
+        hypercareTotal: hypercareTotal + goliveTotal
       });
     }
 
@@ -3842,6 +4040,7 @@
           developmentTotal: numericText("developmentEffortTotal"),
           localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
           hypercareTotal: selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
+          goliveTotal: selectedModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0),
           grandTotal: numericText("finalGrandTotal")
         }
       };
