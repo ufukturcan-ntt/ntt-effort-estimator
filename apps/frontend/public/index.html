@@ -2932,11 +2932,21 @@
       if (head) head.innerHTML = `<tr><th>Geliştirme</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>Toplam</th></tr>`;
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
+      const selectedDevelopments = new Map();
+      (window.developmentQuestions || []).forEach(item => {
+        const value = questionAnswers.developmentQuestions[String(item.no)];
+        if (!value || value === "Seçiniz" || value === "Hayır") return;
+        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
+        if (multiplier > 0) selectedDevelopments.set(item.name, multiplier);
+      });
       developmentEfforts.forEach(([type, name, moduleName, effort]) => {
+        const multiplier = selectedDevelopments.get(name);
+        if (!multiplier) return;
         if (moduleName !== "Hepsi" && !moduleSet.has(moduleName)) return;
         if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
-        if (moduleName === "Hepsi") moduleNames.forEach(module => grouped.get(name)[module] += effort);
-        else grouped.get(name)[moduleName] += effort;
+        const calculatedEffort = effort * multiplier;
+        if (moduleName === "Hepsi") moduleNames.forEach(module => grouped.get(name)[module] += calculatedEffort);
+        else grouped.get(name)[moduleName] += calculatedEffort;
       });
       const colTotals = Object.fromEntries(moduleNames.map(module => [module, 0]));
       const rowHtml = [...grouped.entries()].map(([name, values]) => {
@@ -2948,7 +2958,7 @@
       }).join("");
       const total = Object.values(colTotals).reduce((sum, value) => sum + value, 0);
       const totalRow = `<tr><td><strong>Toplam</strong></td>${moduleNames.map(module => `<td><strong>${fmt(colTotals[module])}</strong></td>`).join("")}<td><strong>${fmt(total)}</strong></td></tr>`;
-      body.innerHTML = moduleNames.length && grouped.size ? rowHtml + totalRow : `<tr><td colspan="${moduleNames.length + 2}">Geliştirme eforu için modül seçimi bekleniyor.</td></tr>`;
+      body.innerHTML = moduleNames.length && grouped.size ? rowHtml + totalRow : `<tr><td colspan="${moduleNames.length + 2}">Geliştirme eforu için seçim bekleniyor.</td></tr>`;
       setText("developmentEffortTotal", fmt(total));
       return total;
     }
@@ -3613,15 +3623,16 @@
       }, 0);
       setText("selectedDevelopmentCount", developmentAnswers.length);
       setText("developmentSelectedPill", `${developmentAnswers.length} seçili`);
-      setText("selectedDevelopmentEffort", fmt(developmentScore));
-      setText("developmentEffortTotal", fmt(developmentScore));
       const projectTotal = renderFinalEffort();
+      const developmentTotal = renderDevelopmentEfforts();
       const localizationTotal = activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
       const hypercareTotal = selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0);
-      setText("finalGrandTotal", fmt(projectTotal + developmentScore + localizationTotal + hypercareTotal));
+      setText("selectedDevelopmentEffort", fmt(developmentTotal));
+      setText("developmentEffortTotal", fmt(developmentTotal));
+      setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + hypercareTotal));
       renderDashboards({
         projectTotal,
-        developmentTotal: developmentScore,
+        developmentTotal,
         localizationTotal,
         hypercareTotal
       });
