@@ -2213,7 +2213,7 @@
         searchOpen: "Modül veya faz ara",
         searchHome: "Çalışma, müşteri veya teklif ara",
         welcome: "Hoş geldin Ufuk Turcan",
-        activeWork: "Aktif çalışma: Ufuk Enerji AŞ / S4 Dönüşüm · Teklif detayları ve giriş adımları",
+        activeWork: "Aktif çalışma",
         overviewLead: "Daha önce açtığın müşteri ve teklif çalışmalarını buradan takip edebilir, yeni teklif akışını başlatabilirsin.",
         totalWork: "Toplam çalışma",
         thisMonth: "Bu ay oluşturulan",
@@ -2340,7 +2340,7 @@
         searchOpen: "Search module or phase",
         searchHome: "Search work, customer or offer",
         welcome: "Welcome Ufuk Turcan",
-        activeWork: "Active work: Ufuk Energy Inc. / S4 Transformation · Offer details and input steps",
+        activeWork: "Active work",
         overviewLead: "Track your previous customer and offer works here, and start a new offer flow.",
         totalWork: "Total works",
         thisMonth: "Created this month",
@@ -2575,8 +2575,7 @@
       setTextContent("#hypercare .pill", t("supportPlan"));
       const search = document.getElementById("search");
       if (search) search.placeholder = document.getElementById("appShell")?.classList.contains("work-open") ? t("searchOpen") : t("searchHome");
-      const subtitle = document.getElementById("headerSubtitle");
-      if (subtitle) subtitle.textContent = document.getElementById("appShell")?.classList.contains("work-open") ? t("activeWork") : t("welcome");
+      updateWorkSubtitle();
       document.querySelectorAll("[data-save-offer]").forEach(button => {
         if (!button.disabled) button.textContent = t("save");
       });
@@ -3391,7 +3390,10 @@
         item.classList.toggle("active", item.dataset.adminSection === section);
       });
       document.querySelectorAll(".admin-section").forEach(panel => {
-        panel.classList.toggle("active", panel.dataset.adminPanel === section);
+        const isActive = panel.dataset.adminPanel === section;
+        panel.classList.toggle("active", isActive);
+        panel.hidden = !isActive;
+        panel.style.display = isActive ? "block" : "none";
       });
     }
 
@@ -3757,15 +3759,35 @@
       renderRows("moduleRows", rows.slice(0, 12));
     }
 
+    function currentWorkSubtitle() {
+      if (currentOfferMode === "new") {
+        return currentLanguage === "en"
+          ? "New offer · Offer details and input steps"
+          : "Yeni teklif · Teklif detayları ve giriş adımları";
+      }
+      const customer = document.getElementById("projectCustomer")?.value.trim();
+      const project = document.getElementById("projectName")?.value.trim();
+      const workName = [customer, project].filter(Boolean).join(" / ");
+      if (!workName) {
+        return currentLanguage === "en"
+          ? "Offer details and input steps"
+          : "Teklif detayları ve giriş adımları";
+      }
+      return currentLanguage === "en"
+        ? `Active work: ${workName} · Offer details and input steps`
+        : `Aktif çalışma: ${workName} · Teklif detayları ve giriş adımları`;
+    }
+
+    function updateWorkSubtitle() {
+      const app = document.getElementById("appShell");
+      const subtitle = document.getElementById("headerSubtitle") || document.querySelector("header .subtitle");
+      if (subtitle) subtitle.textContent = app?.classList.contains("work-open") ? currentWorkSubtitle() : t("welcome");
+    }
+
     function setWorkMode(isOpen) {
       const app = document.getElementById("appShell");
       app.classList.toggle("work-open", isOpen);
-      const subtitle = document.getElementById("headerSubtitle") || document.querySelector("header .subtitle");
-      if (subtitle) {
-        subtitle.textContent = isOpen
-          ? t("activeWork")
-          : t("welcome");
-      }
+      updateWorkSubtitle();
       const search = document.getElementById("search");
       if (search) search.placeholder = isOpen ? t("searchOpen") : t("searchHome");
     }
@@ -3960,7 +3982,10 @@
         const el = document.getElementById(id);
         if (!el || el.dataset.dirtyBound) return;
         el.dataset.dirtyBound = "true";
-        el.addEventListener("input", markDirty);
+        el.addEventListener("input", () => {
+          markDirty();
+          if (id === "projectCustomer" || id === "projectName") updateWorkSubtitle();
+        });
         el.addEventListener("change", markDirty);
       });
       markClean();
@@ -3978,6 +4003,10 @@
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
       document.querySelectorAll(".screen").forEach(x => x.classList.remove("active"));
       document.getElementById(screenId)?.classList.add("active");
+      if (screenId === "admin") {
+        const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
+        openAdminSection(activeSection);
+      }
       window.scrollTo({ top: 0, behavior: "auto" });
     }
 
