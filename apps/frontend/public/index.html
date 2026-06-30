@@ -93,6 +93,22 @@
     }
 
     .nav-group { display: grid; gap: 6px; }
+
+    .admin-tree {
+      display: none;
+      gap: 6px;
+      align-content: start;
+    }
+
+    .app.admin-mode .nav-group,
+    .app.admin-mode .side-card {
+      display: none;
+    }
+
+    .app.admin-mode .admin-tree {
+      display: grid;
+    }
+
     .nav-item {
       display: grid;
       grid-template-columns: 28px 1fr auto;
@@ -538,10 +554,6 @@
       display: none;
     }
 
-    .app:not(.work-open) .admin-tree {
-      display: grid;
-    }
-
     .app:not(.work-open) .detail-action,
     .app:not(.work-open) #overview > .hero,
     .app:not(.work-open) #overview > .grid.detail-preview,
@@ -782,24 +794,7 @@
     }
 
     .admin-shell {
-      display: grid;
-      grid-template-columns: 268px minmax(0, 1fr);
-      gap: 20px;
-      align-items: start;
-    }
-
-    .admin-tree {
-      position: sticky;
-      top: 104px;
-      display: grid;
-      gap: 6px;
-      padding: 18px;
-      border: 0;
-      border-radius: 0;
-      background: linear-gradient(180deg, var(--nav), var(--nav-2));
-      box-shadow: none;
-      min-height: calc(100vh - 146px);
-      align-content: start;
+      min-width: 0;
     }
 
     .admin-tree-item {
@@ -814,7 +809,6 @@
       padding: 11px 10px;
       text-align: left;
       font: inherit;
-      font-weight: 500;
       cursor: pointer;
     }
 
@@ -1474,6 +1468,7 @@
       .top-brand-logo { width: 138px; height: 40px; }
       .app:not(.work-open) .top-brand { flex-wrap: wrap; }
       .nav-group { display: flex; flex-direction: row; }
+      .app.admin-mode .admin-tree { display: flex; flex-direction: row; }
       .nav-item, .admin-tree-item { width: 46px; }
       header {
         grid-template-columns: 1fr;
@@ -1607,6 +1602,21 @@
             <button class="nav-item detail-nav" data-screen="effort" title="Efor">
               <span class="nav-icon">E</span><span>Efor Analizi</span><span class="nav-count">16</span>
             </button>
+          </nav>
+
+          <nav class="admin-tree" aria-label="Admin menüsü">
+            <button class="admin-tree-item active" data-admin-section="users" type="button"><span class="nav-icon">K</span><span>Kullanıcı Onayları</span><span class="nav-count">A</span></button>
+            <button class="admin-tree-item" data-admin-section="industries" type="button"><span class="nav-icon">E</span><span>Endüstri</span><span class="nav-count">D</span></button>
+            <button class="admin-tree-item" data-admin-section="implementations" type="button"><span class="nav-icon">İ</span><span>İmplementasyon Türü</span><span class="nav-count">I</span></button>
+            <button class="admin-tree-item" data-admin-section="systems" type="button"><span class="nav-icon">S</span><span>Sistem Türü</span><span class="nav-count">S</span></button>
+            <button class="admin-tree-item" data-admin-section="modules" type="button"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
+            <button class="admin-tree-item" data-admin-section="scope" type="button"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
+            <button class="admin-tree-item" data-admin-section="development" type="button"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
+            <button class="admin-tree-item" data-admin-section="restrictions" type="button"><span class="nav-icon">R</span><span>Question Restrictions</span><span class="nav-count">R</span></button>
+            <button class="admin-tree-item" data-admin-section="fixed" type="button"><span class="nav-icon">F</span><span>Fixed Days</span><span class="nav-count">FD</span></button>
+            <button class="admin-tree-item" data-admin-section="localization" type="button"><span class="nav-icon">L</span><span>Localization Efforts</span><span class="nav-count">LE</span></button>
+            <button class="admin-tree-item" data-admin-section="vmp" type="button"><span class="nav-icon">V</span><span>Variable + Module + Phase</span><span class="nav-count">VMP</span></button>
+            <button class="button primary" id="saveAdminConfigButton" type="button">Admin Ayarlarını Kaydet</button>
           </nav>
 
           <div class="side-card">
@@ -1955,20 +1965,6 @@
 
         <div class="screen" id="admin">
           <section class="admin-shell">
-            <aside class="admin-tree" aria-label="Admin menüsü">
-              <button class="admin-tree-item active" data-admin-section="users" type="button"><span class="nav-icon">K</span><span>Kullanıcı Onayları</span><span class="nav-count">A</span></button>
-              <button class="admin-tree-item" data-admin-section="industries" type="button"><span class="nav-icon">E</span><span>Endüstri</span><span class="nav-count">D</span></button>
-              <button class="admin-tree-item" data-admin-section="implementations" type="button"><span class="nav-icon">İ</span><span>İmplementasyon Türü</span><span class="nav-count">I</span></button>
-              <button class="admin-tree-item" data-admin-section="systems" type="button"><span class="nav-icon">S</span><span>Sistem Türü</span><span class="nav-count">S</span></button>
-              <button class="admin-tree-item" data-admin-section="modules" type="button"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
-              <button class="admin-tree-item" data-admin-section="scope" type="button"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
-              <button class="admin-tree-item" data-admin-section="development" type="button"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
-              <button class="admin-tree-item" data-admin-section="restrictions" type="button"><span class="nav-icon">R</span><span>Question Restrictions</span><span class="nav-count">R</span></button>
-              <button class="admin-tree-item" data-admin-section="fixed" type="button"><span class="nav-icon">F</span><span>Fixed Days</span><span class="nav-count">FD</span></button>
-              <button class="admin-tree-item" data-admin-section="localization" type="button"><span class="nav-icon">L</span><span>Localization Efforts</span><span class="nav-count">LE</span></button>
-              <button class="admin-tree-item" data-admin-section="vmp" type="button"><span class="nav-icon">V</span><span>Variable + Module + Phase</span><span class="nav-count">VMP</span></button>
-              <button class="button primary" id="saveAdminConfigButton" type="button">Admin Ayarlarını Kaydet</button>
-            </aside>
             <div class="admin-content">
               <section class="panel admin-section active" data-admin-panel="users">
                 <div class="panel-head"><h3 class="panel-title">Kullanıcı Onayları</h3><span class="pill">Admin</span></div>
@@ -3924,7 +3920,9 @@
       if (screenId === "admin" && !currentUser?.is_admin) {
         screenId = "overview";
       }
-      const homeScreens = new Set(["overview", "allworks", "admin"]);
+      const app = document.getElementById("appShell");
+      app.classList.toggle("admin-mode", screenId === "admin");
+      const homeScreens = new Set(["overview", "allworks"]);
       if (homeScreens.has(screenId) && !options.workMode) setWorkMode(false);
       if (!homeScreens.has(screenId) || options.workMode) setWorkMode(true);
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
