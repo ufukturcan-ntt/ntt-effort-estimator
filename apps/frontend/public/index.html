@@ -3386,6 +3386,26 @@
       }
     }
 
+    function openAdminSection(section) {
+      document.querySelectorAll(".admin-tree-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.adminSection === section);
+      });
+      document.querySelectorAll(".admin-section").forEach(panel => {
+        panel.classList.toggle("active", panel.dataset.adminPanel === section);
+      });
+    }
+
+    function bindAdminNavigation() {
+      const tree = document.querySelector(".admin-tree");
+      if (!tree || tree.dataset.navigationBound) return;
+      tree.dataset.navigationBound = "true";
+      tree.addEventListener("click", event => {
+        const button = event.target.closest(".admin-tree-item");
+        if (!button || !tree.contains(button)) return;
+        openAdminSection(button.dataset.adminSection);
+      });
+    }
+
     function renderAdminPage() {
       const data = window.adminSeedData || {};
       const projectDefinitions = (data.projectDefinitions || []).slice(1);
@@ -3415,14 +3435,7 @@
         button.addEventListener("click", () => addAdminMatrixRow(button.dataset.adminAddMatrix));
       });
       document.getElementById("addAdminModuleButton")?.addEventListener("click", addAdminModule);
-      document.querySelectorAll(".admin-tree-item").forEach(button => {
-        if (button.dataset.bound) return;
-        button.dataset.bound = "true";
-        button.addEventListener("click", () => {
-          document.querySelectorAll(".admin-tree-item").forEach(item => item.classList.toggle("active", item === button));
-          document.querySelectorAll(".admin-section").forEach(panel => panel.classList.toggle("active", panel.dataset.adminPanel === button.dataset.adminSection));
-        });
-      });
+      bindAdminNavigation();
       const saveButton = document.getElementById("saveAdminConfigButton");
       if (saveButton && !saveButton.dataset.bound) {
         saveButton.dataset.bound = "true";
@@ -4278,6 +4291,7 @@
       renderWorkbookDrivenScreens();
     });
 
+    bindAdminNavigation();
     renderRows("moduleRows", modules.slice(0, 12));
     renderPhases();
     refreshProjectDefinitionSelects();
