@@ -1872,7 +1872,7 @@
         <div class="screen" id="localization">
           <section class="grid">
             <div class="panel">
-              <div class="panel-head"><h3 class="panel-title">Localization</h3><span class="pill">Ülke seçimi</span></div>
+              <div class="panel-head"><h3 class="panel-title">Localization</h3><span class="pill">Ülke ve modül seçimi</span></div>
               <div class="form-grid" id="localizationControls"></div>
             </div>
             <div class="panel">
@@ -1920,7 +1920,7 @@
             </section>
 
             <section class="panel">
-              <div class="panel-head"><h3 class="panel-title">Lokalizasyon eforları</h3><span class="pill">Ülke x Faz</span></div>
+              <div class="panel-head"><h3 class="panel-title">Lokalizasyon eforları</h3><span class="pill">Modül x Ülke x Faz</span></div>
               <div class="table-wrap compact-table effort-table">
                 <table>
                   <thead id="localizationEffortHead"></thead>
@@ -2094,20 +2094,39 @@
       {module:"NTT Data POS", group:"NTT Own IP", selected:true, team:""}
     ];
 
+    function normalizeLocalizationEffortRows(rows = []) {
+      const normalizedRows = rows.map(row => [...row]);
+      const headerIndex = normalizedRows.findIndex(row => row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke"));
+      if (headerIndex < 0) return normalizedRows;
+      const headers = normalizedRows[headerIndex];
+      const moduleIndex = headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()));
+      if (moduleIndex >= 0) return normalizedRows;
+      headers.splice(1, 0, "Modül");
+      normalizedRows.slice(headerIndex + 1).forEach(row => row.splice(1, 0, "FI"));
+      return normalizedRows;
+    }
+
     function buildLocalizationCatalog() {
-      const rows = window.adminSeedData?.localizationEfforts || [];
+      const rows = normalizeLocalizationEffortRows(window.adminSeedData?.localizationEfforts || []);
+      window.adminSeedData.localizationEfforts = rows;
       const headerIndex = rows.findIndex(row => row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke"));
       const headers = rows[headerIndex] || [];
+      const countryIndex = headers.findIndex(header => ["Ülke", "Ulke", "Ãœlke"].includes(String(header || "").trim()));
+      const moduleIndex = headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()));
+      const phaseEntries = headers
+        .map((phase, index) => ({ phase, index }))
+        .filter(({ index }) => index !== countryIndex && index !== moduleIndex);
       const parsed = (headerIndex >= 0 ? rows.slice(headerIndex + 1) : [])
-        .filter(row => row[0])
+        .filter(row => row[countryIndex])
         .map(row => ({
-          country: row[0],
+          country: row[countryIndex],
+          module: row[moduleIndex] || "FI",
           selected: false,
-          values: Object.fromEntries(headers.slice(1).map((phase, index) => [phase, Number(row[index + 1]) || 0]))
+          values: Object.fromEntries(phaseEntries.map(({ phase, index }) => [phase, Number(row[index]) || 0]))
         }));
       return parsed.length ? parsed : [
-        {country:"Rusya", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-        {country:"Birleşik Arap Emirlikleri", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}}
+        {country:"Rusya", module:"FI", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
+        {country:"Birleşik Arap Emirlikleri", module:"FI", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}}
       ];
     }
 
@@ -2290,7 +2309,7 @@
         potentialImpact: "gün potansiyel etki",
         moduleSelection: "Modül Seçimi",
         teamSplit: "Ekip ayrıştırma gerekli mi?",
-        countrySelection: "Ülke seçimi",
+        countrySelection: "Ülke ve modül seçimi",
         localizationEffort: "Lokalizasyon eforu",
         supportPlan: "Destek planı",
         selected: "seçili"
@@ -2417,7 +2436,7 @@
         potentialImpact: "days potential impact",
         moduleSelection: "Module Selection",
         teamSplit: "Need team split?",
-        countrySelection: "Country selection",
+        countrySelection: "Country and module selection",
         localizationEffort: "Localization effort",
         supportPlan: "Support plan",
         selected: "selected"
@@ -2769,15 +2788,19 @@
     function renderLocalizationControls() {
       const target = document.getElementById("localizationControls");
       if (!target) return;
-      target.innerHTML = localizationCatalog.map((item, index) => `
+      const selectedModules = new Set(selectedModuleNames());
+      const availableRows = localizationCatalog
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => selectedModules.has(item.module));
+      target.innerHTML = availableRows.map(({ item, index }) => `
         <div class="input-field">
-          <label>${item.country}</label>
+          <label>${item.country} · ${item.module}</label>
           <select data-localization-index="${index}">
             <option value="true" ${item.selected ? "selected" : ""}>${t("exists")}</option>
             <option value="false" ${!item.selected ? "selected" : ""}>${t("none")}</option>
           </select>
         </div>
-      `).join("");
+      `).join("") || `<div class="input-field"><label>Seçili modüller için lokalizasyon tanımı bulunmuyor.</label></div>`;
       target.querySelectorAll("[data-localization-index]").forEach(select => {
         select.addEventListener("change", () => {
           localizationCatalog[Number(select.dataset.localizationIndex)].selected = select.value === "true";
@@ -2788,7 +2811,8 @@
     }
 
     function activeLocalizations() {
-      return localizationCatalog.filter(item => item.selected);
+      const selectedModules = new Set(selectedModuleNames());
+      return localizationCatalog.filter(item => item.selected && selectedModules.has(item.module));
     }
 
     function renderLocalizationEfforts() {
@@ -2799,7 +2823,7 @@
       const html = rows.length ? rows.map(row => `
         <div class="step">
           <span class="step-no">${row.country.slice(0,2).toUpperCase()}</span>
-          <div><strong>${row.country}</strong><span>Proje eforlarıyla aynı faz yapısı</span></div>
+          <div><strong>${row.country}</strong><span>${row.module} modülü · Proje eforlarıyla aynı faz yapısı</span></div>
           <b>${fmt(sumPhases(row.values))}g</b>
         </div>
       `).join("") : `<div class="step"><span class="step-no">0</span><div><strong>Ülke seçili değil</strong><span>Lokalizasyon eforu oluşmadı</span></div><b>0g</b></div>`;
@@ -2812,21 +2836,22 @@
     function renderLocalizationEffortTable(rows = activeLocalizations()) {
       const head = document.getElementById("localizationEffortHead");
       const body = document.getElementById("localizationEffortRows");
-      if (head) head.innerHTML = `<tr><th>Ülke</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>Modül</th><th>Ülke</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th></tr>`;
       if (!body) return;
       const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
       const rowHtml = rows.map(row => {
         phaseHeaders.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
         return `
           <tr>
+            <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
             <td><span class="module-chip"><span class="module-initial">${row.country.slice(0,2).toUpperCase()}</span>${row.country}</span></td>
             ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
             <td><strong>${fmt(sumPhases(row.values))}</strong></td>
           </tr>
         `;
       }).join("");
-      const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
-      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 2}">Lokalizasyon seçimi yapılmadı.</td></tr>`;
+      const totalRow = `<tr><td colspan="2"><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
+      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 3}">Lokalizasyon seçimi yapılmadı.</td></tr>`;
     }
 
     function hypercareValue(moduleName) {
@@ -2860,7 +2885,13 @@
           markDirty();
           const rowTotal = document.querySelector(`[data-hyper-total="${CSS.escape(input.dataset.hyper)}"]`);
           if (rowTotal) rowTotal.textContent = fmt(hypercareValue(input.dataset.hyper));
-          updateHypercareTotals();
+          const support = updateHypercareTotals();
+          const projectTotal = renderFinalEffort();
+          const developmentTotal = numericText("developmentEffortTotal");
+          const localizationTotal = activeLocalizations().reduce((sum, item) => sum + sumPhases(item.values), 0);
+          setText("finalHypercareTotal", fmt(support.hypercare));
+          setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + support.hypercare));
+          renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: support.hypercare });
         });
       });
       return updateHypercareTotals();
@@ -2898,22 +2929,25 @@
     function renderFinalEffort() {
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
-      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Hypercare</th><th>Toplam</th></tr>`;
       const rows = finalRowsForSelectedModules();
       const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
       if (body) {
         const rowHtml = rows.map(row => {
           phaseHeaders.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
+          const hypercare = hypercareValue(row.module);
           return `
             <tr>
               <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
               ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
-              <td><strong>${fmt(row.total)}</strong></td>
+              <td>${fmt(hypercare)}</td>
+              <td><strong>${fmt(row.total + hypercare)}</strong></td>
             </tr>
           `;
         }).join("");
-        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
-        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 2}">Modül seçimi yapılmadı.</td></tr>`;
+        const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
+        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + hypercareTotal)}</strong></td></tr>`;
+        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 3}">Modül seçimi yapılmadı.</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
       setText("projectEffortTotal", fmt(total));
@@ -2954,7 +2988,8 @@
       }).join("");
       const total = Object.values(colTotals).reduce((sum, value) => sum + value, 0);
       const totalRow = `<tr><td><strong>Toplam</strong></td>${moduleNames.map(module => `<td><strong>${fmt(colTotals[module])}</strong></td>`).join("")}<td><strong>${fmt(total)}</strong></td></tr>`;
-      body.innerHTML = moduleNames.length && grouped.size ? rowHtml + totalRow : `<tr><td colspan="${moduleNames.length + 2}">Geliştirme eforu için seçim bekleniyor.</td></tr>`;
+      const emptyRow = `<tr><td colspan="${moduleNames.length + 2}">Geliştirme eforu için seçim bekleniyor.</td></tr>`;
+      body.innerHTML = moduleNames.length ? (grouped.size ? rowHtml : emptyRow) + totalRow : emptyRow;
       setText("developmentEffortTotal", fmt(total));
       return total;
     }
@@ -3038,6 +3073,7 @@
       if (normalized === "Kaynak Tipi") return { options: ["Değişken", "Modül"], multiple: false };
       if (normalized === "Kaynak") return { options: adminQuestionNames(), multiple: false };
       if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...moduleCatalog.map(item => item.module)], multiple: false };
+      if (["Modül", "Modul", "Module"].includes(normalized)) return { options: moduleCatalog.map(item => item.module), multiple: false };
       if (["Efor Bazı", "Efor BazÄ±"].includes(normalized)) return { options: ["Sabit", "Katsayı", "1 Farklı Şirket Kurgusu", "1 Entegrasyon bazında"], multiple: false };
       if (["Ülke", "Ulke", "Ãœlke"].includes(normalized)) return { options: localizationCatalog.map(item => item.country), multiple: false };
       return null;
@@ -3405,6 +3441,7 @@
       const selectedCount = selectedModuleNames().length;
       setText("selectedModuleCount", selectedCount);
       setText("moduleNavCount", selectedCount);
+      renderLocalizationControls();
       const localizationTotal = renderLocalizationEfforts();
       const projectTotal = renderFinalEffort();
       const developmentTotal = renderDevelopmentEfforts();
@@ -3739,7 +3776,7 @@
       const projectName = document.getElementById("projectName")?.value || "";
       const implementationType = document.getElementById("projectImplementation")?.value || "";
       const moduleSelection = Object.fromEntries([...moduleState.entries()]);
-      const localizationSelection = Object.fromEntries(localizationCatalog.map(item => [item.country, item.selected]));
+      const localizationSelection = Object.fromEntries(localizationCatalog.map(item => [`${item.country}::${item.module}`, item.selected]));
       const hypercareInputs = Object.fromEntries([...hypercareState.entries()]);
       return {
         userId: currentUser?.id,
@@ -3879,7 +3916,7 @@
       });
       localizationCatalog.forEach(item => {
         item.selected = mode === "existing"
-          ? ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country)
+          ? item.module === "FI" && ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country)
           : false;
       });
       resetHypercareState(mode);
