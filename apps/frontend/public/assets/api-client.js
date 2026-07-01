@@ -42,10 +42,13 @@ window.EffortApi = {
       body: JSON.stringify({ userId })
     });
   },
-  approveOffer(id, adminUserId) {
+  pendingApprovalOffers(approverUserId) {
+    return this.request(`/api/offers/pending-approval?approverUserId=${encodeURIComponent(approverUserId)}`);
+  },
+  approveOffer(id, approverUserId) {
     return this.request(`/api/offers/${encodeURIComponent(id)}/approve`, {
       method: "POST",
-      body: JSON.stringify({ adminUserId })
+      body: JSON.stringify({ approverUserId })
     });
   },
   deleteOffer(id) {

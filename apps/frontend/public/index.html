@@ -1561,6 +1561,7 @@
             <button class="button home-action" id="dashboardButton" type="button">Dashboard</button>
             <button class="button home-action" id="allWorksButton" type="button">Tüm Çalışmalarım</button>
             <button class="button home-action" id="newOfferButton" type="button">+ Yeni Teklif</button>
+            <button class="button home-action approver-only" id="pendingApprovalsButton" type="button" style="display:none">Onay Bekleyenler</button>
             <button class="button home-action admin-only" id="topAdminButton" type="button" style="display:none">Admin</button>
           </div>
           <p class="subtitle" id="headerSubtitle">Hoş geldin Ufuk Turcan</p>
@@ -1793,6 +1794,31 @@
                 <button class="button" type="button">‹ Önceki</button>
                 <button class="button" type="button">Sonraki ›</button>
               </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="screen" id="pendingapprovals">
+          <section class="panel">
+            <div class="panel-head">
+              <h3 class="panel-title">Onay Bekleyen Teklifler</h3>
+              <span class="pill"><span id="pendingApprovalCount">0</span> teklif</span>
+            </div>
+            <div class="list-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Proje No</th>
+                    <th>Proje İsmi</th>
+                    <th>Müşteri</th>
+                    <th>Endüstri</th>
+                    <th>Toplam Efor</th>
+                    <th>Gönderim Tarihi</th>
+                    <th>İşlem</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingApprovalRows"></tbody>
+              </table>
             </div>
           </section>
         </div>
@@ -2199,6 +2225,7 @@
     let currentOfferStatus = "DRAFT";
     let currentOfferAccessMode = "edit";
     let cachedOffers = [];
+    let cachedPendingApprovals = [];
     let currentLanguage = localStorage.getItem("effortLanguage") || document.getElementById("languageSelect")?.value || "tr";
 
     const i18n = {
@@ -2223,6 +2250,7 @@
         flowText: "Project Definition, Scope, Developments, Modules, Localization ve Hypercare girişleri oturum sonrası açılır.",
         dashboard: "Dashboard",
         allWorks: "Tüm Çalışmalarım",
+        pendingApprovals: "Onay Bekleyenler",
         newOffer: "+ Yeni Teklif",
         admin: "Admin",
         searchOpen: "Modül veya faz ara",
@@ -2266,7 +2294,7 @@
         backHome: "İlk Ekrana Dön",
         firstScreen: "İlk Ekran",
         draft: "Taslak",
-        review: "Onayda",
+        review: "Onayda Bekliyor",
         approved: "Onaylandı",
         reference: "Referans",
         offerSteps: "Teklif adımları",
@@ -2351,6 +2379,7 @@
         flowText: "Project Definition, Scope, Developments, Modules, Localization and Hypercare inputs open after sign-in.",
         dashboard: "Dashboard",
         allWorks: "All My Works",
+        pendingApprovals: "Pending Approvals",
         newOffer: "+ New Offer",
         admin: "Admin",
         searchOpen: "Search module or phase",
@@ -2394,7 +2423,7 @@
         backHome: "Back to Dashboard",
         firstScreen: "Dashboard",
         draft: "Draft",
-        review: "In Approval",
+        review: "Pending Approval",
         approved: "Approved",
         reference: "Reference",
         offerSteps: "Offer steps",
@@ -2528,6 +2557,7 @@
       setTextContent("#dashboardButton", t("dashboard"));
       setTextContent("#allWorksButton", t("allWorks"));
       setTextContent("#newOfferButton", t("newOffer"));
+      setTextContent("#pendingApprovalsButton", t("pendingApprovals"));
       setTextContent("#topAdminButton", t("admin"));
       setTexts(".detail-nav span:nth-child(2)", [
         t("projectDefinition"),
@@ -3425,6 +3455,11 @@
     }
 
     function openAdminSection(section) {
+      const content = document.querySelector(".admin-content");
+      if (content) {
+        content.hidden = false;
+        content.style.setProperty("display", "block", "important");
+      }
       document.querySelectorAll(".admin-tree-item").forEach(item => {
         item.classList.toggle("active", item.dataset.adminSection === section);
       });
@@ -3432,14 +3467,22 @@
         const isActive = panel.dataset.adminPanel === section;
         panel.classList.toggle("active", isActive);
         panel.hidden = !isActive;
-        panel.style.display = isActive ? "block" : "none";
+        panel.style.setProperty("display", isActive ? "block" : "none", "important");
       });
     }
+
+    window.openAdminSection = openAdminSection;
 
     function bindAdminNavigation() {
       const tree = document.querySelector(".admin-tree");
       if (!tree || tree.dataset.navigationBound) return;
       tree.dataset.navigationBound = "true";
+      tree.querySelectorAll(".admin-tree-item").forEach(button => {
+        button.addEventListener("click", event => {
+          event.preventDefault();
+          openAdminSection(button.dataset.adminSection);
+        });
+      });
       tree.addEventListener("click", event => {
         const button = event.target.closest(".admin-tree-item");
         if (!button || !tree.contains(button)) return;
@@ -3851,6 +3894,45 @@
       }
     }
 
+    function renderPendingApprovals() {
+      const target = document.getElementById("pendingApprovalRows");
+      setText("pendingApprovalCount", cachedPendingApprovals.length);
+      if (!target) return;
+      target.innerHTML = cachedPendingApprovals.map(offer => `
+        <tr>
+          <td>${offer.offer_no || ""}</td>
+          <td>${offer.project_name || offer.title || "Yeni teklif"}</td>
+          <td>${offer.customer_name || ""}</td>
+          <td>${offer.industry || ""}</td>
+          <td>${fmt(offer.total_effort || 0)}g</td>
+          <td>${offer.submitted_at ? new Date(offer.submitted_at).toLocaleDateString("tr-TR") : ""}</td>
+          <td><button class="button primary" data-approve-offer="${offer.id}" type="button">Onayla</button></td>
+        </tr>
+      `).join("") || `<tr><td colspan="7">Onay bekleyen teklif bulunmuyor.</td></tr>`;
+      target.querySelectorAll("[data-approve-offer]").forEach(button => {
+        button.addEventListener("click", () => {
+          confirmAction("Bu teklifi onaylamak istediğinize emin misiniz?", async () => {
+            button.disabled = true;
+            button.textContent = "Onaylanıyor";
+            const approved = await window.EffortApi.approveOffer(button.dataset.approveOffer, currentUser.id);
+            cachedPendingApprovals = cachedPendingApprovals.filter(offer => offer.id !== approved.id);
+            renderPendingApprovals();
+            alert("Teklif onaylandı.");
+          });
+        });
+      });
+    }
+
+    async function loadPendingApprovals() {
+      if (!currentUser?.can_approve_offers && !currentUser?.is_admin) {
+        cachedPendingApprovals = [];
+        renderPendingApprovals();
+        return;
+      }
+      cachedPendingApprovals = await window.EffortApi.pendingApprovalOffers(currentUser.id);
+      renderPendingApprovals();
+    }
+
     const questionAnswers = { scopeQuestions: {}, developmentQuestions: {} };
 
     function getProjectFilters() {
@@ -4155,8 +4237,12 @@
 
     function applyUserPermissions() {
       const isAdmin = Boolean(currentUser?.is_admin || currentUser?.role === "ADMIN");
+      const canApproveOffers = Boolean(currentUser?.can_approve_offers || isAdmin);
       document.querySelectorAll(".admin-only").forEach(el => {
         el.style.display = isAdmin ? "" : "none";
+      });
+      document.querySelectorAll(".approver-only").forEach(el => {
+        el.style.display = canApproveOffers ? "" : "none";
       });
     }
 
@@ -4234,9 +4320,12 @@
       if (screenId === "admin" && !currentUser?.is_admin) {
         screenId = "overview";
       }
+      if (screenId === "pendingapprovals" && !currentUser?.can_approve_offers && !currentUser?.is_admin) {
+        screenId = "overview";
+      }
       const app = document.getElementById("appShell");
       app.classList.toggle("admin-mode", screenId === "admin");
-      const homeScreens = new Set(["overview", "allworks"]);
+      const homeScreens = new Set(["overview", "allworks", "pendingapprovals"]);
       if (homeScreens.has(screenId) && !options.workMode) setWorkMode(false);
       if (!homeScreens.has(screenId) || options.workMode) setWorkMode(true);
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
@@ -4492,6 +4581,11 @@
     document.getElementById("allWorksButton").addEventListener("click", async () => {
       await loadOffers();
       guardedOpenScreen("allworks");
+    });
+
+    document.getElementById("pendingApprovalsButton").addEventListener("click", async () => {
+      await loadPendingApprovals();
+      guardedOpenScreen("pendingapprovals");
     });
 
     document.getElementById("newOfferButton").addEventListener("click", () => {

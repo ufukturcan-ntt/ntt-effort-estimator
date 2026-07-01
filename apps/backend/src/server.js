@@ -33,6 +33,27 @@ async function approvalSettings() {
   return result.rows[0]?.payload || {};
 }
 
+function configuredApproverEmails(value) {
+  return String(value || "")
+    .split(/[;,]/)
+    .map(email => normalizeEmail(email))
+    .filter(Boolean);
+}
+
+async function isOfferApprover(userId) {
+  if (!userId) return false;
+  const result = await query(
+    `select email, is_admin from app_user where id = $1 and status = 'APPROVED'`,
+    [userId]
+  );
+  const user = result.rows[0];
+  if (!user) return false;
+  if (user.is_admin) return true;
+  const settings = await approvalSettings();
+  const configured = settings.offerApproverEmail || process.env.OFFER_APPROVER_EMAIL || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
+  return configuredApproverEmails(configured).includes(normalizeEmail(user.email));
+}
+
 async function sendApprovalMail(user) {
   const settings = await approvalSettings();
   const approverEmail = settings.userApproverEmail || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
@@ -115,7 +136,9 @@ app.post("/api/login", async (req, res, next) => {
       [normalizedEmail, password]
     );
     if (!result.rowCount) return res.status(401).json({ error: "User is not approved or credentials are invalid" });
-    res.json(result.rows[0]);
+    const user = result.rows[0];
+    user.can_approve_offers = await isOfferApprover(user.id);
+    res.json(user);
   } catch (error) {
     next(error);
   }
@@ -222,6 +245,24 @@ app.get("/api/offers", async (req, res, next) => {
        order by updated_at desc
        limit 200`,
       [userId || null]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/offers/pending-approval", async (req, res, next) => {
+  try {
+    const approverUserId = req.query.approverUserId;
+    if (!(await isOfferApprover(approverUserId))) return res.status(403).json({ error: "Offer approver authorization required" });
+    const result = await query(
+      `select id, offer_no, title, customer_name, project_name, industry, implementation_type,
+              system_type, status, total_effort, submitted_at, updated_at
+       from offer
+       where status = 'SUBMITTED'
+       order by submitted_at asc nulls last, updated_at asc
+       limit 200`
     );
     res.json(result.rows);
   } catch (error) {
@@ -355,8 +396,8 @@ app.post("/api/offers/:id/submit", async (req, res, next) => {
 
 app.post("/api/offers/:id/approve", async (req, res, next) => {
   try {
-    const adminUserId = req.body?.adminUserId;
-    if (!(await isAdminUser(adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const approverUserId = req.body?.approverUserId || req.body?.adminUserId;
+    if (!(await isOfferApprover(approverUserId))) return res.status(403).json({ error: "Offer approver authorization required" });
     const result = await query(
       `update offer
        set status = 'APPROVED',
@@ -364,10 +405,11 @@ app.post("/api/offers/:id/approve", async (req, res, next) => {
            approved_at = now(),
            updated_at = now()
        where id = $1
+         and status = 'SUBMITTED'
        returning *`,
-      [req.params.id, adminUserId]
+      [req.params.id, approverUserId]
     );
-    if (!result.rowCount) return res.status(404).json({ error: "Offer not found" });
+    if (!result.rowCount) return res.status(409).json({ error: "Teklif onay beklemiyor veya bulunamadı" });
     res.json(result.rows[0]);
   } catch (error) {
     next(error);
