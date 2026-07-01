@@ -28,8 +28,14 @@ function publicBaseUrl() {
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 }
 
+async function approvalSettings() {
+  const result = await query(`select payload from admin_config where entity = 'approvalSettings'`);
+  return result.rows[0]?.payload || {};
+}
+
 async function sendApprovalMail(user) {
-  const approverEmail = process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
+  const settings = await approvalSettings();
+  const approverEmail = settings.userApproverEmail || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
   if (!approverEmail) {
     console.log(`Approval requested for ${user.email}. No APPROVER_EMAIL configured.`);
     return;
@@ -61,7 +67,8 @@ async function sendApprovalMail(user) {
 }
 
 async function sendOfferApprovalMail(offer) {
-  const approverEmail = process.env.OFFER_APPROVER_EMAIL || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
+  const settings = await approvalSettings();
+  const approverEmail = settings.offerApproverEmail || process.env.OFFER_APPROVER_EMAIL || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
   if (!approverEmail) {
     console.log(`Offer approval requested for ${offer.offer_no}. No OFFER_APPROVER_EMAIL configured.`);
     return;
@@ -395,10 +402,19 @@ app.delete("/api/offers/:id", async (req, res, next) => {
   }
 });
 
-app.get("/api/admin", async (_req, res, next) => {
+app.get("/api/admin", async (req, res, next) => {
   try {
     const result = await query(`select entity, payload from admin_config order by entity`);
-    res.json(Object.fromEntries(result.rows.map(row => [row.entity, row.payload])));
+    const config = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    if (await isAdminUser(req.query.userId)) {
+      config.approvalSettings = {
+        userApproverEmail: config.approvalSettings?.userApproverEmail || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL || "",
+        offerApproverEmail: config.approvalSettings?.offerApproverEmail || process.env.OFFER_APPROVER_EMAIL || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL || ""
+      };
+    } else {
+      delete config.approvalSettings;
+    }
+    res.json(config);
   } catch (error) {
     next(error);
   }
@@ -406,12 +422,22 @@ app.get("/api/admin", async (_req, res, next) => {
 
 app.put("/api/admin/:entity", async (req, res, next) => {
   try {
+    if (!(await isAdminUser(req.query.adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const payload = req.body || {};
+    if (req.params.entity === "approvalSettings") {
+      const emails = [payload.userApproverEmail, payload.offerApproverEmail].filter(Boolean);
+      if (emails.some(email => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()))) {
+        return res.status(400).json({ error: "Geçerli bir onay e-posta adresi girin" });
+      }
+      payload.userApproverEmail = String(payload.userApproverEmail || "").trim();
+      payload.offerApproverEmail = String(payload.offerApproverEmail || "").trim();
+    }
     const result = await query(
       `insert into admin_config (entity, payload)
        values ($1, $2::jsonb)
        on conflict (entity) do update set payload = excluded.payload, updated_at = now()
        returning entity, payload`,
-      [req.params.entity, JSON.stringify(req.body || {})]
+      [req.params.entity, JSON.stringify(payload)]
     );
     res.json(result.rows[0]);
   } catch (error) {

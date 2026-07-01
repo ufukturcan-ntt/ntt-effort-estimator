@@ -1606,6 +1606,7 @@
 
           <nav class="admin-tree" aria-label="Admin menüsü">
             <button class="admin-tree-item active" data-admin-section="users" type="button"><span class="nav-icon">K</span><span>Kullanıcı Onayları</span><span class="nav-count">A</span></button>
+            <button class="admin-tree-item" data-admin-section="approvals" type="button"><span class="nav-icon">O</span><span>Onay Ayarları</span><span class="nav-count">@</span></button>
             <button class="admin-tree-item" data-admin-section="industries" type="button"><span class="nav-icon">E</span><span>Endüstri</span><span class="nav-count">D</span></button>
             <button class="admin-tree-item" data-admin-section="implementations" type="button"><span class="nav-icon">İ</span><span>İmplementasyon Türü</span><span class="nav-count">I</span></button>
             <button class="admin-tree-item" data-admin-section="systems" type="button"><span class="nav-icon">S</span><span>Sistem Türü</span><span class="nav-count">S</span></button>
@@ -1970,6 +1971,19 @@
                 <div class="panel-head"><h3 class="panel-title">Kullanıcı Onayları</h3><span class="pill">Admin</span></div>
                 <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Talep Tarihi</th><th>İşlem</th></tr></thead><tbody id="pendingUsersRows"></tbody></table></div>
               </section>
+              <section class="panel admin-section" data-admin-panel="approvals">
+                <div class="panel-head"><h3 class="panel-title">Onay Ayarları</h3><span class="pill">E-posta</span></div>
+                <div class="form-grid">
+                  <div class="input-field">
+                    <label for="userApproverEmail">Kullanıcı erişim onay adresi</label>
+                    <input id="userApproverEmail" type="email" autocomplete="off" />
+                  </div>
+                  <div class="input-field">
+                    <label for="offerApproverEmail">Teklif onay adresi</label>
+                    <input id="offerApproverEmail" type="email" autocomplete="off" />
+                  </div>
+                </div>
+              </section>
               <section class="panel admin-section" data-admin-panel="industries">
                 <div class="panel-head"><h3 class="panel-title">Endüstri Tanımları</h3><button class="button primary" data-admin-add-list="adminIndustryList" type="button">+ Endüstri</button></div>
                 <div class="definition-list" id="adminIndustryList"></div>
@@ -2277,6 +2291,7 @@
         none: "Yok",
         countPlaceholder: "Adet",
         adminUsers: "Kullanıcı Onayları",
+        adminApprovals: "Onay Ayarları",
         adminIndustries: "Endüstri",
         adminImplementations: "İmplementasyon Türü",
         adminSystems: "Sistem Türü",
@@ -2404,6 +2419,7 @@
         none: "No",
         countPlaceholder: "Qty",
         adminUsers: "User Approvals",
+        adminApprovals: "Approval Settings",
         adminIndustries: "Industries",
         adminImplementations: "Implementation Types",
         adminSystems: "System Types",
@@ -2467,6 +2483,7 @@
     function setAdminMenuLabels() {
       const labels = {
         users: "adminUsers",
+        approvals: "adminApprovals",
         industries: "adminIndustries",
         implementations: "adminImplementations",
         systems: "adminSystems",
@@ -3307,7 +3324,11 @@
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         fixedDays: collectMatrixRows("adminFixedHead", "adminFixedRows"),
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
-        variableModulePhase: collectMatrixRows("adminVmpHead", "adminVmpRows")
+        variableModulePhase: collectMatrixRows("adminVmpHead", "adminVmpRows"),
+        approvalSettings: {
+          userApproverEmail: document.getElementById("userApproverEmail")?.value.trim() || "",
+          offerApproverEmail: document.getElementById("offerApproverEmail")?.value.trim() || ""
+        }
       };
     }
 
@@ -3352,6 +3373,12 @@
       if (config.scopeQuestions) window.scopeQuestions = config.scopeQuestions;
       if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
       if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
+      if (config.approvalSettings) {
+        const userInput = document.getElementById("userApproverEmail");
+        const offerInput = document.getElementById("offerApproverEmail");
+        if (userInput) userInput.value = config.approvalSettings.userApproverEmail || "";
+        if (offerInput) offerInput.value = config.approvalSettings.offerApproverEmail || "";
+      }
       syncModuleStateWithCatalog();
       localizationCatalog = buildLocalizationCatalog();
       refreshProjectDefinitionSelects();
@@ -3359,7 +3386,7 @@
 
     async function loadAdminConfig() {
       if (!window.EffortApi) return;
-      const config = await window.EffortApi.adminData();
+      const config = await window.EffortApi.adminData(currentUser?.id);
       applyAdminConfig(config);
       renderLocalizationControls();
       renderWorkbookDrivenScreens();
@@ -3369,6 +3396,13 @@
 
     async function saveAdminConfig(button) {
       if (!currentUser?.is_admin) return;
+      const invalidEmail = ["userApproverEmail", "offerApproverEmail"]
+        .map(id => document.getElementById(id))
+        .find(input => input?.value && !input.checkValidity());
+      if (invalidEmail) {
+        invalidEmail.focus();
+        throw new Error("Geçerli bir onay e-posta adresi girin.");
+      }
       const config = collectAdminConfig();
       const originalText = button?.textContent;
       if (button) {
@@ -3376,7 +3410,7 @@
         button.textContent = "Kaydediliyor";
       }
       try {
-        await Promise.all(Object.entries(config).map(([entity, payload]) => window.EffortApi.saveAdminEntity(entity, payload)));
+        await Promise.all(Object.entries(config).map(([entity, payload]) => window.EffortApi.saveAdminEntity(entity, payload, currentUser.id)));
         applyAdminConfig(config);
         renderLocalizationControls();
         renderWorkbookDrivenScreens();
@@ -3442,6 +3476,12 @@
         button.addEventListener("click", () => addAdminMatrixRow(button.dataset.adminAddMatrix));
       });
       document.getElementById("addAdminModuleButton")?.addEventListener("click", addAdminModule);
+      ["userApproverEmail", "offerApproverEmail"].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input || input.dataset.adminBound) return;
+        input.dataset.adminBound = "true";
+        input.addEventListener("input", markAdminDirty);
+      });
       bindAdminNavigation();
       const saveButton = document.getElementById("saveAdminConfigButton");
       if (saveButton && !saveButton.dataset.bound) {

@@ -51,11 +51,11 @@ window.EffortApi = {
   deleteOffer(id) {
     return this.request(`/api/offers/${encodeURIComponent(id)}`, { method: "DELETE" });
   },
-  adminData() {
-    return this.request("/api/admin");
+  adminData(userId) {
+    return this.request(`/api/admin?userId=${encodeURIComponent(userId || "")}`);
   },
-  saveAdminEntity(entity, payload) {
-    return this.request(`/api/admin/${encodeURIComponent(entity)}`, {
+  saveAdminEntity(entity, payload, adminUserId) {
+    return this.request(`/api/admin/${encodeURIComponent(entity)}?adminUserId=${encodeURIComponent(adminUserId || "")}`, {
       method: "PUT",
       body: JSON.stringify(payload)
     });
