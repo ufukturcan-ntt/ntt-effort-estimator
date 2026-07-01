@@ -184,6 +184,44 @@ async function isAdminUser(userId) {
   return Boolean(result.rows[0]?.is_admin);
 }
 
+app.get("/api/admin/users", async (req, res, next) => {
+  try {
+    if (!(await isAdminUser(req.query.adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const result = await query(
+      `select id, email, display_name, role, is_admin, status, created_at, approved_at
+       from app_user
+       order by created_at asc`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/admin/users/:id/role", async (req, res, next) => {
+  try {
+    const adminUserId = req.body?.adminUserId;
+    if (!(await isAdminUser(adminUserId))) return res.status(403).json({ error: "Admin authorization required" });
+    const role = String(req.body?.role || "").toUpperCase();
+    if (!["USER", "ADMIN"].includes(role)) return res.status(400).json({ error: "Role must be USER or ADMIN" });
+    if (req.params.id === adminUserId && role !== "ADMIN") {
+      return res.status(409).json({ error: "Kendi Admin rolünüzü kaldıramazsınız" });
+    }
+    const result = await query(
+      `update app_user
+       set role = $2,
+           is_admin = ($2 = 'ADMIN')
+       where id = $1
+       returning id, email, display_name, role, is_admin, status, created_at, approved_at`,
+      [req.params.id, role]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: "User not found" });
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/admin/users/pending", async (req, res, next) => {
   try {
     if (!(await isAdminUser(req.query.adminUserId))) return res.status(403).json({ error: "Admin authorization required" });

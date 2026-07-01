@@ -66,6 +66,15 @@ window.EffortApi = {
   pendingUsers(adminUserId) {
     return this.request(`/api/admin/users/pending?adminUserId=${encodeURIComponent(adminUserId)}`);
   },
+  adminUsers(adminUserId) {
+    return this.request(`/api/admin/users?adminUserId=${encodeURIComponent(adminUserId)}`);
+  },
+  updateUserRole(id, role, adminUserId) {
+    return this.request(`/api/admin/users/${encodeURIComponent(id)}/role`, {
+      method: "PUT",
+      body: JSON.stringify({ role, adminUserId })
+    });
+  },
   approveUser(id, adminUserId) {
     return this.request(`/api/admin/users/${encodeURIComponent(id)}/approve`, {
       method: "POST",
