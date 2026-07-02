@@ -781,6 +781,10 @@
       gap: 20px;
     }
 
+    .dashboard-grid.category-dashboards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .mini-bars {
       padding: 18px;
       display: grid;
@@ -878,6 +882,31 @@
       padding: 10px;
     }
 
+    #adminIndustryList,
+    #adminImplementationList,
+    #adminSystemList {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px;
+    }
+
+    #adminIndustryList .definition-row,
+    #adminImplementationList .definition-row,
+    #adminSystemList .definition-row,
+    .admin-module-card {
+      gap: 6px;
+      padding: 6px;
+    }
+
+    #adminIndustryList .admin-edit,
+    #adminImplementationList .admin-edit,
+    #adminSystemList .admin-edit,
+    .admin-module-card .admin-edit {
+      min-height: 30px;
+      padding: 4px 7px;
+      font-size: 12px;
+    }
+
     .admin-edit {
       min-height: 36px;
       display: flex;
@@ -917,6 +946,21 @@
       font-size: 14px;
     }
 
+    .admin-module-group-head {
+      padding: 8px 10px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .admin-module-group-head h4 {
+      padding: 0;
+      border: 0;
+    }
+
     .admin-module-list {
       display: grid;
       gap: 8px;
@@ -930,13 +974,42 @@
     }
 
     .admin-question-table table {
-      min-width: 1180px;
+      min-width: 1540px;
+    }
+
+    .admin-check-cell {
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .admin-check-cell input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--blue);
+    }
+
+    .admin-score-input {
+      width: 88px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 7px 8px;
+      font: inherit;
+    }
+
+    .admin-score-input:disabled {
+      background: #eef2f5;
+      color: var(--muted);
     }
 
     .admin-section table th,
     .admin-section table td {
       text-align: left;
       vertical-align: top;
+    }
+
+    #allworks th,
+    #allworks td {
+      text-align: left;
     }
 
     .admin-select {
@@ -951,6 +1024,82 @@
 
     .admin-select[multiple] {
       min-height: 84px;
+    }
+
+    .admin-dense-table {
+      padding: 0 10px 10px;
+      max-height: 68vh;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: auto;
+    }
+
+    .admin-dense-table table {
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .admin-dense-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .admin-dense-table th,
+    .admin-dense-table td {
+      padding: 5px 6px;
+      white-space: nowrap;
+    }
+
+    .admin-dense-table td[contenteditable="true"] {
+      min-width: 76px;
+      background: #fff;
+      outline: none;
+    }
+
+    .admin-dense-table td[contenteditable="true"]:focus {
+      background: #f3f9fd;
+      box-shadow: inset 0 0 0 2px rgba(0,114,188,.3);
+    }
+
+    .admin-dense-table .admin-select {
+      min-width: 118px;
+      max-width: 190px;
+      padding: 4px 5px;
+      font-size: 11px;
+    }
+
+    .admin-dense-table .admin-select[multiple] {
+      min-height: 54px;
+    }
+
+    .admin-dense-table .button {
+      min-height: 28px;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+
+    [data-admin-panel="fixed"],
+    [data-admin-panel="fixed"] .list-table {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .fixed-scroll-top {
+      margin: 8px 10px 0;
+      width: calc(100% - 20px);
+      height: 14px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f4f7f9;
+      box-sizing: border-box;
+    }
+
+    .fixed-scroll-top > div {
+      height: 1px;
     }
 
     .compact-table input,
@@ -1472,6 +1621,7 @@
       .nav-item, .admin-tree-item { grid-template-columns: 1fr; justify-items: center; padding: 10px; }
       .hero, .grid, .dashboard-top { grid-template-columns: 1fr; }
       .project-grid, .work-grid, .module-groups, .summary-grid, .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dashboard-grid.category-dashboards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .login-shell { grid-template-columns: 1fr; }
       .login-visual { display: none; }
     }
@@ -1520,6 +1670,7 @@
       .content { padding: 16px; }
       .hero-left, .hero-right { padding: 18px; }
       .project-grid, .score-row, .stat-grid, .work-grid, .form-grid, .module-groups, .summary-grid, .dashboard-grid { grid-template-columns: 1fr; }
+      .dashboard-grid.category-dashboards { grid-template-columns: 1fr; }
       .question-card { grid-template-columns: 1fr; }
       .login-panel { padding: 28px 18px; }
       .login-panel h1 { font-size: 28px; }
@@ -1728,6 +1879,21 @@
                 <div class="metric"><span>Toplam potansiyel efor</span><b id="quickTotalEffort">0</b><small>gün</small></div>
                 <div class="metric"><span>En yoğun kategori</span><b id="quickTopCategory" style="font-size:24px">-</b><small>aktif tekliflerde</small></div>
               </div>
+            </div>
+          </section>
+
+          <section class="dashboard-grid category-dashboards home-only">
+            <div class="panel">
+              <div class="panel-head"><h3 class="panel-title">Endüstri dağılımı</h3><span class="pill">Teklif</span></div>
+              <div class="mini-bars" id="industryDashboard"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3 class="panel-title">İmplementasyon dağılımı</h3><span class="pill">Teklif</span></div>
+              <div class="mini-bars" id="implementationDashboard"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3 class="panel-title">Sistem dağılımı</h3><span class="pill">Teklif</span></div>
+              <div class="mini-bars" id="systemDashboard"></div>
             </div>
           </section>
 
@@ -2062,32 +2228,33 @@
                 <div class="definition-list" id="adminSystemList"></div>
               </section>
               <section class="panel admin-section" data-admin-panel="modules">
-                <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleButton" type="button">+ Modül</button></div>
+                <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleGroupButton" type="button">+ Grup</button></div>
                 <div class="admin-module-board" id="adminModuleBoard"></div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etkiler mi?</th><th>Efor Etki Tipi</th><th>Cevap Tipi</th><th>Puan</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Cevap için baz değer</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etkiler mi?</th><th>Efor Etki Tipi</th><th>Cevap Tipi</th><th>Puan</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Cevap için baz değer</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="restrictions">
                 <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><button class="button primary" data-admin-add-matrix="adminRestrictionsRows" type="button">+ Satır</button></div>
-                <div class="list-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="fixed">
                 <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><button class="button primary" data-admin-add-matrix="adminFixedRows" type="button">+ Satır</button></div>
-                <div class="list-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
+                <div class="fixed-scroll-top" id="fixedDaysScrollTop" aria-label="Fixed Days yatay kaydırma"><div></div></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="localization">
                 <div class="panel-head"><h3 class="panel-title">Localization Efforts</h3><button class="button primary" data-admin-add-matrix="adminLocalizationRows" type="button">+ Ülke</button></div>
-                <div class="list-table"><table><thead id="adminLocalizationHead"></thead><tbody id="adminLocalizationRows"></tbody></table></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminLocalizationHead"></thead><tbody id="adminLocalizationRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="vmp">
                 <div class="panel-head"><h3 class="panel-title">Variable + Module + Phase</h3><button class="button primary" data-admin-add-matrix="adminVmpRows" type="button">+ Satır</button></div>
-                <div class="list-table"><table><thead id="adminVmpHead"></thead><tbody id="adminVmpRows"></tbody></table></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminVmpHead"></thead><tbody id="adminVmpRows"></tbody></table></div>
               </section>
             </div>
           </section>
@@ -2186,6 +2353,93 @@
       return normalizedRows;
     }
 
+    function normalizeFixedDaysRows(rows = []) {
+      const canonicalRows = rows.map(row => row.map(canonicalPhaseName));
+      const existingHeader = canonicalRows.find(row => row.includes("System Type") && (row.includes("Modül") || row.includes("Column1")));
+      if (existingHeader) {
+        return canonicalRows.map(row => row.map(value => value === "Column1" ? "Modül" : value));
+      }
+      const output = [["Modül", "Size", ...phaseHeaders, "Implementation Type", "System Type"]];
+      let implementation = "All";
+      let size = "All";
+      canonicalRows.forEach(row => {
+        const first = String(row[0] || "").trim();
+        const marker = first.match(/^Implementation Type:\\s*(.+)$/i);
+        if (marker) {
+          implementation = marker[1].trim() || "All";
+          return;
+        }
+        if (["SMALL", "MEDIUM", "LARGE", "X-LARGE"].includes(first.toUpperCase())) {
+          size = first.toUpperCase();
+          return;
+        }
+        if (!first || ["Column1", "Modül"].includes(first)) return;
+        const rowImplementation = String(row[row.length - 1] || "").trim();
+        if (rowImplementation && adminDefinitionValues(1).includes(rowImplementation)) implementation = rowImplementation;
+        const phaseValues = phaseHeaders.map(phase => {
+          const headerRow = canonicalRows.find(candidate => candidate.includes("Column1") && candidate.includes(phase));
+          const index = headerRow?.indexOf(phase) ?? -1;
+          return index >= 0 ? (row[index] ?? "") : "";
+        });
+        const systemType = ["Conversion", "Greenfield"].includes(implementation)
+          ? "SAP S/4HANA Private Cloud"
+          : "All";
+        output.push([first, size, ...phaseValues, implementation || "All", systemType]);
+      });
+      return output;
+    }
+
+    function ensureWorkbookFixedDaysRows(rows = []) {
+      const normalized = normalizeFixedDaysRows(rows);
+      const headers = normalized[0] || [];
+      const implementationIndex = headers.indexOf("Implementation Type");
+      ["Conversion", "Greenfield"].forEach(implementation => {
+        if (normalized.slice(1).some(row => row[implementationIndex] === implementation)) return;
+        const workbookRows = window.fixedDaysByImplementation?.[implementation] || {};
+        Object.entries(workbookRows).forEach(([module, values]) => {
+          if (/^(Implementation Type:|SMALL|MEDIUM|LARGE|X-LARGE)/i.test(module)) return;
+          normalized.push([
+            module,
+            "All",
+            ...phaseHeaders.map(phase => Number(values?.[phase]) || 0),
+            implementation,
+            "SAP S/4HANA Private Cloud"
+          ]);
+        });
+      });
+      return normalized;
+    }
+
+    function fixedRowsForSelection(implementation, systemType, sizeKey) {
+      const rows = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const headers = rows[0] || [];
+      const moduleIndex = headers.indexOf("Modül");
+      const sizeIndex = headers.indexOf("Size");
+      const implementationIndex = headers.indexOf("Implementation Type");
+      const systemIndex = headers.indexOf("System Type");
+      const selected = new Map();
+      rows.slice(1).forEach(row => {
+        const rowImplementation = row[implementationIndex] || "All";
+        const rowSystem = row[systemIndex] || "All";
+        const rowSize = row[sizeIndex] || "All";
+        if (![implementation, "All"].includes(rowImplementation)) return;
+        if (![systemType, "All"].includes(rowSystem)) return;
+        if (![sizeKey, "All"].includes(rowSize)) return;
+        const module = row[moduleIndex];
+        if (!module) return;
+        const specificity =
+          (rowImplementation === implementation ? 4 : 0)
+          + (rowSystem === systemType ? 2 : 0)
+          + (rowSize === sizeKey ? 1 : 0);
+        if ((selected.get(module)?.specificity ?? -1) > specificity) return;
+        selected.set(module, {
+          specificity,
+          values: Object.fromEntries(phaseHeaders.map(phase => [phase, Number(row[headers.indexOf(phase)]) || 0]))
+        });
+      });
+      return Object.fromEntries([...selected.entries()].map(([module, entry]) => [module, entry.values]));
+    }
+
     function buildLocalizationCatalog() {
       const rows = normalizeLocalizationEffortRows(window.adminSeedData?.localizationEfforts || []);
       window.adminSeedData.localizationEfforts = rows;
@@ -2205,14 +2459,26 @@
           values: Object.fromEntries(phaseEntries.map(({ phase, index }) => [phase, Number(row[index]) || 0]))
         }));
       return parsed.length ? parsed : [
-        {country:"Rusya", module:"FI", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
-        {country:"Birleşik Arap Emirlikleri", module:"FI", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Anaveri Kontrol":13,"Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}}
+        {country:"Rusya", module:"FI", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Dokümantasyon Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri Aktarım":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Canlı Anaveri Kontrol":13,"Canlı Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}},
+        {country:"Birleşik Arap Emirlikleri", module:"FI", selected:false, values:{"Analiz":2,"Dokümantasyon":3,"Dokümantasyon Onay":4,"Uyarlama":5,"Birim Test":6,"QA Sistem Ayağa Kaldırma":7,"QA Anaveri Aktarım":8,"Internal Entegrasyon Testi":9,"Entegrasyon Testi":10,"Yetkilendirme":11,"Canlı Sistem Ayağa Kaldırma":12,"Canlı Anaveri Kontrol":13,"Canlı Anaveri Aktarım":14,"Hypercare":15,"Canlı Destek":16}}
       ];
     }
 
     let localizationCatalog = buildLocalizationCatalog();
 
-    const phaseHeaders = ["Analiz","Dokümantasyon","Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri","Internal Entegrasyon Testi","Entegrasyon Testi","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Anaveri Kontrol","Anaveri Aktarım"];
+    const phaseHeaders = ["Analiz","Dokümantasyon","Dokümantasyon Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri Aktarım","Internal Entegrasyon Testi","Entegrasyon Testi","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Canlı Anaveri Kontrol","Canlı Anaveri Aktarım"];
+    const phaseNameAliases = {
+      "Onay": "Dokümantasyon Onay",
+      "QA Anaveri": "QA Anaveri Aktarım",
+      "Anaveri Kontrol": "Canlı Anaveri Kontrol",
+      "Anaveri Aktarım": "Canlı Anaveri Aktarım"
+    };
+
+    function canonicalPhaseName(value) {
+      return phaseNameAliases[value] || value;
+    }
+
+    window.adminSeedData.fixedDays = ensureWorkbookFixedDaysRows(window.adminSeedData?.fixedDays || []);
 
     const finalEffortBase = {
       FI: {"Analiz":2,"Dokümantasyon":1,"Uyarlama":.5,"Birim Test":.25,"QA Sistem Ayağa Kaldırma":.25,"Internal Entegrasyon Testi":.5,"Entegrasyon Testi":1},
@@ -2289,6 +2555,35 @@
       });
       return selected;
     }
+
+    function enrichQuestionsFromExcel(dataKey, questions = [], defaultGroup) {
+      const rows = window.adminSeedData?.[dataKey] || [];
+      const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "No"));
+      const excelRows = new Map(rows.slice(headerIndex + 1)
+        .filter(row => Number(row[0]))
+        .map(row => [String(row[0]), row]));
+      return questions.map(item => {
+        const excelRow = excelRows.get(String(item.no)) || [];
+        const baseValue = item.baseValue || excelRow[3] || (item.answerType === "number" ? "Sayı" : "Evet / Hayır");
+        const answerType = item.answerType === "number" || String(baseValue).toLocaleLowerCase("tr-TR").includes("sayı")
+          ? "number"
+          : "yesno";
+        return {
+          ...item,
+          group: item.group || defaultGroup,
+          variableType: item.variableType || baseValue,
+          sizeImpact: item.sizeImpact == null ? Number(item.score ?? excelRow[4]) > 0 : item.sizeImpact,
+          score: Number(item.score ?? excelRow[4]) || 0,
+          baseValue,
+          scoreCalculation: item.scoreCalculation || (answerType === "number" ? "Adet bazında" : "Evet/Hayır"),
+          effortImpactType: item.effortImpactType || "Sabit",
+          answerType
+        };
+      });
+    }
+
+    window.scopeQuestions = enrichQuestionsFromExcel("scope", window.scopeQuestions, "Kapsam");
+    window.developmentQuestions = enrichQuestionsFromExcel("development", window.developmentQuestions, "Geliştirme");
 
     const moduleState = new Map(moduleCatalog.map(item => [item.module, { selected: item.selected, team: item.team }]));
     const hypercareState = new Map(moduleCatalog.map(item => {
@@ -2724,8 +3019,8 @@
     const phases = [
       ["Canlı Destek", 662, "#276ef1"],
       ["Hypercare", 268, "#16a36b"],
-      ["Anaveri Aktarım", 28, "#d89019"],
-      ["Anaveri Kontrol", 26, "#6658d3"],
+      ["Canlı Anaveri Aktarım", 28, "#d89019"],
+      ["Canlı Anaveri Kontrol", 26, "#6658d3"],
       ["Entegrasyon Testi", 24, "#0f8b8d"],
       ["Canlı Sistem Ayağa Kaldırma", 24, "#d94b4b"],
       ["Yetkilendirme", 22, "#7c3aed"],
@@ -3044,9 +3339,10 @@
 
     function finalRowsForSelectedModules() {
       const implementation = document.getElementById("projectImplementation")?.value || "Conversion";
-      const fixedRows = window.fixedDaysByImplementation?.[implementation] || window.fixedDaysByImplementation?.Conversion || {};
+      const systemType = document.getElementById("projectSystem")?.value || "All";
       const size = projectSizeFromScore(currentScopeScore());
-      const sizeRow = fixedRows[size.fixedKey] || {};
+      const fixedRows = fixedRowsForSelection(implementation, systemType, size.fixedKey);
+      const sizeRow = {};
       return selectedModuleNames().map(name => {
         const base = fixedRows[name] || finalEffortBase[name] || {};
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
@@ -3207,7 +3503,9 @@
       if (normalized === "Variable Type") return { options: ["Kapsam", "Geliştirme"], multiple: false };
       if (normalized === "Allowed Industries") return { options: ["All", ...adminDefinitionValues(0)], multiple: true };
       if (normalized === "Allowed Implementation Types") return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
-      if (normalized === "Implementation Type") return { options: adminDefinitionValues(1), multiple: false };
+      if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: false };
+      if (normalized === "System Type") return { options: ["All", ...adminDefinitionValues(2)], multiple: false };
+      if (normalized === "Size") return { options: ["All", "SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
       if (normalized === "Allowed System Types") return { options: ["All", ...adminDefinitionValues(2)], multiple: true };
       if (normalized === "Active?") return { options: ["Yes", "No"], multiple: false };
       if (normalized === "Kaynak Tipi") return { options: ["Değişken", "Modül"], multiple: false };
@@ -3219,12 +3517,37 @@
       return null;
     }
 
+    function syncFixedDaysScrollbars() {
+      const top = document.getElementById("fixedDaysScrollTop");
+      const bottom = document.getElementById("adminFixedRows")?.closest(".admin-dense-table");
+      const table = bottom?.querySelector("table");
+      if (!top || !bottom || !table) return;
+      const spacer = top.firstElementChild;
+      if (spacer) spacer.style.width = `${table.scrollWidth}px`;
+      if (top.dataset.syncBound) return;
+      top.dataset.syncBound = "true";
+      let syncing = false;
+      top.addEventListener("scroll", () => {
+        if (syncing) return;
+        syncing = true;
+        bottom.scrollLeft = top.scrollLeft;
+        syncing = false;
+      });
+      bottom.addEventListener("scroll", () => {
+        if (syncing) return;
+        syncing = true;
+        top.scrollLeft = bottom.scrollLeft;
+        syncing = false;
+      });
+      window.addEventListener("resize", syncFixedDaysScrollbars);
+    }
+
     function renderEditableMatrix(headId, bodyId, rows) {
       const head = document.getElementById(headId);
       const body = document.getElementById(bodyId);
       if (!body || !rows?.length) return;
       const headerIndex = rows.findIndex(row => {
-        if (bodyId === "adminFixedRows") return row.includes("Column1");
+        if (bodyId === "adminFixedRows") return row.includes("Column1") || row.includes("Modül");
         if (bodyId === "adminLocalizationRows") return row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke");
         if (bodyId === "adminVmpRows") return row.includes("Kaynak Tipi");
         return row.includes("No") || row.includes("Variable Type") || row.includes("Question");
@@ -3238,6 +3561,7 @@
         return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`).join("");
       bindAdminEditable(body);
+      if (bodyId === "adminFixedRows") requestAnimationFrame(syncFixedDaysScrollbars);
     }
 
     function addAdminMatrixRow(bodyId) {
@@ -3263,6 +3587,23 @@
         if (select.dataset.selectBound) return;
         select.dataset.selectBound = "true";
         select.addEventListener("change", markAdminDirty);
+      });
+      root.querySelectorAll("[data-admin-checkbox]").forEach(checkbox => {
+        if (checkbox.dataset.checkboxBound) return;
+        checkbox.dataset.checkboxBound = "true";
+        checkbox.addEventListener("change", () => {
+          const scoreInput = checkbox.closest("tr")?.querySelector(".admin-score-input");
+          if (scoreInput) {
+            scoreInput.disabled = !checkbox.checked;
+            if (!checkbox.checked) scoreInput.value = "";
+          }
+          markAdminDirty();
+        });
+      });
+      root.querySelectorAll(".admin-score-input").forEach(input => {
+        if (input.dataset.scoreBound) return;
+        input.dataset.scoreBound = "true";
+        input.addEventListener("input", markAdminDirty);
       });
       root.querySelectorAll("[data-admin-remove]").forEach(button => {
         if (button.dataset.removeBound) return;
@@ -3305,10 +3646,13 @@
     function renderAdminModules() {
       const target = document.getElementById("adminModuleBoard");
       if (!target) return;
-      const groups = ["S4Core", "NTT Own IP", "Advanced Solution"];
+      const groups = [...new Set(moduleCatalog.map(item => item.group).filter(Boolean))];
       target.innerHTML = groups.map(group => `
         <section class="admin-module-group" data-admin-module-group="${group}">
-          <h4>${group}</h4>
+          <div class="admin-module-group-head">
+            <h4>${escapeHtml(group)}</h4>
+            <button class="button" data-add-module-to-group="${escapeHtml(group)}" type="button">+ Modül</button>
+          </div>
           <div class="admin-module-list">
             ${moduleCatalog.filter(item => item.group === group).map(item => `
               <article class="admin-module-card">
@@ -3320,10 +3664,15 @@
         </section>
       `).join("");
       bindAdminEditable(target);
+      target.querySelectorAll("[data-add-module-to-group]").forEach(button => {
+        button.addEventListener("click", () => addAdminModule(button.dataset.addModuleToGroup));
+      });
     }
 
-    function addAdminModule() {
-      const target = document.querySelector('[data-admin-module-group="S4Core"] .admin-module-list');
+    function addAdminModule(group) {
+      const target = [...document.querySelectorAll("[data-admin-module-group]")]
+        .find(section => section.dataset.adminModuleGroup === group)
+        ?.querySelector(".admin-module-list");
       if (!target) return;
       target.insertAdjacentHTML("beforeend", `
         <article class="admin-module-card">
@@ -3335,23 +3684,52 @@
       markAdminDirty();
     }
 
+    function addAdminModuleGroup() {
+      const name = prompt("Yeni grup adı");
+      const group = String(name || "").trim();
+      if (!group) return;
+      if ([...document.querySelectorAll("[data-admin-module-group]")]
+        .some(section => section.dataset.adminModuleGroup === group)) {
+        alert("Bu grup zaten tanımlı.");
+        return;
+      }
+      const target = document.getElementById("adminModuleBoard");
+      target.insertAdjacentHTML("beforeend", `
+        <section class="admin-module-group" data-admin-module-group="${escapeHtml(group)}">
+          <div class="admin-module-group-head">
+            <h4>${escapeHtml(group)}</h4>
+            <button class="button" data-add-module-to-group="${escapeHtml(group)}" type="button">+ Modül</button>
+          </div>
+          <div class="admin-module-list"></div>
+        </section>
+      `);
+      const button = [...target.querySelectorAll("[data-add-module-to-group]")]
+        .find(item => item.dataset.addModuleToGroup === group);
+      button?.addEventListener("click", () => addAdminModule(group));
+      markAdminDirty();
+    }
+
     function renderQuestionAdmin(targetId, questions) {
       const target = document.getElementById(targetId);
       if (!target) return;
-      target.innerHTML = questions.map(item => `
+      target.innerHTML = questions.map(item => {
+        const hasSizeImpact = item.sizeImpact === true || item.sizeImpact === "Evet" || (item.sizeImpact == null && Number(item.score) > 0);
+        return `
         <tr>
           ${editableCell(item.no)}
           ${editableCell(item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme"))}
           ${editableCell(item.variableType || item.answerType || "Evet/Hayır")}
           ${editableCell(item.name)}
           ${editableCell(item.description)}
-          ${editableCell(item.score ? "Evet" : "Hayır")}
+          <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
+          <td><input class="admin-score-input" type="number" step="any" value="${Number(item.score) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
+          ${editableCell(item.baseValue || (item.answerType === "number" ? "Sayı" : "Evet / Hayır"))}
+          ${adminSelectCell(item.scoreCalculation || (item.answerType === "number" ? "Adet bazında" : "Evet/Hayır"), ["Adet bazında", "Evet/Hayır"])}
           ${editableCell(item.effortImpactType || "Sabit")}
-          ${editableCell(item.answerType || "yesno")}
-          ${editableCell(item.score || "")}
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
-      `).join("");
+      `;
+      }).join("");
       bindAdminEditable(target);
     }
 
@@ -3360,17 +3738,29 @@
       if (!target) return;
       const no = target.querySelectorAll("tr").length + 1;
       const group = targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme";
-      target.insertAdjacentHTML("beforeend", `<tr>${[no, group, "Evet/Hayır", "Yeni soru", "Açıklama", "Evet", "Sabit", "yesno", 0].map(editableCell).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      target.insertAdjacentHTML("beforeend", `<tr>
+        ${[no, group, "Evet/Hayır", "Yeni soru", "Açıklama"].map(editableCell).join("")}
+        <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
+        <td><input class="admin-score-input" type="number" step="any" disabled /></td>
+        ${editableCell("Evet / Hayır")}
+        ${adminSelectCell("Evet/Hayır", ["Adet bazında", "Evet/Hayır"])}
+        ${editableCell("Sabit")}
+        <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
+      </tr>`);
       bindAdminEditable(target);
       markAdminDirty();
     }
 
     function adminCellValue(cell) {
+      const checkbox = cell.querySelector('input[type="checkbox"]');
+      if (checkbox) return checkbox.checked;
       const select = cell.querySelector("select");
       if (select) {
         const values = [...select.selectedOptions].map(option => option.value);
         return select.multiple ? values.join(", ") : (values[0] || "");
       }
+      const input = cell.querySelector("input");
+      if (input) return input.value;
       return cell.textContent.trim();
     }
 
@@ -3408,17 +3798,20 @@
 
     function collectQuestionAdminRows(targetId) {
       return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
-        const cells = [...row.children].slice(0, 9).map(adminCellValue);
+        const cells = [...row.children].slice(0, 10).map(adminCellValue);
+        const scoreCalculation = cells[8] || "Evet/Hayır";
         return {
           no: Number(cells[0]) || cells[0],
           group: cells[1],
           variableType: cells[2],
           name: cells[3],
           description: cells[4],
-          sizeImpact: cells[5],
-          effortImpactType: cells[6],
-          answerType: cells[7],
-          score: Number(String(cells[8]).replace(",", ".")) || 0,
+          sizeImpact: Boolean(cells[5]),
+          score: Number(String(cells[6]).replace(",", ".")) || 0,
+          baseValue: cells[7],
+          scoreCalculation,
+          effortImpactType: cells[9],
+          answerType: scoreCalculation === "Adet bazında" ? "number" : "yesno",
           active: true
         };
       }).filter(item => item.name);
@@ -3484,12 +3877,15 @@
     }
 
     function applyAdminConfig(config = {}) {
-      if (config.developmentQuestions) {
-        config.developmentQuestions = config.developmentQuestions.map(item => ({
-          ...item,
-          name: canonicalDevelopmentName(item.name)
-        }));
-      }
+      ["scopeQuestions", "developmentQuestions"].forEach(key => {
+        if (!config[key]) return;
+        const dataKey = key === "scopeQuestions" ? "scope" : "development";
+        const defaultGroup = key === "scopeQuestions" ? "Kapsam" : "Geliştirme";
+        config[key] = enrichQuestionsFromExcel(dataKey, config[key], defaultGroup).map(item => ({
+            ...item,
+            name: key === "developmentQuestions" ? canonicalDevelopmentName(item.name) : item.name
+          }));
+      });
       ["restrictions", "variableModulePhase"].forEach(key => {
         if (!config[key]) return;
         config[key] = config[key].map(row => row.map(value =>
@@ -3498,6 +3894,10 @@
             : value
         ));
       });
+      ["fixedDays", "localizationEfforts", "variableModulePhase"].forEach(key => {
+        if (config[key]) config[key] = config[key].map(row => row.map(canonicalPhaseName));
+      });
+      if (config.fixedDays) config.fixedDays = ensureWorkbookFixedDaysRows(config.fixedDays);
       if (config.projectDefinitions) window.adminSeedData.projectDefinitions = config.projectDefinitions;
       if (config.restrictions) window.adminSeedData.restrictions = config.restrictions;
       if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
@@ -3622,7 +4022,11 @@
         button.dataset.bound = "true";
         button.addEventListener("click", () => addAdminMatrixRow(button.dataset.adminAddMatrix));
       });
-      document.getElementById("addAdminModuleButton")?.addEventListener("click", addAdminModule);
+      const addGroupButton = document.getElementById("addAdminModuleGroupButton");
+      if (addGroupButton && !addGroupButton.dataset.bound) {
+        addGroupButton.dataset.bound = "true";
+        addGroupButton.addEventListener("click", addAdminModuleGroup);
+      }
       ["userApproverEmail", "offerApproverEmail"].forEach(id => {
         const input = document.getElementById(id);
         if (!input || input.dataset.adminBound) return;
@@ -3687,8 +4091,10 @@
 
     function projectEffortRowsForOffer(offer) {
       const implementation = offer.implementation_type || offerJson(offer.project_definition).implementation || "Conversion";
-      const fixedRows = window.fixedDaysByImplementation?.[implementation] || window.fixedDaysByImplementation?.Conversion || {};
-      const sizeRow = fixedRows[projectSizeFromScore(offerScopeScore(offer)).fixedKey] || {};
+      const systemType = offer.system_type || offerJson(offer.project_definition).system || "All";
+      const sizeKey = projectSizeFromScore(offerScopeScore(offer)).fixedKey;
+      const fixedRows = fixedRowsForSelection(implementation, systemType, sizeKey);
+      const sizeRow = {};
       const support = offerJson(offer.hypercare_inputs);
       return offerSelectedModules(offer).map(({ module, team }) => {
         const base = fixedRows[module] || finalEffortBase[module] || {};
@@ -3789,6 +4195,18 @@
       return "";
     }
 
+    function renderOfferCategoryDashboard(targetId, field, color) {
+      const counts = cachedOffers.reduce((result, offer) => {
+        const label = String(offer[field] || "Tanımsız").trim() || "Tanımsız";
+        result.set(label, (result.get(label) || 0) + 1);
+        return result;
+      }, new Map());
+      const rows = [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "tr"))
+        .map(([label, value]) => [label, value, color]);
+      renderMiniBars(targetId, rows.length ? rows : [["Kayıt yok", 0, color]]);
+    }
+
     function renderAllWorks() {
       const target = document.getElementById("allWorksRows");
       const recentTarget = document.getElementById("recentWorkGrid");
@@ -3815,6 +4233,9 @@
       setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} draft, ${reviewCount} review` : t("noActiveRecords"));
       setText("quickTotalEffort", fmt(totalEffort));
       setText("quickTopCategory", topCategory);
+      renderOfferCategoryDashboard("industryDashboard", "industry", "var(--blue)");
+      renderOfferCategoryDashboard("implementationDashboard", "implementation_type", "var(--amber)");
+      renderOfferCategoryDashboard("systemDashboard", "system_type", "var(--green)");
       const portfolioTarget = document.getElementById("portfolioAnalysisList");
       if (portfolioTarget) {
         const max = Math.max(cachedOffers.length, 1);
@@ -4061,6 +4482,7 @@
 
     function answerImpact(item, value) {
       if (!value || value === "Seçiniz" || value === "Hayır") return 0;
+      if (item.sizeImpact === false || item.sizeImpact === "Hayır") return 0;
       const score = Number(item.score) || 0;
       if (item.answerType === "number") return Math.max(Number(value) || 0, 0) * score;
       return value === "Evet" ? score : 0;
@@ -4371,18 +4793,25 @@
             </select>
           </td>
           <td>${row.created_at ? new Date(row.created_at).toLocaleString("tr-TR") : ""}</td>
-          <td>${row.status === "PENDING" ? `<button class="button primary" data-approve-user="${row.id}" type="button">Onayla</button>` : "-"}</td>
+          <td>
+            <div class="quick-actions">
+              <button class="button primary" data-save-user-role="${row.id}" type="button" ${row.id === currentUser.id ? "disabled" : ""}>Kaydet</button>
+              ${row.status === "PENDING" ? `<button class="button" data-approve-user="${row.id}" type="button">Onayla</button>` : ""}
+            </div>
+          </td>
         </tr>
       `).join("") || `<tr><td colspan="6">Kayıtlı kullanıcı bulunmuyor.</td></tr>`;
-      body.querySelectorAll("[data-user-role]").forEach(select => {
-        select.addEventListener("change", async () => {
-          select.disabled = true;
+      body.querySelectorAll("[data-save-user-role]").forEach(button => {
+        button.addEventListener("click", async () => {
+          const select = body.querySelector(`[data-user-role="${button.dataset.saveUserRole}"]`);
+          if (!select) return;
+          button.disabled = true;
           try {
-            await window.EffortApi.updateUserRole(select.dataset.userRole, select.value, currentUser.id);
-          } catch (error) {
-            alert(`Kullanıcı rolü güncellenemedi: ${error.message}`);
-          } finally {
+            await window.EffortApi.updateUserRole(button.dataset.saveUserRole, select.value, currentUser.id);
             await loadAdminUsers();
+          } catch (error) {
+            button.disabled = false;
+            alert(`Kullanıcı rolü güncellenemedi: ${error.message}`);
           }
         });
       });
