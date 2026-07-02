@@ -771,7 +771,7 @@
     .summary-grid {
       padding: 18px;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -1883,7 +1883,6 @@
               <div class="phase-list">
                 <div class="metric"><span>Müşteri</span><b id="summaryCustomer" style="font-size:22px">Ufuk Enerji AŞ</b><small id="summaryProject">S4 Dönüşüm</small></div>
                 <div class="metric"><span>Tahmini efor</span><b id="summaryEffort">1160</b><small>gün</small></div>
-                <button class="button primary" data-screen-jump="modules">Modüllere devam et</button>
               </div>
             </div>
           </section>
@@ -1899,7 +1898,6 @@
               <div class="panel-head"><h3 class="panel-title">Proje Size</h3><span class="pill" id="scopeSizePill">Small (S)</span></div>
               <div class="phase-list">
                 <div class="metric"><span>Hesaplanan kapsam puanı</span><b id="scopeScoreValue">0</b><small id="scopeSizeHint">Small eşiği: 0-40</small></div>
-                <button class="button primary" data-screen-jump="developments">Developments'a devam et</button>
               </div>
             </div>
           </section>
@@ -2014,6 +2012,7 @@
                 <div class="metric"><span>Geliştirme eforu</span><b id="developmentEffortTotal">0</b><small>geliştirme matrisi</small></div>
                 <div class="metric"><span>Lokalizasyon eforu</span><b id="finalLocalizationTotal">0</b><small>seçili ülkeler</small></div>
                 <div class="metric"><span>Hypercare + Go-Live eforu</span><b id="finalHypercareTotal">0</b><small>destek planı</small></div>
+                <div class="metric"><span>Toplam efor</span><b id="finalSummaryTotal">0</b><small>tüm efor kalemleri</small></div>
               </div>
             </section>
 
@@ -2243,6 +2242,53 @@
       ["Değişken","Dış sistem Planlama Entegrasyonu","PP",6],["Değişken","Dış sistem sipariş entegrasyonları","ABAP",10],["Değişken","Dış sistem sipariş entegrasyonları","SD",7],
       ["Değişken","Dokümantasyon Dili","Hepsi",3],["Değişken","EDI","ABAP",10],["Değişken","EDI","SD",7]
     ];
+
+    const automaticDevelopmentLinks = [
+      { scopeNo: 8, name: "Üretim ana veri yaratma otomasyonu (Varyant konfigurasyonlu)" },
+      { scopeNo: 9, name: "Üretim ana veri yaratma otomasyonu (FVB)" }
+    ];
+    const automaticDevelopmentQuestionNos = new Set([16, 17]);
+
+    function canonicalDevelopmentName(name = "") {
+      const normalized = String(name).trim();
+      if (normalized === "Üretim ana veri yaratma otomasyonu (FMS)") return "Üretim ana veri yaratma otomasyonu (FVB)";
+      if (normalized === "Fashion Vertical Business (FVB)") return "Üretim ana veri yaratma otomasyonu (FVB)";
+      if (normalized === "Varyant Konfigürasyonu") return "Üretim ana veri yaratma otomasyonu (Varyant konfigurasyonlu)";
+      return normalized;
+    }
+
+    function developmentEffortDefinitions() {
+      const rows = window.adminSeedData?.variableModulePhase || [];
+      const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
+      if (headerIndex < 0) return developmentEfforts;
+      const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+      const sourceTypeIndex = headers.indexOf("Kaynak Tipi");
+      const sourceIndex = headers.indexOf("Kaynak");
+      const moduleIndex = headers.findIndex(header => ["Hedef Modül", "Hedef ModÃ¼l"].includes(header));
+      const phaseIndexes = phaseHeaders
+        .map(phase => headers.indexOf(phase))
+        .filter(index => index >= 0);
+      const parsed = rows.slice(headerIndex + 1).map(row => {
+        const effort = phaseIndexes.reduce((sum, index) => sum + (Number(row[index]) || 0), 0);
+        return [row[sourceTypeIndex], canonicalDevelopmentName(row[sourceIndex]), row[moduleIndex], effort];
+      }).filter(([, name, module, effort]) => name && module && effort > 0);
+      return parsed.length ? parsed : developmentEfforts;
+    }
+
+    function selectedDevelopmentMultipliers(scopeAnswers = {}, developmentAnswers = {}) {
+      const selected = new Map();
+      (window.developmentQuestions || []).forEach(item => {
+        if (automaticDevelopmentQuestionNos.has(Number(item.no))) return;
+        const value = developmentAnswers[String(item.no)];
+        if (!value || value === "Seçiniz" || value === "Hayır") return;
+        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
+        if (multiplier > 0) selected.set(canonicalDevelopmentName(item.name), multiplier);
+      });
+      automaticDevelopmentLinks.forEach(link => {
+        if (scopeAnswers[String(link.scopeNo)] === "Evet") selected.set(link.name, 1);
+      });
+      return selected;
+    }
 
     const moduleState = new Map(moduleCatalog.map(item => [item.module, { selected: item.selected, team: item.team }]));
     const hypercareState = new Map(moduleCatalog.map(item => {
@@ -3053,14 +3099,11 @@
       if (head) head.innerHTML = `<tr><th>Geliştirme</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>Toplam</th></tr>`;
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
-      const selectedDevelopments = new Map();
-      (window.developmentQuestions || []).forEach(item => {
-        const value = questionAnswers.developmentQuestions[String(item.no)];
-        if (!value || value === "Seçiniz" || value === "Hayır") return;
-        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
-        if (multiplier > 0) selectedDevelopments.set(item.name, multiplier);
-      });
-      developmentEfforts.forEach(([type, name, moduleName, effort]) => {
+      const selectedDevelopments = selectedDevelopmentMultipliers(
+        questionAnswers.scopeQuestions,
+        questionAnswers.developmentQuestions
+      );
+      developmentEffortDefinitions().forEach(([, name, moduleName, effort]) => {
         const multiplier = selectedDevelopments.get(name);
         if (!multiplier) return;
         if (moduleName !== "Hepsi" && !moduleSet.has(moduleName)) return;
@@ -3068,6 +3111,9 @@
         const calculatedEffort = effort * multiplier;
         if (moduleName === "Hepsi") moduleNames.forEach(module => grouped.get(name)[module] += calculatedEffort);
         else grouped.get(name)[moduleName] += calculatedEffort;
+      });
+      selectedDevelopments.forEach((_, name) => {
+        if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
       });
       const colTotals = Object.fromEntries(moduleNames.map(module => [module, 0]));
       const rowHtml = [...grouped.entries()].map(([name, values]) => {
@@ -3086,11 +3132,14 @@
     }
 
     function renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal }) {
+      const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal;
+      setText("finalSummaryTotal", fmt(grandTotal));
       const mix = [
         ["Standart efor", projectTotal, "var(--blue)"],
         ["Geliştirme eforu", developmentTotal, "var(--amber)"],
         ["Hypercare + Go-Live eforu", hypercareTotal, "var(--green)"],
-        ["Lokalizasyon eforu", localizationTotal, "#6658d3"]
+        ["Lokalizasyon eforu", localizationTotal, "#6658d3"],
+        ["Toplam efor", grandTotal, "var(--ink)"]
       ];
       renderMiniBars("effortMixDashboard", mix);
       const groupTotals = Object.fromEntries(["S4Core", "NTT Own IP", "Advanced Solution"].map(group => [group, 0]));
@@ -3435,6 +3484,20 @@
     }
 
     function applyAdminConfig(config = {}) {
+      if (config.developmentQuestions) {
+        config.developmentQuestions = config.developmentQuestions.map(item => ({
+          ...item,
+          name: canonicalDevelopmentName(item.name)
+        }));
+      }
+      ["restrictions", "variableModulePhase"].forEach(key => {
+        if (!config[key]) return;
+        config[key] = config[key].map(row => row.map(value =>
+          value === "Üretim ana veri yaratma otomasyonu (FMS)"
+            ? "Üretim ana veri yaratma otomasyonu (FVB)"
+            : value
+        ));
+      });
       if (config.projectDefinitions) window.adminSeedData.projectDefinitions = config.projectDefinitions;
       if (config.restrictions) window.adminSeedData.restrictions = config.restrictions;
       if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
@@ -3458,6 +3521,7 @@
       if (!window.EffortApi) return;
       const config = await window.EffortApi.adminData(currentUser?.id);
       applyAdminConfig(config);
+      refreshQuestionLists();
       renderLocalizationControls();
       renderWorkbookDrivenScreens();
       renderAdminPage();
@@ -3643,23 +3707,22 @@
     }
 
     function developmentEffortRowsForOffer(offer, moduleNames) {
-      const answers = offerJson(offer.development_answers);
-      const selectedDevelopments = new Map();
-      (window.developmentQuestions || []).forEach(item => {
-        const value = answers[String(item.no)];
-        if (!value || value === "Seçiniz" || value === "Hayır") return;
-        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
-        if (multiplier > 0) selectedDevelopments.set(item.name, multiplier);
-      });
+      const selectedDevelopments = selectedDevelopmentMultipliers(
+        offerJson(offer.scope_answers),
+        offerJson(offer.development_answers)
+      );
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
-      developmentEfforts.forEach(([, name, moduleName, effort]) => {
+      developmentEffortDefinitions().forEach(([, name, moduleName, effort]) => {
         const multiplier = selectedDevelopments.get(name);
         if (!multiplier || (moduleName !== "Hepsi" && !moduleSet.has(moduleName))) return;
         if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
         const calculatedEffort = effort * multiplier;
         if (moduleName === "Hepsi") moduleNames.forEach(module => grouped.get(name)[module] += calculatedEffort);
         else grouped.get(name)[moduleName] += calculatedEffort;
+      });
+      selectedDevelopments.forEach((_, name) => {
+        if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
       });
       return [...grouped.entries()].map(([name, values]) => ({ name, values }));
     }
@@ -3964,12 +4027,36 @@
       return String(allowed).split(",").map(x => x.trim()).includes(value);
     }
 
-    function isQuestionApplicable(item) {
+    function questionRestriction(item, targetId) {
+      const rows = window.adminSeedData?.restrictions || [];
+      const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
+      if (headerIndex < 0) return null;
+      const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+      const typeIndex = headers.indexOf("Variable Type");
+      const questionIndex = headers.indexOf("Question");
+      const expectedType = targetId === "scopeQuestions" ? "Kapsam" : "Geliştirme";
+      const row = rows.slice(headerIndex + 1).find(candidate =>
+        String(candidate[typeIndex] || "").trim() === expectedType
+        && String(candidate[questionIndex] || "").trim() === item.name
+      );
+      if (!row) return null;
+      const value = header => row[headers.indexOf(header)];
+      return {
+        industries: value("Allowed Industries"),
+        implementationTypes: value("Allowed Implementation Types"),
+        systemTypes: value("Allowed System Types"),
+        active: String(value("Active?") || "Yes").trim().toLowerCase() !== "no"
+      };
+    }
+
+    function isQuestionApplicable(item, targetId) {
       const filters = getProjectFilters();
+      const restriction = questionRestriction(item, targetId);
       return item.active !== false
-        && matchesAllowed(item.industries, filters.industry)
-        && matchesAllowed(item.implementationTypes, filters.implementation)
-        && matchesAllowed(item.systemTypes, filters.system);
+        && restriction?.active !== false
+        && matchesAllowed(restriction?.industries || item.industries, filters.industry)
+        && matchesAllowed(restriction?.implementationTypes || item.implementationTypes, filters.implementation)
+        && matchesAllowed(restriction?.systemTypes || item.systemTypes, filters.system);
     }
 
     function answerImpact(item, value) {
@@ -4037,8 +4124,13 @@
     function renderQuestionList(targetId, questions, options = {}) {
       const target = document.getElementById(targetId);
       if (!target) return;
-      const previousAnswers = options.preserveAnswers === false ? {} : collectVisibleAnswers(targetId);
-      const applicable = questions.filter(isQuestionApplicable);
+      const previousAnswers = options.preserveAnswers === false
+        ? {}
+        : { ...collectVisibleAnswers(targetId), ...questionAnswers[targetId] };
+      const applicable = questions.filter(item =>
+        !(targetId === "developmentQuestions" && automaticDevelopmentQuestionNos.has(Number(item.no)))
+        && isQuestionApplicable(item, targetId)
+      );
       questionAnswers[targetId] = {};
       applicable.forEach(item => {
         const key = String(item.no);
@@ -4330,10 +4422,13 @@
         });
         questionAnswers.scopeQuestions = offerJson(offer?.scope_answers);
         questionAnswers.developmentQuestions = offerJson(offer?.development_answers);
+      } else {
+        questionAnswers.scopeQuestions = {};
+        questionAnswers.developmentQuestions = {};
       }
       renderModuleGroups();
       renderLocalizationControls();
-      refreshQuestionLists({ preserveAnswers: true });
+      refreshQuestionLists({ preserveAnswers: mode === "existing" });
       renderWorkbookDrivenScreens();
     }
 
@@ -4481,8 +4576,18 @@
       renderScreenNavigation();
     }
 
-    function openExistingWork(offerId, accessMode = "edit") {
-      const offer = cachedOffers.find(item => item.id === offerId);
+    async function openExistingWork(offerId, accessMode = "edit") {
+      let offer = cachedOffers.find(item => item.id === offerId);
+      try {
+        if (!offer || typeof offer.module_selection === "undefined") {
+          offer = await window.EffortApi.getOffer(offerId);
+          cachedOffers = [offer, ...cachedOffers.filter(item => item.id !== offer.id)];
+        }
+      } catch (error) {
+        console.error(error);
+        alert(`Teklif detayları yüklenemedi: ${error.message}`);
+        return;
+      }
       const definition = offerJson(offer?.project_definition);
       currentOfferId = offer?.id || null;
       currentOfferStatus = offer?.status || "DRAFT";

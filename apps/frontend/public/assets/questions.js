@@ -696,7 +696,7 @@ window.developmentQuestions = [
   },
   {
     "no": 17,
-    "name": "Üretim ana veri yaratma otomasyonu (FMS)",
+    "name": "Üretim ana veri yaratma otomasyonu (FVB)",
     "description": "İhtiyacı bulunmakta mıdır?",
     "answerType": "yesno",
     "score": null,
