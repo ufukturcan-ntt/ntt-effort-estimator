@@ -295,11 +295,15 @@ app.get("/api/offers/pending-approval", async (req, res, next) => {
     const approverUserId = req.query.approverUserId;
     if (!(await isOfferApprover(approverUserId))) return res.status(403).json({ error: "Offer approver authorization required" });
     const result = await query(
-      `select id, offer_no, title, customer_name, project_name, industry, implementation_type,
-              system_type, status, total_effort, submitted_at, updated_at
-       from offer
-       where status = 'SUBMITTED'
-       order by submitted_at asc nulls last, updated_at asc
+      `select o.id, o.offer_no, o.title, o.customer_name, o.project_name, o.industry, o.implementation_type,
+              o.system_type, o.status, o.total_effort, o.submitted_at, o.updated_at,
+              coalesce(submitter.display_name, owner.display_name, submitter.email, owner.email, '-') as submitted_by_name,
+              coalesce(submitter.email, owner.email, '') as submitted_by_email
+       from offer o
+       left join app_user submitter on submitter.id = o.submitted_by
+       left join app_user owner on owner.id = o.user_id
+       where o.status = 'SUBMITTED'
+       order by o.submitted_at asc nulls last, o.updated_at asc
        limit 200`
     );
     res.json(result.rows);

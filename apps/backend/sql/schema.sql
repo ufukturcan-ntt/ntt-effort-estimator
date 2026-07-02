@@ -29,7 +29,7 @@ create or replace function next_offer_no()
 returns text
 language sql
 as $$
-  select 'EST-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('offer_no_seq')::text, 6, '0');
+  select 'NTT-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('offer_no_seq')::text, 6, '0');
 $$;
 
 create table if not exists offer (
@@ -58,6 +58,10 @@ create table if not exists offer (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+update offer
+set offer_no = 'NTT-' || substring(offer_no from 5)
+where offer_no like 'EST-%';
 
 create index if not exists offer_user_updated_idx on offer (user_id, updated_at desc);
 create index if not exists offer_status_idx on offer (status);

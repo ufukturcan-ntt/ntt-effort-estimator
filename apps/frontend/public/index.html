@@ -1852,6 +1852,7 @@
                     <th>Proje İsmi</th>
                     <th>Müşteri</th>
                     <th>Endüstri</th>
+                    <th>Gönderen</th>
                     <th>Toplam Efor</th>
                     <th>Gönderim Tarihi</th>
                     <th>İşlem</th>
@@ -2686,9 +2687,9 @@
     ];
 
     const allWorks = [
-      ["EST-2026-000014", "Ufuk Enerji AŞ - S4 Dönüşüm", "Ufuk Enerji AŞ", "Konfeksiyon", "DRAFT", "Bugün"],
-      ["EST-2026-000002", "Ufuk Tekstil Dönüşüm", "Ufuk Tekstil AŞ", "Tekstil", "REVIEW", "22.06.2026"],
-      ["EST-2026-000001", "Referans teklif kopyası", "Ufuk Tekstil AŞ", "Tekstil", "DRAFT", "22.06.2026"]
+      ["NTT-2026-000014", "Ufuk Enerji AŞ - S4 Dönüşüm", "Ufuk Enerji AŞ", "Konfeksiyon", "DRAFT", "Bugün"],
+      ["NTT-2026-000002", "Ufuk Tekstil Dönüşüm", "Ufuk Tekstil AŞ", "Tekstil", "REVIEW", "22.06.2026"],
+      ["NTT-2026-000001", "Referans teklif kopyası", "Ufuk Tekstil AŞ", "Tekstil", "DRAFT", "22.06.2026"]
     ];
 
     const fmt = value => Number(value).toLocaleString("tr-TR", {maximumFractionDigits: 1});
@@ -3670,81 +3671,36 @@
       return sheet;
     }
 
-    function excelFormula(formula) {
-      return { t: "n", f: formula, v: 0 };
-    }
-
     function buildBacklogWorkbook(offer) {
       if (!window.XLSX) throw new Error("Excel bileşeni yüklenemedi.");
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
-      const projectHeaders = ["Modül", ...phaseHeaders, "Hypercare", "Go-Live Support", "Toplam"];
-      const projectLastValueColumn = XLSX.utils.encode_col(projectHeaders.length - 2);
-      const projectData = [
-        projectHeaders,
-        ...projectRows.map((row, index) => {
-          const excelRow = index + 2;
-          return [
-            row.module,
-            ...phaseHeaders.map(phase => row.values[phase] || 0),
-            row.hypercare,
-            row.golive,
-            excelFormula(`SUM(B${excelRow}:${projectLastValueColumn}${excelRow})`)
-          ];
-        })
-      ];
-      if (projectRows.length) {
-        const totalRow = projectRows.length + 2;
-        projectData.push([
-          "Toplam",
-          ...projectHeaders.slice(1).map((_, index) => {
-            const column = XLSX.utils.encode_col(index + 1);
-            return excelFormula(`SUM(${column}2:${column}${totalRow - 1})`);
-          })
-        ]);
-      }
-
       const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
-      const developmentHeaders = ["Geliştirme", ...moduleNames, "Toplam"];
-      const developmentLastModuleColumn = XLSX.utils.encode_col(Math.max(moduleNames.length, 1));
-      const developmentData = [
-        developmentHeaders,
-        ...developmentRows.map((row, index) => {
-          const excelRow = index + 2;
-          return [
-            row.name,
-            ...moduleNames.map(module => row.values[module] || 0),
-            moduleNames.length ? excelFormula(`SUM(B${excelRow}:${developmentLastModuleColumn}${excelRow})`) : 0
-          ];
-        })
-      ];
-      if (moduleNames.length) {
-        const totalRow = developmentRows.length + 2;
-        developmentData.push([
-          "Toplam",
-          ...developmentHeaders.slice(1).map((_, index) => {
-            const column = XLSX.utils.encode_col(index + 1);
-            return developmentRows.length ? excelFormula(`SUM(${column}2:${column}${totalRow - 1})`) : 0;
-          })
-        ]);
-      }
+      const backlogRows = [["Backlog Kalemi", "Kategori", "Modül", "Efor Tipi / Geliştirme Maddesi", "Efor (Gün)"]];
+      projectRows.forEach(row => {
+        phaseHeaders.forEach(phase => {
+          backlogRows.push([`${row.module}-${phase}`, "Proje Eforu", row.module, phase, row.values[phase] || 0]);
+        });
+        backlogRows.push([`${row.module}-Hypercare`, "Proje Eforu", row.module, "Hypercare", row.hypercare || 0]);
+        backlogRows.push([`${row.module}-Go-Live Support`, "Proje Eforu", row.module, "Go-Live Support", row.golive || 0]);
+      });
+      developmentRows.forEach(row => {
+        moduleNames.forEach(module => {
+          const effort = row.values[module] || 0;
+          if (effort > 0) backlogRows.push([`${module}-${row.name}`, "Geliştirme Eforu", module, row.name, effort]);
+        });
+      });
 
       const workbook = XLSX.utils.book_new();
-      workbook.Workbook = { CalcPr: { calcMode: "auto", fullCalcOnLoad: "true" } };
       workbook.Props = {
         Title: `${offer.offer_no || "Teklif"} Backlog`,
-        Subject: "Modül bazlı proje ve geliştirme eforları",
+        Subject: "Modül ve efor tipi bazlı proje ve geliştirme backlog'u",
         Author: currentUser?.display_name || "NDBS TR"
       };
       XLSX.utils.book_append_sheet(
         workbook,
-        backlogSheet(projectData, [24, ...phaseHeaders.map(() => 18), 14, 18, 14]),
-        "Proje Eforlari"
-      );
-      XLSX.utils.book_append_sheet(
-        workbook,
-        backlogSheet(developmentData, [48, ...moduleNames.map(() => 14), 14]),
-        "Gelistirme Eforlari"
+        backlogSheet(backlogRows, [48, 20, 16, 48, 14]),
+        "Backlog"
       );
       return workbook;
     }
@@ -3943,11 +3899,32 @@
           <td>${offer.project_name || offer.title || "Yeni teklif"}</td>
           <td>${offer.customer_name || ""}</td>
           <td>${offer.industry || ""}</td>
+          <td>${offer.submitted_by_name || offer.submitted_by_email || "-"}</td>
           <td>${fmt(offer.total_effort || 0)}g</td>
           <td>${offer.submitted_at ? new Date(offer.submitted_at).toLocaleDateString("tr-TR") : ""}</td>
-          <td><button class="button primary" data-approve-offer="${offer.id}" type="button">Onayla</button></td>
+          <td>
+            <div class="quick-actions">
+              <button class="button" data-view-pending-offer="${offer.id}" type="button">Görüntüle</button>
+              <button class="button primary" data-approve-offer="${offer.id}" type="button">Onayla</button>
+            </div>
+          </td>
         </tr>
-      `).join("") || `<tr><td colspan="7">Onay bekleyen teklif bulunmuyor.</td></tr>`;
+      `).join("") || `<tr><td colspan="8">Onay bekleyen teklif bulunmuyor.</td></tr>`;
+      target.querySelectorAll("[data-view-pending-offer]").forEach(button => {
+        button.addEventListener("click", () => {
+          confirmNavigation(() => {
+            Promise.resolve(window.EffortApi.getOffer(button.dataset.viewPendingOffer))
+              .then(offer => {
+                cachedOffers = [offer, ...cachedOffers.filter(item => item.id !== offer.id)];
+                openExistingWork(offer.id, "view");
+              })
+              .catch(error => {
+                console.error(error);
+                alert(`Teklif görüntülenemedi: ${error.message}`);
+              });
+          });
+        });
+      });
       target.querySelectorAll("[data-approve-offer]").forEach(button => {
         button.addEventListener("click", () => {
           confirmAction("Bu teklifi onaylamak istediğinize emin misiniz?", async () => {
@@ -4325,22 +4302,38 @@
       });
     }
 
-    function resetSelectableState(mode) {
+    function resetSelectableState(mode, offer = null) {
+      const savedModules = offerJson(offer?.module_selection);
+      const savedLocalizations = offerJson(offer?.localization_selection);
+      const savedHypercare = offerJson(offer?.hypercare_inputs);
       const teamSplit = document.getElementById("teamSplitSelect");
-      if (teamSplit) teamSplit.value = "no";
+      if (teamSplit) {
+        const hasMultipleTeams = Object.values(savedModules).some(state => Number(state?.team) > 1);
+        teamSplit.value = hasMultipleTeams ? "yes" : "no";
+      }
       moduleCatalog.forEach(item => {
         const state = moduleState.get(item.module);
-        state.selected = mode === "existing" ? item.selected : false;
-        state.team = "";
+        const saved = savedModules[item.module];
+        state.selected = mode === "existing" ? Boolean(saved?.selected ?? saved ?? item.selected) : false;
+        state.team = mode === "existing" && saved?.team ? String(saved.team) : "";
       });
       localizationCatalog.forEach(item => {
-        item.selected = mode === "existing"
-          ? item.module === "FI" && ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country)
-          : false;
+        const key = `${item.country}::${item.module}`;
+        item.selected = mode === "existing" && Object.prototype.hasOwnProperty.call(savedLocalizations, key)
+          ? Boolean(savedLocalizations[key])
+          : mode === "existing" && item.module === "FI" && ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country);
       });
       resetHypercareState(mode);
+      if (mode === "existing") {
+        Object.entries(savedHypercare).forEach(([module, values]) => {
+          if (hypercareState.has(module)) hypercareState.set(module, { ...hypercareState.get(module), ...values });
+        });
+        questionAnswers.scopeQuestions = offerJson(offer?.scope_answers);
+        questionAnswers.developmentQuestions = offerJson(offer?.development_answers);
+      }
       renderModuleGroups();
       renderLocalizationControls();
+      refreshQuestionLists({ preserveAnswers: true });
       renderWorkbookDrivenScreens();
     }
 
@@ -4490,7 +4483,7 @@
 
     function openExistingWork(offerId, accessMode = "edit") {
       const offer = cachedOffers.find(item => item.id === offerId);
-      const definition = offer?.project_definition || {};
+      const definition = offerJson(offer?.project_definition);
       currentOfferId = offer?.id || null;
       currentOfferStatus = offer?.status || "DRAFT";
       currentOfferAccessMode = accessMode;
@@ -4514,7 +4507,7 @@
         effort: "1160"
       });
       currentOfferMode = "existing";
-      resetSelectableState("existing");
+      resetSelectableState("existing", offer);
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
