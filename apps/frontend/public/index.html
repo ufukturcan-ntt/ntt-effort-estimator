@@ -768,6 +768,39 @@
       min-width: 1180px;
     }
 
+    #projectEffortHead th:first-child,
+    #localizationEffortHead th:first-child,
+    #developmentMatrixHead th:first-child,
+    #moduleRowsFull td:first-child,
+    #localizationEffortRows td:first-child,
+    #developmentMatrixRows td:first-child {
+      position: sticky;
+      left: 0;
+      text-align: left;
+      box-shadow: 8px 0 12px -12px rgba(31, 43, 58, .65);
+    }
+
+    #projectEffortHead th:first-child,
+    #localizationEffortHead th:first-child,
+    #developmentMatrixHead th:first-child {
+      z-index: 4;
+      min-width: 180px;
+      background: #f3f6f8;
+    }
+
+    #moduleRowsFull td:first-child,
+    #localizationEffortRows td:first-child,
+    #developmentMatrixRows td:first-child {
+      z-index: 2;
+      min-width: 180px;
+      background: #fff;
+    }
+
+    #developmentMatrixHead th:first-child,
+    #developmentMatrixRows td:first-child {
+      min-width: 260px;
+    }
+
     .summary-grid {
       padding: 18px;
       display: grid;
