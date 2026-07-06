@@ -4728,6 +4728,7 @@
             <span class="status">${statusLabel(row.status)}</span>
             <h4>${row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")}</h4>
             <div class="work-meta">
+              <span><strong>${currentLanguage === "en" ? "Customer" : "Müşteri"}:</strong> ${row.customer_name || (currentLanguage === "en" ? "Not specified" : "Belirtilmedi")}</span>
               <span>${row.offer_no || ""}</span>
               <span>${fmt(row.total_effort || 0)} ${t("days")} · ${row.implementation_type || ""}</span>
               <span>${currentLanguage === "en" ? "Last update" : "Son güncelleme"}: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</span>
