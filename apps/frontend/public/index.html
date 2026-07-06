@@ -2601,7 +2601,7 @@
     function persistFixedDaysEditor() {
       const body = document.getElementById("adminFixedRows");
       if (!body?.dataset.fixedEditorReady) return;
-      const selection = fixedDaysEditorSelection();
+      const selection = JSON.parse(body.dataset.fixedEditorSelection || "null") || fixedDaysEditorSelection();
       const normalized = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
       const headers = normalized[0] || [];
       const moduleIndex = headers.indexOf("Modül");
@@ -2651,6 +2651,7 @@
         </tr>
       `).join("");
       body.dataset.fixedEditorReady = "true";
+      body.dataset.fixedEditorSelection = JSON.stringify(selection);
       bindAdminEditable(body);
       body.querySelectorAll("input, select").forEach(input => input.addEventListener("change", markAdminDirty));
       requestAnimationFrame(syncFixedDaysScrollbars);
