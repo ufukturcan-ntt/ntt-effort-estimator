@@ -1006,6 +1006,31 @@
       background: #fff;
     }
 
+    .question-option-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .question-option-grid > section {
+      min-width: 0;
+    }
+
+    .option-definition-head {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .option-definition-head h4 {
+      margin: 0;
+      font-size: 13px;
+    }
+
     .admin-question-table table {
       width: 100%;
       min-width: 0;
@@ -1174,6 +1199,28 @@
       font-size: 11px;
     }
 
+    .admin-section .list-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      background: #f3f6f8;
+      box-shadow: 0 1px 0 var(--line);
+    }
+
+    .admin-section .list-table th:first-child,
+    .admin-section .list-table td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: #fff;
+      box-shadow: 8px 0 12px -12px rgba(31, 43, 58, .65);
+    }
+
+    .admin-section .list-table thead th:first-child {
+      z-index: 6;
+      background: #f3f6f8;
+    }
+
     [data-admin-panel="fixed"],
     [data-admin-panel="fixed"] .list-table {
       min-width: 0;
@@ -1229,6 +1276,10 @@
 
     @media (max-width: 760px) {
       .fixed-days-filters {
+        grid-template-columns: 1fr;
+      }
+
+      .question-option-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -1934,6 +1985,7 @@
             <button class="admin-tree-item" data-admin-section="implementations" type="button" onclick="openAdminSection('implementations')"><span class="nav-icon">İ</span><span>İmplementasyon Türü</span><span class="nav-count">I</span></button>
             <button class="admin-tree-item" data-admin-section="systems" type="button" onclick="openAdminSection('systems')"><span class="nav-icon">S</span><span>Sistem Türü</span><span class="nav-count">S</span></button>
             <button class="admin-tree-item" data-admin-section="modules" type="button" onclick="openAdminSection('modules')"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
+            <button class="admin-tree-item" data-admin-section="question-options" type="button" onclick="openAdminSection('question-options')"><span class="nav-icon">S</span><span>Soru Alan Seçenekleri</span><span class="nav-count">SO</span></button>
             <button class="admin-tree-item" data-admin-section="scope" type="button" onclick="openAdminSection('scope')"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="development" type="button" onclick="openAdminSection('development')"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="restrictions" type="button" onclick="openAdminSection('restrictions')"><span class="nav-icon">R</span><span>Question Restrictions</span><span class="nav-count">R</span></button>
@@ -2361,6 +2413,27 @@
               <section class="panel admin-section" data-admin-panel="modules">
                 <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleGroupButton" type="button">+ Grup</button></div>
                 <div class="admin-module-board" id="adminModuleBoard"></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="question-options">
+                <div class="panel-head"><h3 class="panel-title">Soru Alan Seçenekleri</h3><span class="pill">Select tanımları</span></div>
+                <div class="question-option-grid">
+                  <section>
+                    <div class="option-definition-head"><h4>Değişken Grup</h4><button class="button primary" data-admin-add-list="adminVariableGroupOptions" type="button">+ Seçenek</button></div>
+                    <div class="definition-list" id="adminVariableGroupOptions"></div>
+                  </section>
+                  <section>
+                    <div class="option-definition-head"><h4>Değişken Tip</h4><button class="button primary" data-admin-add-list="adminVariableTypeOptions" type="button">+ Seçenek</button></div>
+                    <div class="definition-list" id="adminVariableTypeOptions"></div>
+                  </section>
+                  <section>
+                    <div class="option-definition-head"><h4>Cevap için baz değer</h4><button class="button primary" data-admin-add-list="adminBaseValueOptions" type="button">+ Seçenek</button></div>
+                    <div class="definition-list" id="adminBaseValueOptions"></div>
+                  </section>
+                  <section>
+                    <div class="option-definition-head"><h4>Efor Etki Tipi</h4><button class="button primary" data-admin-add-list="adminEffortImpactTypeOptions" type="button">+ Seçenek</button></div>
+                    <div class="definition-list" id="adminEffortImpactTypeOptions"></div>
+                  </section>
+                </div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
@@ -3791,6 +3864,51 @@
       return [...new Set([...(window.scopeQuestions || []), ...(window.developmentQuestions || [])].map(item => item.name).filter(Boolean))];
     }
 
+    function uniqueOptionValues(values = []) {
+      return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
+    }
+
+    function displayVariableType(value) {
+      if (value === "number") return "Sayı";
+      if (value === "yesno") return "Evet/Hayır";
+      return value;
+    }
+
+    function currentQuestionFieldOptions() {
+      const questions = [...(window.scopeQuestions || []), ...(window.developmentQuestions || [])];
+      const configured = window.adminSeedData?.questionFieldOptions || {};
+      return {
+        variableGroups: uniqueOptionValues([
+          ...(configured.variableGroups || []),
+          ...questions.map(item => item.group),
+          "Kapsam",
+          "Geliştirme"
+        ]),
+        variableTypes: uniqueOptionValues([
+          ...(configured.variableTypes || []),
+          ...questions.map(item => item.variableType),
+          "Evet/Hayır",
+          "Sayı"
+        ].map(displayVariableType)),
+        baseValues: uniqueOptionValues([
+          ...(configured.baseValues || []),
+          ...questions.map(item => item.baseValue),
+          "Evet / Hayır",
+          "Sayı"
+        ]),
+        effortImpactTypes: uniqueOptionValues([
+          ...(configured.effortImpactTypes || []),
+          ...questions.map(item => item.effortImpactType),
+          "Sabit",
+          "Katsayı"
+        ])
+      };
+    }
+
+    function optionValuesWithCurrent(options, value) {
+      return uniqueOptionValues([...(options || []), value]);
+    }
+
     function adminSelectCell(value = "", options = [], multiple = false) {
       const selectedValues = String(value || "").split(",").map(item => item.trim()).filter(Boolean);
       const rendered = options.map(option => {
@@ -4017,20 +4135,25 @@
     function renderQuestionAdmin(targetId, questions) {
       const target = document.getElementById(targetId);
       if (!target) return;
+      const fieldOptions = currentQuestionFieldOptions();
       target.innerHTML = questions.map(item => {
         const hasSizeImpact = item.sizeImpact === true || item.sizeImpact === "Evet" || (item.sizeImpact == null && Number(item.score) > 0);
+        const groupValue = item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme");
+        const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
+        const baseValue = item.baseValue || (item.answerType === "number" ? "Sayı" : "Evet / Hayır");
+        const effortImpactType = item.effortImpactType || "Sabit";
         return `
         <tr>
           ${editableCell(item.no)}
-          ${editableCell(item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme"))}
-          ${editableCell(item.variableType || item.answerType || "Evet/Hayır")}
+          ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
+          ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${editableCell(item.name)}
           ${editableCell(item.description)}
           <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
           <td><input class="admin-score-input" type="number" step="any" value="${Number(item.score) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
-          ${editableCell(item.baseValue || (item.answerType === "number" ? "Sayı" : "Evet / Hayır"))}
+          ${adminSelectCell(baseValue, optionValuesWithCurrent(fieldOptions.baseValues, baseValue))}
           ${adminSelectCell(item.scoreCalculation || (item.answerType === "number" ? "Adet bazında" : "Evet/Hayır"), ["Adet bazında", "Evet/Hayır"])}
-          ${editableCell(item.effortImpactType || "Sabit")}
+          ${adminSelectCell(effortImpactType, optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType))}
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
       `;
@@ -4043,13 +4166,17 @@
       if (!target) return;
       const no = target.querySelectorAll("tr").length + 1;
       const group = targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme";
+      const fieldOptions = currentQuestionFieldOptions();
       target.insertAdjacentHTML("beforeend", `<tr>
-        ${[no, group, "Evet/Hayır", "Yeni soru", "Açıklama"].map(editableCell).join("")}
+        ${editableCell(no)}
+        ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
+        ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
+        ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
         <td><input class="admin-score-input" type="number" step="any" disabled /></td>
-        ${editableCell("Evet / Hayır")}
+        ${adminSelectCell("Evet / Hayır", fieldOptions.baseValues)}
         ${adminSelectCell("Evet/Hayır", ["Adet bazında", "Evet/Hayır"])}
-        ${editableCell("Sabit")}
+        ${adminSelectCell("Sabit", fieldOptions.effortImpactTypes)}
         <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
       </tr>`);
       bindAdminEditable(target);
@@ -4139,6 +4266,12 @@
         moduleCatalog: collectAdminModules(),
         scopeQuestions: collectQuestionAdminRows("adminScopeRows"),
         developmentQuestions: collectQuestionAdminRows("adminDevelopmentRows"),
+        questionFieldOptions: {
+          variableGroups: collectDefinitionValues("adminVariableGroupOptions"),
+          variableTypes: collectDefinitionValues("adminVariableTypeOptions"),
+          baseValues: collectDefinitionValues("adminBaseValueOptions"),
+          effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions")
+        },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         fixedDays: window.adminSeedData.fixedDays,
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
@@ -4206,6 +4339,7 @@
       });
       if (config.fixedDays) config.fixedDays = ensureWorkbookFixedDaysRows(config.fixedDays);
       if (config.projectDefinitions) window.adminSeedData.projectDefinitions = config.projectDefinitions;
+      if (config.questionFieldOptions) window.adminSeedData.questionFieldOptions = config.questionFieldOptions;
       if (config.restrictions) window.adminSeedData.restrictions = config.restrictions;
       if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
       if (config.localizationEfforts) window.adminSeedData.localizationEfforts = config.localizationEfforts;
@@ -4255,6 +4389,7 @@
         applyAdminConfig(config);
         renderLocalizationControls();
         renderWorkbookDrivenScreens();
+        renderAdminPage();
         markAdminClean();
         alert("Admin ayarları kaydedildi.");
       } finally {
@@ -4307,6 +4442,11 @@
       renderDefinitionList("adminIndustryList", projectDefinitions.map(row => row[0]), "Endüstri tanımı yok.");
       renderDefinitionList("adminImplementationList", projectDefinitions.map(row => row[1]), "İmplementasyon türü yok.");
       renderDefinitionList("adminSystemList", projectDefinitions.map(row => row[2]), "Sistem türü yok.");
+      const fieldOptions = currentQuestionFieldOptions();
+      renderDefinitionList("adminVariableGroupOptions", fieldOptions.variableGroups, "Değişken grup seçeneği yok.");
+      renderDefinitionList("adminVariableTypeOptions", fieldOptions.variableTypes, "Değişken tip seçeneği yok.");
+      renderDefinitionList("adminBaseValueOptions", fieldOptions.baseValues, "Baz değer seçeneği yok.");
+      renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
