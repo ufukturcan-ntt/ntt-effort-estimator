@@ -1086,6 +1086,37 @@
       max-width: 100%;
     }
 
+    .fixed-days-filters {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(180px, 1fr));
+      gap: 10px;
+      padding: 0 10px;
+    }
+
+    .fixed-days-filters label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .fixed-days-filters select,
+    .admin-number-input {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 7px;
+      background: #fff;
+      font: inherit;
+    }
+
+    .admin-number-input {
+      width: 72px;
+      padding: 4px 5px;
+      font-size: 11px;
+    }
+
     .fixed-scroll-top {
       margin: 8px 10px 0;
       width: calc(100% - 20px);
@@ -1100,6 +1131,12 @@
 
     .fixed-scroll-top > div {
       height: 1px;
+    }
+
+    @media (max-width: 760px) {
+      .fixed-days-filters {
+        grid-template-columns: 1fr;
+      }
     }
 
     .compact-table input,
@@ -2244,7 +2281,12 @@
                 <div class="list-table admin-dense-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="fixed">
-                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><button class="button primary" data-admin-add-matrix="adminFixedRows" type="button">+ Satır</button></div>
+                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><button class="button primary" id="addFixedDaysModuleButton" type="button">+ Modül</button></div>
+                <div class="fixed-days-filters">
+                  <label><span>Size</span><select id="fixedDaysSizeFilter"></select></label>
+                  <label><span>İmplementasyon Türü</span><select id="fixedDaysImplementationFilter"></select></label>
+                  <label><span>Sistem Türü</span><select id="fixedDaysSystemFilter"></select></label>
+                </div>
                 <div class="fixed-scroll-top" id="fixedDaysScrollTop" aria-label="Fixed Days yatay kaydırma"><div></div></div>
                 <div class="list-table admin-dense-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
               </section>
@@ -2438,6 +2480,121 @@
         });
       });
       return Object.fromEntries([...selected.entries()].map(([module, entry]) => [module, entry.values]));
+    }
+
+    function fixedDaysEditorSelection() {
+      return {
+        size: document.getElementById("fixedDaysSizeFilter")?.value || "SMALL",
+        implementation: document.getElementById("fixedDaysImplementationFilter")?.value || "All",
+        systemType: document.getElementById("fixedDaysSystemFilter")?.value || "All"
+      };
+    }
+
+    function persistFixedDaysEditor() {
+      const body = document.getElementById("adminFixedRows");
+      if (!body?.dataset.fixedEditorReady) return;
+      const selection = fixedDaysEditorSelection();
+      const normalized = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const headers = normalized[0] || [];
+      const moduleIndex = headers.indexOf("Modül");
+      const sizeIndex = headers.indexOf("Size");
+      const implementationIndex = headers.indexOf("Implementation Type");
+      const systemIndex = headers.indexOf("System Type");
+      const retained = normalized.slice(1).filter(row =>
+        row[sizeIndex] !== selection.size
+        || row[implementationIndex] !== selection.implementation
+        || row[systemIndex] !== selection.systemType
+      );
+      const editorRows = [...body.querySelectorAll("tr")].map(row => {
+        const module = row.querySelector("[data-fixed-module]")?.value || "";
+        const values = [...row.querySelectorAll("[data-fixed-phase]")].map(input => {
+          const value = String(input.value || "").trim().replace(",", ".");
+          return value === "" ? "" : Number(value);
+        });
+        return [module, selection.size, ...values, selection.implementation, selection.systemType];
+      }).filter(row => row[moduleIndex]);
+      window.adminSeedData.fixedDays = [headers, ...retained, ...editorRows];
+    }
+
+    function renderFixedDaysEditor() {
+      const body = document.getElementById("adminFixedRows");
+      const head = document.getElementById("adminFixedHead");
+      if (!body || !head) return;
+      const selection = fixedDaysEditorSelection();
+      const rows = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const headers = rows[0] || [];
+      const indexes = {
+        module: headers.indexOf("Modül"),
+        size: headers.indexOf("Size"),
+        implementation: headers.indexOf("Implementation Type"),
+        system: headers.indexOf("System Type")
+      };
+      const matching = rows.slice(1).filter(row =>
+        row[indexes.size] === selection.size
+        && row[indexes.implementation] === selection.implementation
+        && row[indexes.system] === selection.systemType
+      );
+      head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>İşlem</th></tr>`;
+      body.innerHTML = matching.map(row => `
+        <tr>
+          ${adminSelectCell(row[indexes.module], moduleCatalog.map(item => item.module)).replace("<select", '<select data-fixed-module')}
+          ${phaseHeaders.map(phase => `<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="${escapeHtml(row[headers.indexOf(phase)] ?? "")}"></td>`).join("")}
+          <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
+        </tr>
+      `).join("");
+      body.dataset.fixedEditorReady = "true";
+      bindAdminEditable(body);
+      body.querySelectorAll("input, select").forEach(input => input.addEventListener("change", markAdminDirty));
+      requestAnimationFrame(syncFixedDaysScrollbars);
+    }
+
+    function initializeFixedDaysEditor() {
+      const size = document.getElementById("fixedDaysSizeFilter");
+      const implementation = document.getElementById("fixedDaysImplementationFilter");
+      const system = document.getElementById("fixedDaysSystemFilter");
+      if (!size || !implementation || !system) return;
+      const current = fixedDaysEditorSelection();
+      size.innerHTML = ["SMALL", "MEDIUM", "LARGE", "X-LARGE"].map(value => `<option>${value}</option>`).join("");
+      implementation.innerHTML = ["All", ...adminDefinitionValues(1)].map(value => `<option>${escapeHtml(value)}</option>`).join("");
+      system.innerHTML = ["All", ...adminDefinitionValues(2)].map(value => `<option>${escapeHtml(value)}</option>`).join("");
+      size.value = current.size;
+      implementation.value = current.implementation === "All" ? (adminDefinitionValues(1)[0] || "All") : current.implementation;
+      system.value = current.systemType === "All" && ["Conversion", "Greenfield"].includes(implementation.value)
+        ? "SAP S/4HANA Private Cloud"
+        : current.systemType;
+      [size, implementation, system].forEach(select => {
+        if (select.dataset.fixedFilterBound) return;
+        select.dataset.fixedFilterBound = "true";
+        select.addEventListener("change", () => {
+          persistFixedDaysEditor();
+          if (select === implementation) {
+            system.value = ["Conversion", "Greenfield"].includes(implementation.value)
+              ? "SAP S/4HANA Private Cloud"
+              : "All";
+          }
+          renderFixedDaysEditor();
+        });
+      });
+      const addButton = document.getElementById("addFixedDaysModuleButton");
+      if (addButton && !addButton.dataset.fixedAddBound) {
+        addButton.dataset.fixedAddBound = "true";
+        addButton.addEventListener("click", () => {
+          const used = new Set([...document.querySelectorAll("#adminFixedRows [data-fixed-module]")].map(select => select.value));
+          const module = moduleCatalog.find(item => !used.has(item.module))?.module || moduleCatalog[0]?.module || "";
+          const body = document.getElementById("adminFixedRows");
+          body.insertAdjacentHTML("beforeend", `
+            <tr>
+              ${adminSelectCell(module, moduleCatalog.map(item => item.module)).replace("<select", '<select data-fixed-module')}
+              ${phaseHeaders.map(() => '<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="0"></td>').join("")}
+              <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
+            </tr>
+          `);
+          bindAdminEditable(body);
+          markAdminDirty();
+          requestAnimationFrame(syncFixedDaysScrollbars);
+        });
+      }
+      renderFixedDaysEditor();
     }
 
     function buildLocalizationCatalog() {
@@ -3828,13 +3985,14 @@
     }
 
     function collectAdminConfig() {
+      persistFixedDaysEditor();
       return {
         projectDefinitions: collectAdminProjectDefinitions(),
         moduleCatalog: collectAdminModules(),
         scopeQuestions: collectQuestionAdminRows("adminScopeRows"),
         developmentQuestions: collectQuestionAdminRows("adminDevelopmentRows"),
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
-        fixedDays: collectMatrixRows("adminFixedHead", "adminFixedRows"),
+        fixedDays: window.adminSeedData.fixedDays,
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
         variableModulePhase: collectMatrixRows("adminVmpHead", "adminVmpRows"),
         approvalSettings: {
@@ -4004,7 +4162,7 @@
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", data.restrictions || []);
-      renderEditableMatrix("adminFixedHead", "adminFixedRows", data.fixedDays || []);
+      initializeFixedDaysEditor();
       renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", data.localizationEfforts || []);
       renderEditableMatrix("adminVmpHead", "adminVmpRows", data.variableModulePhase || []);
       document.querySelectorAll("[data-admin-add]").forEach(button => {
