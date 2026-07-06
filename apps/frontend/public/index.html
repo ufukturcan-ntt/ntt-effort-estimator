@@ -2456,6 +2456,53 @@
       return normalizedRows;
     }
 
+    function normalizeVariableModulePhaseRows(rows = []) {
+      const normalizedRows = rows.map(row => [...row]);
+      const headerIndex = normalizedRows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
+      if (headerIndex < 0) return normalizedRows;
+      const oldHeaders = normalizedRows[headerIndex].map(cell => String(cell || "").trim());
+      if (oldHeaders.includes("Kapsam Sorusu") && oldHeaders.includes("Geliştirme Sorusu") && oldHeaders.includes("Modül")) {
+        return [oldHeaders.filter(Boolean), ...normalizedRows.slice(headerIndex + 1).map(row => {
+          const offset = normalizedRows[headerIndex][0] === "" && row.length === oldHeaders.length ? 1 : 0;
+          return offset ? row.slice(1) : row;
+        })];
+      }
+      const sourceTypeIndex = oldHeaders.indexOf("Kaynak Tipi");
+      const sourceIndex = oldHeaders.indexOf("Kaynak");
+      if (sourceTypeIndex < 0 || sourceIndex < 0) return normalizedRows;
+      const scopeNames = new Set((window.scopeQuestions || []).map(item => String(item.name || "").trim()));
+      const developmentNames = new Set((window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name)));
+      const restrictions = window.adminSeedData?.restrictions || [];
+      const restrictionHeaderIndex = restrictions.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
+      if (restrictionHeaderIndex >= 0) {
+        const restrictionHeaders = restrictions[restrictionHeaderIndex].map(cell => String(cell || "").trim());
+        const typeIndex = restrictionHeaders.indexOf("Variable Type");
+        const questionIndex = restrictionHeaders.indexOf("Question");
+        restrictions.slice(restrictionHeaderIndex + 1).forEach(row => {
+          const question = String(row[questionIndex] || "").trim();
+          if (row[typeIndex] === "Kapsam") scopeNames.add(question);
+          if (row[typeIndex] === "Geliştirme") developmentNames.add(canonicalDevelopmentName(question));
+        });
+      }
+      const newHeaders = oldHeaders.filter(Boolean);
+      const compactSourceIndex = newHeaders.indexOf("Kaynak");
+      newHeaders.splice(compactSourceIndex, 1, "Kapsam Sorusu", "Geliştirme Sorusu", "Modül");
+      const dataRows = normalizedRows.slice(headerIndex + 1).map(row => {
+        const compactRow = oldHeaders[0] === "" ? row.slice(1) : [...row];
+        const compactHeaders = oldHeaders.filter(Boolean);
+        const type = compactRow[compactHeaders.indexOf("Kaynak Tipi")] || "";
+        const source = String(compactRow[compactHeaders.indexOf("Kaynak")] || "").trim();
+        const scopeSource = type !== "Modül" && scopeNames.has(source) ? source : "";
+        const developmentSource = type !== "Modül" && (developmentNames.has(canonicalDevelopmentName(source)) || !scopeSource)
+          ? canonicalDevelopmentName(source)
+          : "";
+        const moduleSource = type === "Modül" ? source : "";
+        compactRow.splice(compactHeaders.indexOf("Kaynak"), 1, scopeSource, developmentSource, moduleSource);
+        return compactRow;
+      });
+      return [newHeaders, ...dataRows];
+    }
+
     function normalizeFixedDaysRows(rows = []) {
       const canonicalRows = rows.map(row => row.map(canonicalPhaseName));
       const existingHeader = canonicalRows.find(row => row.includes("System Type") && (row.includes("Modül") || row.includes("Column1")));
@@ -2742,19 +2789,22 @@
     }
 
     function developmentEffortDefinitions() {
-      const rows = window.adminSeedData?.variableModulePhase || [];
+      const rows = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []);
       const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
       if (headerIndex < 0) return developmentEfforts;
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
       const sourceTypeIndex = headers.indexOf("Kaynak Tipi");
-      const sourceIndex = headers.indexOf("Kaynak");
+      const sourceIndexes = ["Kapsam Sorusu", "Geliştirme Sorusu", "Modül", "Kaynak"]
+        .map(header => headers.indexOf(header))
+        .filter(index => index >= 0);
       const moduleIndex = headers.findIndex(header => ["Hedef Modül", "Hedef ModÃ¼l"].includes(header));
       const phaseIndexes = phaseHeaders
         .map(phase => headers.indexOf(phase))
         .filter(index => index >= 0);
       const parsed = rows.slice(headerIndex + 1).map(row => {
         const effort = phaseIndexes.reduce((sum, index) => sum + (Number(row[index]) || 0), 0);
-        return [row[sourceTypeIndex], canonicalDevelopmentName(row[sourceIndex]), row[moduleIndex], effort];
+        const source = sourceIndexes.map(index => row[index]).find(Boolean);
+        return [row[sourceTypeIndex], canonicalDevelopmentName(source), row[moduleIndex], effort];
       }).filter(([, name, module, effort]) => name && module && effort > 0);
       return parsed.length ? parsed : developmentEfforts;
     }
@@ -3728,6 +3778,8 @@
       if (normalized === "Active?") return { options: ["Yes", "No"], multiple: false };
       if (normalized === "Kaynak Tipi") return { options: ["Değişken", "Modül"], multiple: false };
       if (normalized === "Kaynak") return { options: adminQuestionNames(), multiple: false };
+      if (normalized === "Kapsam Sorusu") return { options: ["", ...(window.scopeQuestions || []).map(item => item.name)], multiple: false };
+      if (normalized === "Geliştirme Sorusu") return { options: ["", ...(window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name))], multiple: false };
       if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...moduleCatalog.map(item => item.module)], multiple: false };
       if (["Modül", "Modul", "Module"].includes(normalized)) return { options: moduleCatalog.map(item => item.module), multiple: false };
       if (["Efor Bazı", "Efor BazÄ±"].includes(normalized)) return { options: ["Sabit", "Katsayı", "1 Farklı Şirket Kurgusu", "1 Entegrasyon bazında"], multiple: false };
@@ -3764,14 +3816,15 @@
       const head = document.getElementById(headId);
       const body = document.getElementById(bodyId);
       if (!body || !rows?.length) return;
+      if (bodyId === "adminVmpRows") rows = normalizeVariableModulePhaseRows(rows);
       const headerIndex = rows.findIndex(row => {
         if (bodyId === "adminFixedRows") return row.includes("Column1") || row.includes("Modül");
         if (bodyId === "adminLocalizationRows") return row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke");
         if (bodyId === "adminVmpRows") return row.includes("Kaynak Tipi");
         return row.includes("No") || row.includes("Variable Type") || row.includes("Question");
       });
-      const headers = rows[Math.max(headerIndex, 0)].filter((_, index) => !(bodyId === "adminVmpRows" && index === 0));
-      const dataRows = rows.slice(Math.max(headerIndex, 0) + 1).map(row => bodyId === "adminVmpRows" ? row.slice(1) : row);
+      const headers = rows[Math.max(headerIndex, 0)];
+      const dataRows = rows.slice(Math.max(headerIndex, 0) + 1);
       if (head) head.innerHTML = `<tr>${headers.map(value => `<th>${value}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
       body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
@@ -4110,9 +4163,10 @@
         config[key] = config[key].map(row => row.map(value =>
           value === "Üretim ana veri yaratma otomasyonu (FMS)"
             ? "Üretim ana veri yaratma otomasyonu (FVB)"
-            : value
+          : value
         ));
       });
+      if (config.variableModulePhase) config.variableModulePhase = normalizeVariableModulePhaseRows(config.variableModulePhase);
       ["fixedDays", "localizationEfforts", "variableModulePhase"].forEach(key => {
         if (config[key]) config[key] = config[key].map(row => row.map(canonicalPhaseName));
       });
