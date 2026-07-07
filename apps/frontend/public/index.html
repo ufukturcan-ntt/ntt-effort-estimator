@@ -2550,6 +2550,14 @@
       {module:"NTT Data POS", group:"NTT Own IP", selected:true, team:""}
     ];
 
+    function sortByModuleName(items) {
+      return [...items].sort((a, b) => String(a.module || "").localeCompare(String(b.module || ""), "tr-TR"));
+    }
+
+    function sortedModuleNames() {
+      return sortByModuleName(moduleCatalog).map(item => item.module);
+    }
+
     function normalizeLocalizationEffortRows(rows = []) {
       const normalizedRows = rows.map(row => [...row]);
       const headerIndex = normalizedRows.findIndex(row => row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke"));
@@ -2704,6 +2712,18 @@
       };
     }
 
+    function fixedDaysRowTotal(row, headers) {
+      return phaseHeaders.reduce((sum, phase) => sum + (Number(row[headers.indexOf(phase)]) || 0), 0);
+    }
+
+    function refreshFixedDaysRowTotal(row) {
+      const target = row.querySelector("[data-fixed-total]");
+      if (!target) return;
+      const total = [...row.querySelectorAll("[data-fixed-phase]")]
+        .reduce((sum, input) => sum + (Number(String(input.value || "").replace(",", ".")) || 0), 0);
+      target.textContent = fmt(total);
+    }
+
     function persistFixedDaysEditor() {
       const body = document.getElementById("adminFixedRows");
       if (!body?.dataset.fixedEditorReady) return;
@@ -2748,18 +2768,22 @@
         && row[indexes.implementation] === selection.implementation
         && row[indexes.system] === selection.systemType
       );
-      head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>İşlem</th></tr>`;
+      head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th><th>İşlem</th></tr>`;
       body.innerHTML = matching.map(row => `
         <tr>
-          ${adminSelectCell(row[indexes.module], moduleCatalog.map(item => item.module)).replace("<select", '<select data-fixed-module')}
+          ${adminSelectCell(row[indexes.module], sortedModuleNames()).replace("<select", '<select data-fixed-module')}
           ${phaseHeaders.map(phase => `<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="${escapeHtml(row[headers.indexOf(phase)] ?? "")}"></td>`).join("")}
+          <td><strong data-fixed-total>${fmt(fixedDaysRowTotal(row, headers))}</strong></td>
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
       `).join("");
       body.dataset.fixedEditorReady = "true";
       body.dataset.fixedEditorSelection = JSON.stringify(selection);
       bindAdminEditable(body);
-      body.querySelectorAll("input, select").forEach(input => input.addEventListener("change", markAdminDirty));
+      body.querySelectorAll("input, select").forEach(input => input.addEventListener("change", event => {
+        if (event.target.matches("[data-fixed-phase]")) refreshFixedDaysRowTotal(event.target.closest("tr"));
+        markAdminDirty();
+      }));
       requestAnimationFrame(syncFixedDaysScrollbars);
     }
 
@@ -2795,16 +2819,25 @@
         addButton.dataset.fixedAddBound = "true";
         addButton.addEventListener("click", () => {
           const used = new Set([...document.querySelectorAll("#adminFixedRows [data-fixed-module]")].map(select => select.value));
-          const module = moduleCatalog.find(item => !used.has(item.module))?.module || moduleCatalog[0]?.module || "";
+          const module = sortByModuleName(moduleCatalog).find(item => !used.has(item.module))?.module || sortedModuleNames()[0] || "";
           const body = document.getElementById("adminFixedRows");
           body.insertAdjacentHTML("beforeend", `
             <tr>
-              ${adminSelectCell(module, moduleCatalog.map(item => item.module)).replace("<select", '<select data-fixed-module')}
+              ${adminSelectCell(module, sortedModuleNames()).replace("<select", '<select data-fixed-module')}
               ${phaseHeaders.map(() => '<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="0"></td>').join("")}
+              <td><strong data-fixed-total>0</strong></td>
               <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
             </tr>
           `);
           bindAdminEditable(body);
+          body.querySelectorAll("input, select").forEach(input => {
+            if (input.dataset.fixedTotalBound) return;
+            input.dataset.fixedTotalBound = "true";
+            input.addEventListener("change", event => {
+              if (event.target.matches("[data-fixed-phase]")) refreshFixedDaysRowTotal(event.target.closest("tr"));
+              markAdminDirty();
+            });
+          });
           markAdminDirty();
           requestAnimationFrame(syncFixedDaysScrollbars);
         });
@@ -3560,7 +3593,7 @@
       target.innerHTML = groups.map(group => `
         <div class="module-group">
           <h4>${group}</h4>
-          ${moduleCatalog.filter(item => item.group === group).map(item => {
+          ${sortByModuleName(moduleCatalog.filter(item => item.group === group)).map(item => {
             const state = moduleState.get(item.module);
             return `
               <label class="module-choice">
@@ -3932,8 +3965,8 @@
       if (normalized === "Kaynak") return { options: adminQuestionNames(), multiple: false };
       if (normalized === "Kapsam Sorusu") return { options: ["", ...(window.scopeQuestions || []).map(item => item.name)], multiple: false };
       if (normalized === "Geliştirme Sorusu") return { options: ["", ...(window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name))], multiple: false };
-      if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...moduleCatalog.map(item => item.module)], multiple: false };
-      if (["Modül", "Modul", "Module"].includes(normalized)) return { options: moduleCatalog.map(item => item.module), multiple: false };
+      if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...sortedModuleNames()], multiple: false };
+      if (["Modül", "Modul", "Module"].includes(normalized)) return { options: sortedModuleNames(), multiple: false };
       if (["Efor Bazı", "Efor BazÄ±"].includes(normalized)) return { options: ["Sabit", "Katsayı", "1 Farklı Şirket Kurgusu", "1 Entegrasyon bazında"], multiple: false };
       if (["Ülke", "Ulke", "Ãœlke"].includes(normalized)) return { options: localizationCatalog.map(item => item.country), multiple: false };
       return null;
@@ -4077,7 +4110,7 @@
             <button class="button" data-add-module-to-group="${escapeHtml(group)}" type="button">+ Modül</button>
           </div>
           <div class="admin-module-list">
-            ${moduleCatalog.filter(item => item.group === group).map(item => `
+            ${sortByModuleName(moduleCatalog.filter(item => item.group === group)).map(item => `
               <article class="admin-module-card">
                 ${editableDiv(item.module)}
                 <button class="button danger" data-admin-remove type="button">Sil</button>
@@ -5496,6 +5529,10 @@
     }
 
     function openNewOffer() {
+      currentOfferId = null;
+      currentOfferStatus = "DRAFT";
+      currentOfferAccessMode = "edit";
+      currentOfferMode = "new";
       setProjectForm({
         customer: "",
         project: "",
@@ -5506,10 +5543,6 @@
         notes: "",
         effort: "0"
       }, { preserveAnswers: false });
-      currentOfferId = null;
-      currentOfferStatus = "DRAFT";
-      currentOfferAccessMode = "edit";
-      currentOfferMode = "new";
       resetSelectableState("new");
       markClean();
       openWork("project");
