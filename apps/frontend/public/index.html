@@ -4025,7 +4025,8 @@
       if (head) head.innerHTML = `<tr>${headers.map(value => `<th>${value}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
       body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
-        const selectConfig = adminMatrixOptions(header);
+        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(String(header || "").trim());
+        const selectConfig = isLocalizationCountry ? null : adminMatrixOptions(header);
         return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`).join("");
       bindAdminEditable(body);
@@ -4038,7 +4039,8 @@
       const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
       if (!headers.length) return;
       body.insertAdjacentHTML("beforeend", `<tr>${headers.map(header => {
-        const selectConfig = adminMatrixOptions(header);
+        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(String(header || "").trim());
+        const selectConfig = isLocalizationCountry ? null : adminMatrixOptions(header);
         return selectConfig ? adminSelectCell("", selectConfig.options, selectConfig.multiple) : editableCell("");
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
       bindAdminEditable(body);
