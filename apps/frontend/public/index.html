@@ -2567,8 +2567,16 @@
       {module:"NTT Data POS", group:"NTT Own IP", selected:true, team:""}
     ];
 
+    const defaultModuleGroups = ["S4Core", "NTT Own IP", "Advanced Solution", "Zorunlu Modüller"];
+
     function sortByModuleName(items) {
       return [...items].sort((a, b) => String(a.module || "").localeCompare(String(b.module || ""), "tr-TR"));
+    }
+
+    function moduleGroupNames() {
+      const groups = new Set(defaultModuleGroups);
+      moduleCatalog.map(item => item.group).filter(Boolean).forEach(group => groups.add(group));
+      return [...groups];
     }
 
     function sortedModuleNames() {
@@ -3603,7 +3611,7 @@
     function renderModuleGroups() {
       const target = document.getElementById("moduleGroups");
       if (!target) return;
-      const groups = ["S4Core", "NTT Own IP", "Advanced Solution"];
+      const groups = moduleGroupNames();
       const showTeam = isTeamSplitEnabled();
       target.innerHTML = groups.map(group => `
         <div class="module-group">
@@ -4113,7 +4121,7 @@
     function renderAdminModules() {
       const target = document.getElementById("adminModuleBoard");
       if (!target) return;
-      const groups = [...new Set(moduleCatalog.map(item => item.group).filter(Boolean))];
+      const groups = moduleGroupNames();
       target.innerHTML = groups.map(group => `
         <section class="admin-module-group" data-admin-module-group="${group}">
           <div class="admin-module-group-head">
