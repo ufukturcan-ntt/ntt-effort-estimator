@@ -1082,15 +1082,14 @@
     }
 
     .admin-question-table th:nth-child(1) { width: 4%; }
-    .admin-question-table th:nth-child(2) { width: 8%; }
-    .admin-question-table th:nth-child(3) { width: 8%; }
-    .admin-question-table th:nth-child(4) { width: 17%; }
-    .admin-question-table th:nth-child(5) { width: 26%; }
+    .admin-question-table th:nth-child(2) { width: 9%; }
+    .admin-question-table th:nth-child(3) { width: 9%; }
+    .admin-question-table th:nth-child(4) { width: 18%; }
+    .admin-question-table th:nth-child(5) { width: 29%; }
     .admin-question-table th:nth-child(6) { width: 6%; }
     .admin-question-table th:nth-child(7) { width: 6%; }
-    .admin-question-table th:nth-child(8) { width: 10%; }
-    .admin-question-table th:nth-child(9) { width: 10%; }
-    .admin-question-table th:nth-child(10) { width: 5%; }
+    .admin-question-table th:nth-child(8) { width: 12%; }
+    .admin-question-table th:nth-child(9) { width: 7%; }
 
     .admin-question-table .admin-edit {
       min-height: 24px;
@@ -2455,11 +2454,11 @@
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="restrictions">
                 <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><button class="button primary" data-admin-add-matrix="adminRestrictionsRows" type="button">+ Satır</button></div>
@@ -2991,8 +2990,7 @@
       return questions.map(item => {
         const excelRow = excelRows.get(String(item.no)) || [];
         const variableType = item.variableType || excelRow[3] || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
-        const scoreCalculation = item.scoreCalculation || (String(variableType).toLocaleLowerCase("tr-TR").includes("sayı") ? "Adet bazında" : "Evet/Hayır");
-        const answerType = scoreCalculation === "Adet bazında" || String(variableType).toLocaleLowerCase("tr-TR").includes("sayı")
+        const answerType = String(variableType).toLocaleLowerCase("tr-TR").includes("sayı")
           ? "number"
           : "yesno";
         return {
@@ -3001,7 +2999,6 @@
           variableType,
           sizeImpact: item.sizeImpact == null ? Number(item.score ?? excelRow[4]) > 0 : item.sizeImpact,
           score: Number(item.score ?? excelRow[4]) || 0,
-          scoreCalculation,
           effortImpactType: item.effortImpactType || "Sabit",
           answerType
         };
@@ -4197,7 +4194,6 @@
           ${editableCell(item.description)}
           <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
           <td><input class="admin-score-input" type="number" step="any" value="${Number(item.score) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
-          ${adminSelectCell(item.scoreCalculation || (item.answerType === "number" ? "Adet bazında" : "Evet/Hayır"), ["Adet bazında", "Evet/Hayır"])}
           ${adminSelectCell(effortImpactType, optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType))}
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
@@ -4219,7 +4215,6 @@
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
         <td><input class="admin-score-input" type="number" step="any" disabled /></td>
-        ${adminSelectCell("Evet/Hayır", ["Adet bazında", "Evet/Hayır"])}
         ${adminSelectCell("Sabit", fieldOptions.effortImpactTypes)}
         <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
       </tr>`);
@@ -4274,8 +4269,8 @@
 
     function collectQuestionAdminRows(targetId) {
       return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
-        const cells = [...row.children].slice(0, 9).map(adminCellValue);
-        const scoreCalculation = cells[7] || (String(cells[2] || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "Adet bazında" : "Evet/Hayır");
+        const cells = [...row.children].slice(0, 8).map(adminCellValue);
+        const answerType = String(cells[2] || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "number" : "yesno";
         return {
           no: Number(cells[0]) || cells[0],
           group: cells[1],
@@ -4284,9 +4279,8 @@
           description: cells[4],
           sizeImpact: Boolean(cells[5]),
           score: Number(String(cells[6]).replace(",", ".")) || 0,
-          scoreCalculation,
-          effortImpactType: cells[8],
-          answerType: scoreCalculation === "Adet bazında" || String(cells[2] || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "number" : "yesno",
+          effortImpactType: cells[7],
+          answerType,
           active: true
         };
       }).filter(item => item.name);
