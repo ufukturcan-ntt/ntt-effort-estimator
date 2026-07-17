@@ -1988,6 +1988,9 @@
             <button class="nav-item detail-nav" data-screen="developments" title="Developments">
               <span class="nav-icon">G</span><span>Developments</span><span class="nav-count">24</span>
             </button>
+            <button class="nav-item detail-nav" data-screen="fixedefforts" title="Sabit Efor">
+              <span class="nav-icon">S</span><span>Sabit Efor</span><span class="nav-count" id="fixedEffortNavCount">0g</span>
+            </button>
             <button class="nav-item detail-nav" data-screen="localization" title="Localization">
               <span class="nav-icon">L</span><span>Localization</span><span class="nav-count" id="localizationNavCount">0</span>
             </button>
@@ -2302,6 +2305,24 @@
               </div>
             </div>
             <div class="module-groups" id="moduleGroups"></div>
+          </section>
+        </div>
+
+        <div class="screen" id="fixedefforts">
+          <section class="grid">
+            <div class="panel">
+              <div class="panel-head"><h3 class="panel-title">Sabit Efor</h3><span class="pill">Analiz eforuna eklenir</span></div>
+              <div class="compact-table">
+                <table>
+                  <thead><tr><th>Modül</th><th>Analiz Eforu (gün)</th></tr></thead>
+                  <tbody id="fixedEffortRows"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><h3 class="panel-title">Sabit efor özeti</h3><span class="pill"><span id="fixedEffortTotal">0</span>g</span></div>
+              <div class="phase-list" id="fixedEffortSummary"></div>
+            </div>
           </section>
         </div>
 
@@ -3037,6 +3058,18 @@
     window.scopeQuestions = enrichQuestionsFromExcel("scope", window.scopeQuestions, "Kapsam");
     window.developmentQuestions = enrichQuestionsFromExcel("development", window.developmentQuestions, "Geliştirme");
 
+    const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP"];
+    const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
+
+    function fixedEffortValues(source = fixedEffortState) {
+      const entries = source instanceof Map ? [...source.entries()] : Object.entries(source || {});
+      return Object.fromEntries(entries.map(([module, value]) => [module, Math.max(Number(value) || 0, 0)]));
+    }
+
+    function fixedEffortTotal(source = fixedEffortState) {
+      return Object.values(fixedEffortValues(source)).reduce((sum, value) => sum + value, 0);
+    }
+
     const moduleState = new Map(moduleCatalog.map(item => [item.module, { selected: item.selected, team: item.team }]));
     const hypercareState = new Map(moduleCatalog.map(item => {
       const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] = hypercareDefaults[item.module] || ["","","","",""];
@@ -3131,11 +3164,12 @@
         approved: "Onaylandı",
         reference: "Referans",
         offerSteps: "Teklif adımları",
-        sections7: "7 bölüm",
+        sections7: "8 bölüm",
         ready: "Hazır",
         projectInfo: "Müşteri, sektör, sistem, implementasyon",
         scopeInfo: "Size skoru ve kapsam soruları",
         developmentInfo: "Ek geliştirme ve entegrasyonlar",
+        fixedEffortInfo: "PMO, Governance, BASIS ve ABAP sabit eforları",
         moduleInfo: "SAP modül seçimi",
         localizationInfo: "Ülke bazlı lokalizasyon",
         hypercareInfo: "Go-live sonrası destek parametreleri",
@@ -3143,6 +3177,7 @@
         modules: "Modüller",
         scope: "Kapsam",
         developments: "Developments",
+        fixedEfforts: "Sabit Efor",
         localization: "Localization",
         hypercare: "Hypercare",
         effortAnalysis: "Efor Analizi",
@@ -3260,11 +3295,12 @@
         approved: "Approved",
         reference: "Reference",
         offerSteps: "Offer steps",
-        sections7: "7 sections",
+        sections7: "8 sections",
         ready: "Ready",
         projectInfo: "Customer, industry, system, implementation",
         scopeInfo: "Size score and scope questions",
         developmentInfo: "Additional developments and integrations",
+        fixedEffortInfo: "Fixed PMO, Governance, BASIS and ABAP efforts",
         moduleInfo: "SAP module selection",
         localizationInfo: "Country-based localization",
         hypercareInfo: "Post go-live support parameters",
@@ -3272,6 +3308,7 @@
         modules: "Modules",
         scope: "Scope",
         developments: "Developments",
+        fixedEfforts: "Fixed Effort",
         localization: "Localization",
         hypercare: "Hypercare",
         effortAnalysis: "Effort Analysis",
@@ -3397,6 +3434,7 @@
         t("modules"),
         t("scope"),
         t("developments"),
+        t("fixedEfforts"),
         t("localization"),
         t("hypercare"),
         t("effortAnalysis")
@@ -3412,11 +3450,12 @@
         t("projectInfo"),
         t("scopeInfo"),
         t("developmentInfo"),
+        t("fixedEffortInfo"),
         t("moduleInfo"),
         t("localizationInfo"),
         t("hypercareInfo")
       ]);
-      setTexts("#overview .wizard-step b", [t("ready"), "L", "24", "33", "2", "268g"]);
+      setTexts("#overview .wizard-step b", [t("ready"), "L", "24", "S", "33", "2", "268g"]);
       setTextContent("#overview > .panel .panel-title", t("recentWorks"));
       const empty = document.querySelector("#recentWorkGrid .empty-state");
       if (empty) empty.textContent = cachedOffers.length ? "" : t("loadingRecords");
@@ -3445,6 +3484,8 @@
       setTextContent("#developmentSelectedPill", `${document.getElementById("selectedDevelopmentCount")?.textContent || "0"} ${t("selected")}`);
       setTexts("#developments .metric span", [t("selectedDevelopment"), t("extraEffort")]);
       setTexts("#developments .metric small", [t("answeredDevelopment"), t("potentialImpact")]);
+      setTextContent("#fixedefforts .panel:nth-child(1) .panel-title", t("fixedEfforts"));
+      setTextContent("#fixedefforts .panel:nth-child(2) .panel-title", currentLanguage === "en" ? "Fixed effort summary" : "Sabit efor özeti");
       setTextContent("#modules .panel-title", t("moduleSelection"));
       setTextContent("#modules .input-field label", t("teamSplit"));
       setTextContent("#teamSplitSelect option[value='no']", t("no"));
@@ -3595,10 +3636,11 @@
         return state?.selected || (state?.team || "").trim() !== "";
       }) || isTeamSplitEnabled();
       const hasLocalizationData = localizationCatalog.some(item => item.selected);
+      const hasFixedEffortData = fixedEffortTotal() > 0;
       const hasHypercareData = [...hypercareState.values()].some(row =>
         ["weeks", "daysPerWeek", "shifts", "locations", "goliveDays"].some(field => String(row[field] || "").trim() !== "")
       );
-      return formHasData || hasQuestionData || hasModuleData || hasLocalizationData || hasHypercareData;
+      return formHasData || hasQuestionData || hasModuleData || hasLocalizationData || hasFixedEffortData || hasHypercareData;
     }
 
     function confirmNavigation(action) {
@@ -3688,6 +3730,52 @@
           renderWorkbookDrivenScreens();
         });
       });
+    }
+
+    function renderFixedEfforts() {
+      const target = document.getElementById("fixedEffortRows");
+      const summary = document.getElementById("fixedEffortSummary");
+      const values = fixedEffortValues();
+      const total = fixedEffortTotal();
+      setText("fixedEffortTotal", fmt(total));
+      setText("fixedEffortNavCount", `${fmt(total)}g`);
+      if (target) {
+        target.innerHTML = fixedEffortModules.map(module => `
+          <tr>
+            <td><span class="module-chip"><span class="module-initial">${initials(module)}</span>${module}</span></td>
+            <td><input type="number" min="0" step="0.5" data-fixed-effort="${module}" value="${fixedEffortState.get(module) || ""}" /></td>
+          </tr>
+        `).join("");
+        target.querySelectorAll("[data-fixed-effort]").forEach(input => {
+          input.addEventListener("input", () => {
+            fixedEffortState.set(input.dataset.fixedEffort, input.value);
+            markDirty();
+            const values = fixedEffortValues();
+            const total = fixedEffortTotal();
+            setText("fixedEffortTotal", fmt(total));
+            setText("fixedEffortNavCount", `${fmt(total)}g`);
+            if (summary) {
+              summary.innerHTML = fixedEffortModules.map(module => `
+                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>Analiz eforu</small></div>
+              `).join("");
+            }
+            const projectTotal = renderFinalEffort();
+            const developmentTotal = renderDevelopmentEfforts();
+            const localizationTotal = activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
+            const support = updateHypercareTotals();
+            const supportTotal = support.hypercare + support.golive;
+            setText("finalHypercareTotal", fmt(supportTotal));
+            setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + supportTotal));
+            renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
+          });
+        });
+      }
+      if (summary) {
+        summary.innerHTML = fixedEffortModules.map(module => `
+          <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>Analiz eforu</small></div>
+        `).join("");
+      }
+      return total;
     }
 
     function activeLocalizations() {
@@ -3795,14 +3883,17 @@
       const size = projectSizeFromScore(currentScopeScore());
       const fixedRows = fixedRowsForSelection(implementation, systemType, size.fixedKey);
       const sizeRow = {};
-      return selectedModuleNames().map(name => {
+      const fixedValues = fixedEffortValues();
+      const names = [...new Set([...selectedModuleNames(), ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
+      return names.map(name => {
         const base = fixedRows[name] || finalEffortBase[name] || {};
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
         const values = Object.fromEntries(phaseHeaders.map(phase => {
           const baseValue = Number(base[phase]) || 0;
           const sizeValue = Number(sizeRow[phase]) || 0;
-          const calculated = baseValue + sizeValue;
-          return [phase, calculated * teamMultiplier];
+          const fixedValue = phase === "Analiz" ? (fixedValues[name] || 0) : 0;
+          const calculated = (baseValue + sizeValue) * teamMultiplier + fixedValue;
+          return [phase, calculated];
         }));
         return { module: name, values, total: sumValues(values) };
       });
@@ -4604,6 +4695,7 @@
       setText("selectedModuleCount", selectedCount);
       setText("moduleNavCount", selectedCount);
       renderLocalizationControls();
+      const fixedEffortTotalValue = renderFixedEfforts();
       const localizationTotal = renderLocalizationEfforts();
       const projectTotal = renderFinalEffort();
       const developmentTotal = renderDevelopmentEfforts();
@@ -4640,6 +4732,11 @@
       }, 0);
     }
 
+    function offerFixedEfforts(offer) {
+      const finalEffort = offerJson(offer.final_effort);
+      return fixedEffortValues(finalEffort.fixedEfforts || offer.fixedEfforts || {});
+    }
+
     function projectEffortRowsForOffer(offer) {
       const implementation = offer.implementation_type || offerJson(offer.project_definition).implementation || "Conversion";
       const systemType = offer.system_type || offerJson(offer.project_definition).system || "All";
@@ -4647,11 +4744,16 @@
       const fixedRows = fixedRowsForSelection(implementation, systemType, sizeKey);
       const sizeRow = {};
       const support = offerJson(offer.hypercare_inputs);
-      return offerSelectedModules(offer).map(({ module, team }) => {
+      const fixedValues = offerFixedEfforts(offer);
+      const effortModules = [...new Map([
+        ...offerSelectedModules(offer).map(item => [item.module, item]),
+        ...fixedEffortModules.filter(module => fixedValues[module] > 0).map(module => [module, { module, team: 1 }])
+      ]).values()];
+      return effortModules.map(({ module, team }) => {
         const base = fixedRows[module] || finalEffortBase[module] || {};
         const values = Object.fromEntries(phaseHeaders.map(phase => [
           phase,
-          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team
+          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (phase === "Analiz" ? (fixedValues[module] || 0) : 0)
         ]));
         const supportRow = support[module] || {};
         const factors = [supportRow.weeks, supportRow.daysPerWeek, supportRow.shifts, supportRow.locations].map(Number);
@@ -4883,6 +4985,7 @@
     function recalculatedOfferPayload(offer) {
       const definition = offerJson(offer.project_definition);
       const finalEffort = recalculatedOfferEffort(offer);
+      const fixedEfforts = offerFixedEfforts(offer);
       return {
         title: offer.title || offer.project_name || definition.project || "Yeni Teklif",
         customerName: offer.customer_name || definition.customer || "",
@@ -4898,7 +5001,11 @@
         moduleSelection: offerJson(offer.module_selection),
         localizationSelection: offerJson(offer.localization_selection),
         hypercareInputs: offerJson(offer.hypercare_inputs),
-        finalEffort
+        finalEffort: {
+          ...finalEffort,
+          fixedEfforts,
+          fixedEffortTotal: fixedEffortTotal(fixedEfforts)
+        }
       };
     }
 
@@ -5426,6 +5533,7 @@
       const implementationType = document.getElementById("projectImplementation")?.value || "";
       const moduleSelection = Object.fromEntries([...moduleState.entries()]);
       const localizationSelection = Object.fromEntries(localizationCatalog.map(item => [`${item.country}::${item.module}`, item.selected]));
+      const fixedEfforts = fixedEffortValues();
       const hypercareInputs = Object.fromEntries([...hypercareState.entries()]);
       return {
         userId: currentUser?.id,
@@ -5455,6 +5563,8 @@
           projectTotal: numericText("projectEffortTotal"),
           developmentTotal: numericText("developmentEffortTotal"),
           localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
+          fixedEfforts,
+          fixedEffortTotal: fixedEffortTotal(),
           hypercareTotal: selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
           goliveTotal: selectedModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0),
           grandTotal: numericText("finalGrandTotal")
@@ -5591,6 +5701,7 @@
       const savedModules = offerJson(offer?.module_selection);
       const savedLocalizations = offerJson(offer?.localization_selection);
       const savedHypercare = offerJson(offer?.hypercare_inputs);
+      const savedFixedEfforts = offerJson(offer?.final_effort).fixedEfforts || {};
       const teamSplit = document.getElementById("teamSplitSelect");
       if (teamSplit) {
         const hasMultipleTeams = Object.values(savedModules).some(state => Number(state?.team) > 1);
@@ -5607,6 +5718,9 @@
         item.selected = mode === "existing" && Object.prototype.hasOwnProperty.call(savedLocalizations, key)
           ? Boolean(savedLocalizations[key])
           : mode === "existing" && item.module === "FI" && ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country);
+      });
+      fixedEffortModules.forEach(module => {
+        fixedEffortState.set(module, mode === "existing" ? String(Number(savedFixedEfforts[module]) || "") : "");
       });
       resetHypercareState(mode);
       if (mode === "existing") {
@@ -5683,7 +5797,7 @@
       openScreen(screenId, { workMode: true });
     }
 
-    const offerScreens = new Set(["project", "modules", "scope", "developments", "localization", "hypercare", "effort"]);
+    const offerScreens = new Set(["project", "modules", "scope", "developments", "fixedefforts", "localization", "hypercare", "effort"]);
 
     function guardedOpenWork(screenId = "project") {
       if (offerScreens.has(screenId)) {
@@ -5702,6 +5816,7 @@
       ["modules", "modules"],
       ["scope", "scope"],
       ["developments", "developments"],
+      ["fixedefforts", "fixedEfforts"],
       ["localization", "localization"],
       ["hypercare", "hypercare"],
       ["effort", "effortAnalysis"]
