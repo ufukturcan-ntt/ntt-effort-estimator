@@ -4733,6 +4733,130 @@
       XLSX.writeFile(workbook, `${safeName}-Backlog.xlsx`, { compression: true });
     }
 
+    function printTable(headers, rows, emptyText) {
+      if (!rows.length) return `<p class="empty">${escapeHtml(emptyText)}</p>`;
+      return `
+        <table>
+          <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+          <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+        </table>
+      `;
+    }
+
+    function offerLocalizationRows(offer, moduleNames) {
+      const selection = offerJson(offer.localization_selection);
+      const moduleSet = new Set(moduleNames);
+      return localizationCatalog.filter(item => moduleSet.has(item.module) && Boolean(selection[`${item.country}::${item.module}`]));
+    }
+
+    function offerPrintHtml(offer) {
+      const definition = offerJson(offer.project_definition);
+      const projectRows = projectEffortRowsForOffer(offer);
+      const moduleNames = projectRows.map(row => row.module);
+      const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
+      const localizationRows = offerLocalizationRows(offer, moduleNames);
+      const scopeScore = offerScopeScore(offer);
+      const size = projectSizeFromScore(scopeScore);
+      const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values), 0);
+      const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
+      const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
+      const developmentTotal = developmentRows.reduce((sum, row) =>
+        sum + moduleNames.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0), 0);
+      const localizationTotal = localizationRows.reduce((sum, row) => sum + sumPhases(row.values), 0);
+      const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal;
+      const infoRows = [
+        ["Proje No", offer.offer_no || ""],
+        ["Müşteri", offer.customer_name || definition.customer || ""],
+        ["Proje", offer.project_name || definition.project || offer.title || ""],
+        ["Endüstri", offer.industry || definition.industry || ""],
+        ["İmplementasyon Türü", offer.implementation_type || definition.implementation || ""],
+        ["Sistem Türü", offer.system_type || definition.system || ""],
+        ["Size", size.label],
+        ["Kapsam Skoru", fmt(scopeScore)],
+        ["Durum", statusLabel(offer.status)],
+        ["Son Güncelleme", offer.updated_at ? new Date(offer.updated_at).toLocaleDateString("tr-TR") : ""]
+      ];
+      const projectTableRows = projectRows.map(row => {
+        const total = sumValues(row.values) + (Number(row.hypercare) || 0) + (Number(row.golive) || 0);
+        return [row.module, ...phaseHeaders.map(phase => fmt(row.values[phase] || 0)), fmt(row.hypercare || 0), fmt(row.golive || 0), fmt(total)];
+      });
+      const projectTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+      projectRows.forEach(row => phaseHeaders.forEach(phase => projectTotals[phase] += Number(row.values[phase]) || 0));
+      if (projectRows.length) {
+        projectTableRows.push(["Toplam", ...phaseHeaders.map(phase => fmt(projectTotals[phase])), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
+      }
+      const localizationTableRows = localizationRows.map(row => [
+        row.module,
+        row.country,
+        ...phaseHeaders.map(phase => fmt(row.values[phase] || 0)),
+        fmt(sumPhases(row.values))
+      ]);
+      const developmentTableRows = developmentRows.map(row => {
+        const rowTotal = moduleNames.reduce((sum, module) => sum + (Number(row.values[module]) || 0), 0);
+        return { row: [row.name, ...moduleNames.map(module => row.values[module] ? fmt(row.values[module]) : ""), fmt(rowTotal)], total: rowTotal };
+      }).filter(item => item.total > 0).map(item => item.row);
+      const summaryRows = [
+        ["Standart proje eforu", fmt(projectTotal)],
+        ["Geliştirme eforu", fmt(developmentTotal)],
+        ["Lokalizasyon eforu", fmt(localizationTotal)],
+        ["Hypercare", fmt(hypercareTotal)],
+        ["Go-Live Support", fmt(goliveTotal)],
+        ["Toplam efor", fmt(grandTotal)]
+      ];
+      return `<!doctype html>
+        <html lang="tr">
+        <head>
+          <meta charset="utf-8">
+          <title>${escapeHtml(offer.offer_no || "Teklif")} PDF</title>
+          <style>
+            @page { size: A4 landscape; margin: 12mm; }
+            * { box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; color: #172033; margin: 0; font-size: 10px; }
+            h1 { margin: 0 0 4px; font-size: 22px; }
+            h2 { margin: 18px 0 8px; font-size: 15px; page-break-after: avoid; }
+            .meta { color: #5a6475; margin-bottom: 12px; }
+            .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+            .metric { border: 1px solid #d8deea; border-radius: 6px; padding: 8px; }
+            .metric span { display: block; color: #5a6475; font-size: 9px; }
+            .metric strong { display: block; margin-top: 4px; font-size: 15px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; page-break-inside: auto; }
+            th, td { border: 1px solid #d8deea; padding: 4px 5px; text-align: left; vertical-align: top; }
+            th { background: #eef3fb; font-weight: 700; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            .info-table { width: 65%; }
+            .info-table th { width: 180px; }
+            .empty { color: #5a6475; border: 1px solid #d8deea; padding: 8px; border-radius: 6px; }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeHtml(offer.offer_no || "")} · ${escapeHtml(offer.project_name || offer.title || "Teklif")}</h1>
+          <div class="meta">Project Definition, size bilgisi ve final efor çıktısı</div>
+          <h2>Project Definition</h2>
+          <table class="info-table"><tbody>${infoRows.map(([key, value]) => `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>
+          <h2>Final Özet</h2>
+          <div class="grid">${summaryRows.map(([key, value]) => `<div class="metric"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)} g</strong></div>`).join("")}</div>
+          <h2>Proje Eforları</h2>
+          ${printTable(["Modül", ...phaseHeaders, "Hypercare", "Go-Live Support", "Toplam"], projectTableRows, "Proje eforu bulunmuyor.")}
+          <h2>Lokalizasyon Eforları</h2>
+          ${printTable(["Modül", "Ülke", ...phaseHeaders, "Toplam"], localizationTableRows, "Lokalizasyon eforu bulunmuyor.")}
+          <h2>Geliştirme Eforları</h2>
+          ${printTable(["Geliştirme", ...moduleNames, "Toplam"], developmentTableRows, "Geliştirme eforu bulunmuyor.")}
+        </body>
+        </html>`;
+    }
+
+    function printOfferPdf(offer, printWindow = window.open("", "_blank")) {
+      if (!printWindow) {
+        alert("PDF penceresi açılamadı. Tarayıcı popup iznini kontrol edin.");
+        return;
+      }
+      printWindow.document.open();
+      printWindow.document.write(offerPrintHtml(offer));
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 300);
+    }
+
     function localizationTotalForOffer(offer, moduleNames) {
       const selection = offerJson(offer.localization_selection);
       const moduleSet = new Set(moduleNames);
@@ -4863,6 +4987,7 @@
                 <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("change")}</button>
                 <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
                 <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Yeniden Efor Hesapla</button>
+                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button">Yazdır</button>
                 ${workflowButtons(row)}
               </div>
             </td>
@@ -4934,6 +5059,28 @@
               await loadOffers();
               alert("Teklif onaya gönderildi.");
             });
+          }
+          if (action === "print") {
+            const printWindow = window.open("", "_blank");
+            if (!printWindow) {
+              alert("PDF penceresi açılamadı. Tarayıcı popup iznini kontrol edin.");
+              return;
+            }
+            printWindow.document.write("<p style='font-family:Arial,sans-serif'>PDF hazırlanıyor...</p>");
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = "PDF Hazırlanıyor";
+            try {
+              const offer = await window.EffortApi.getOffer(offerId);
+              printOfferPdf(offer, printWindow);
+            } catch (error) {
+              console.error(error);
+              printWindow.close();
+              alert("PDF çıktısı hazırlanamadı.");
+            } finally {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
           }
           if (action === "recalculate") {
             const summary = cachedOffers.find(offer => offer.id === offerId);
