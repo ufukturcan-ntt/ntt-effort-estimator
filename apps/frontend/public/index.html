@@ -1008,27 +1008,50 @@
 
     .question-option-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-      padding: 18px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
     }
 
     .question-option-grid > section {
       min-width: 0;
     }
 
+    .question-option-grid .definition-list {
+      grid-template-columns: 1fr;
+      gap: 6px;
+      padding: 0;
+    }
+
+    .question-option-grid .definition-row {
+      gap: 6px;
+      padding: 6px;
+    }
+
+    .question-option-grid .admin-edit {
+      min-height: 28px;
+      padding: 4px 7px;
+      font-size: 12px;
+    }
+
+    .question-option-grid .button {
+      min-height: 28px;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+
     .option-definition-head {
-      min-height: 38px;
+      min-height: 30px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
+      gap: 8px;
+      margin-bottom: 6px;
     }
 
     .option-definition-head h4 {
       margin: 0;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     .admin-question-table table {
@@ -1059,16 +1082,15 @@
     }
 
     .admin-question-table th:nth-child(1) { width: 4%; }
-    .admin-question-table th:nth-child(2) { width: 7%; }
-    .admin-question-table th:nth-child(3) { width: 7%; }
-    .admin-question-table th:nth-child(4) { width: 16%; }
-    .admin-question-table th:nth-child(5) { width: 23%; }
-    .admin-question-table th:nth-child(6) { width: 5%; }
-    .admin-question-table th:nth-child(7) { width: 5%; }
-    .admin-question-table th:nth-child(8) { width: 8%; }
-    .admin-question-table th:nth-child(9) { width: 9%; }
-    .admin-question-table th:nth-child(10) { width: 9%; }
-    .admin-question-table th:nth-child(11) { width: 7%; }
+    .admin-question-table th:nth-child(2) { width: 8%; }
+    .admin-question-table th:nth-child(3) { width: 8%; }
+    .admin-question-table th:nth-child(4) { width: 17%; }
+    .admin-question-table th:nth-child(5) { width: 26%; }
+    .admin-question-table th:nth-child(6) { width: 6%; }
+    .admin-question-table th:nth-child(7) { width: 6%; }
+    .admin-question-table th:nth-child(8) { width: 10%; }
+    .admin-question-table th:nth-child(9) { width: 10%; }
+    .admin-question-table th:nth-child(10) { width: 5%; }
 
     .admin-question-table .admin-edit {
       min-height: 24px;
@@ -2426,10 +2448,6 @@
                     <div class="definition-list" id="adminVariableTypeOptions"></div>
                   </section>
                   <section>
-                    <div class="option-definition-head"><h4>Cevap için baz değer</h4><button class="button primary" data-admin-add-list="adminBaseValueOptions" type="button">+ Seçenek</button></div>
-                    <div class="definition-list" id="adminBaseValueOptions"></div>
-                  </section>
-                  <section>
                     <div class="option-definition-head"><h4>Efor Etki Tipi</h4><button class="button primary" data-admin-add-list="adminEffortImpactTypeOptions" type="button">+ Seçenek</button></div>
                     <div class="definition-list" id="adminEffortImpactTypeOptions"></div>
                   </section>
@@ -2437,11 +2455,11 @@
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Cevap için baz değer</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Cevap için baz değer</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Puan Hesaplama</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="restrictions">
                 <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><button class="button primary" data-admin-add-matrix="adminRestrictionsRows" type="button">+ Satır</button></div>
@@ -2972,18 +2990,18 @@
         .map(row => [String(row[0]), row]));
       return questions.map(item => {
         const excelRow = excelRows.get(String(item.no)) || [];
-        const baseValue = item.baseValue || excelRow[3] || (item.answerType === "number" ? "Sayı" : "Evet / Hayır");
-        const answerType = item.answerType === "number" || String(baseValue).toLocaleLowerCase("tr-TR").includes("sayı")
+        const variableType = item.variableType || excelRow[3] || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
+        const scoreCalculation = item.scoreCalculation || (String(variableType).toLocaleLowerCase("tr-TR").includes("sayı") ? "Adet bazında" : "Evet/Hayır");
+        const answerType = scoreCalculation === "Adet bazında" || String(variableType).toLocaleLowerCase("tr-TR").includes("sayı")
           ? "number"
           : "yesno";
         return {
           ...item,
           group: item.group || defaultGroup,
-          variableType: item.variableType || baseValue,
+          variableType,
           sizeImpact: item.sizeImpact == null ? Number(item.score ?? excelRow[4]) > 0 : item.sizeImpact,
           score: Number(item.score ?? excelRow[4]) || 0,
-          baseValue,
-          scoreCalculation: item.scoreCalculation || (answerType === "number" ? "Adet bazında" : "Evet/Hayır"),
+          scoreCalculation,
           effortImpactType: item.effortImpactType || "Sabit",
           answerType
         };
@@ -3923,12 +3941,6 @@
           "Evet/Hayır",
           "Sayı"
         ].map(displayVariableType)),
-        baseValues: uniqueOptionValues([
-          ...(configured.baseValues || []),
-          ...questions.map(item => item.baseValue),
-          "Evet / Hayır",
-          "Sayı"
-        ]),
         effortImpactTypes: uniqueOptionValues([
           ...(configured.effortImpactTypes || []),
           ...questions.map(item => item.effortImpactType),
@@ -4173,7 +4185,6 @@
         const hasSizeImpact = item.sizeImpact === true || item.sizeImpact === "Evet" || (item.sizeImpact == null && Number(item.score) > 0);
         const groupValue = item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme");
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
-        const baseValue = item.baseValue || (item.answerType === "number" ? "Sayı" : "Evet / Hayır");
         const effortImpactType = item.effortImpactType || "Sabit";
         return `
         <tr>
@@ -4184,7 +4195,6 @@
           ${editableCell(item.description)}
           <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
           <td><input class="admin-score-input" type="number" step="any" value="${Number(item.score) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
-          ${adminSelectCell(baseValue, optionValuesWithCurrent(fieldOptions.baseValues, baseValue))}
           ${adminSelectCell(item.scoreCalculation || (item.answerType === "number" ? "Adet bazında" : "Evet/Hayır"), ["Adet bazında", "Evet/Hayır"])}
           ${adminSelectCell(effortImpactType, optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType))}
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
@@ -4207,7 +4217,6 @@
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
         <td><input class="admin-score-input" type="number" step="any" disabled /></td>
-        ${adminSelectCell("Evet / Hayır", fieldOptions.baseValues)}
         ${adminSelectCell("Evet/Hayır", ["Adet bazında", "Evet/Hayır"])}
         ${adminSelectCell("Sabit", fieldOptions.effortImpactTypes)}
         <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
@@ -4263,8 +4272,8 @@
 
     function collectQuestionAdminRows(targetId) {
       return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
-        const cells = [...row.children].slice(0, 10).map(adminCellValue);
-        const scoreCalculation = cells[8] || "Evet/Hayır";
+        const cells = [...row.children].slice(0, 9).map(adminCellValue);
+        const scoreCalculation = cells[7] || (String(cells[2] || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "Adet bazında" : "Evet/Hayır");
         return {
           no: Number(cells[0]) || cells[0],
           group: cells[1],
@@ -4273,10 +4282,9 @@
           description: cells[4],
           sizeImpact: Boolean(cells[5]),
           score: Number(String(cells[6]).replace(",", ".")) || 0,
-          baseValue: cells[7],
           scoreCalculation,
-          effortImpactType: cells[9],
-          answerType: scoreCalculation === "Adet bazında" ? "number" : "yesno",
+          effortImpactType: cells[8],
+          answerType: scoreCalculation === "Adet bazında" || String(cells[2] || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "number" : "yesno",
           active: true
         };
       }).filter(item => item.name);
@@ -4302,7 +4310,6 @@
         questionFieldOptions: {
           variableGroups: collectDefinitionValues("adminVariableGroupOptions"),
           variableTypes: collectDefinitionValues("adminVariableTypeOptions"),
-          baseValues: collectDefinitionValues("adminBaseValueOptions"),
           effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions")
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
@@ -4478,7 +4485,6 @@
       const fieldOptions = currentQuestionFieldOptions();
       renderDefinitionList("adminVariableGroupOptions", fieldOptions.variableGroups, "Değişken grup seçeneği yok.");
       renderDefinitionList("adminVariableTypeOptions", fieldOptions.variableTypes, "Değişken tip seçeneği yok.");
-      renderDefinitionList("adminBaseValueOptions", fieldOptions.baseValues, "Baz değer seçeneği yok.");
       renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
