@@ -4668,6 +4668,51 @@
       XLSX.writeFile(workbook, `${safeName}-Backlog.xlsx`, { compression: true });
     }
 
+    function localizationTotalForOffer(offer, moduleNames) {
+      const selection = offerJson(offer.localization_selection);
+      const moduleSet = new Set(moduleNames);
+      return localizationCatalog
+        .filter(item => moduleSet.has(item.module) && Boolean(selection[`${item.country}::${item.module}`]))
+        .reduce((sum, item) => sum + sumPhases(item.values), 0);
+    }
+
+    function recalculatedOfferEffort(offer) {
+      const projectRows = projectEffortRowsForOffer(offer);
+      const moduleNames = projectRows.map(row => row.module);
+      const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
+      const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values), 0);
+      const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
+      const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
+      const developmentTotal = developmentRows.reduce((sum, row) => {
+        return sum + moduleNames.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0);
+      }, 0);
+      const localizationTotal = localizationTotalForOffer(offer, moduleNames);
+      const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal;
+      return { projectTotal, developmentTotal, localizationTotal, hypercareTotal, goliveTotal, grandTotal };
+    }
+
+    function recalculatedOfferPayload(offer) {
+      const definition = offerJson(offer.project_definition);
+      const finalEffort = recalculatedOfferEffort(offer);
+      return {
+        title: offer.title || offer.project_name || definition.project || "Yeni Teklif",
+        customerName: offer.customer_name || definition.customer || "",
+        projectName: offer.project_name || definition.project || "",
+        industry: offer.industry || definition.industry || "",
+        implementationType: offer.implementation_type || definition.implementation || "",
+        systemType: offer.system_type || definition.system || "",
+        status: offer.status || "DRAFT",
+        totalEffort: finalEffort.grandTotal,
+        projectDefinition: definition,
+        scopeAnswers: offerJson(offer.scope_answers),
+        developmentAnswers: offerJson(offer.development_answers),
+        moduleSelection: offerJson(offer.module_selection),
+        localizationSelection: offerJson(offer.localization_selection),
+        hypercareInputs: offerJson(offer.hypercare_inputs),
+        finalEffort
+      };
+    }
+
     window.BacklogExport = { buildWorkbook: buildBacklogWorkbook };
 
     function workflowButtons(row) {
@@ -4752,6 +4797,7 @@
                 <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
                 <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("change")}</button>
                 <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
+                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Yeniden Efor Hesapla</button>
                 ${workflowButtons(row)}
               </div>
             </td>
@@ -4822,6 +4868,25 @@
               cachedOffers = [submitted, ...cachedOffers.filter(offer => offer.id !== submitted.id)];
               await loadOffers();
               alert("Teklif onaya gönderildi.");
+            });
+          }
+          if (action === "recalculate") {
+            const summary = cachedOffers.find(offer => offer.id === offerId);
+            if (String(summary?.status || "").toUpperCase() === "APPROVED") return;
+            confirmAction("Bu çalışmanın eforunu yeniden hesaplamak istediğinize emin misiniz?", async () => {
+              button.disabled = true;
+              const originalText = button.textContent;
+              button.textContent = "Hesaplanıyor";
+              try {
+                const offer = await window.EffortApi.getOffer(offerId);
+                const saved = await window.EffortApi.updateOffer(offerId, recalculatedOfferPayload(offer));
+                cachedOffers = [saved, ...cachedOffers.filter(item => item.id !== saved.id)];
+                await loadOffers();
+                alert(`Efor yeniden hesaplandı. Yeni toplam: ${fmt(saved.total_effort || 0)} gün`);
+              } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+              }
             });
           }
           if (action === "backlog") {
