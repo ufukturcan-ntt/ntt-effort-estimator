@@ -3980,13 +3980,14 @@
       return uniqueOptionValues([...(options || []), value]);
     }
 
-    function adminSelectCell(value = "", options = [], multiple = false) {
+    function adminSelectCell(value = "", options = [], multiple = false, attributes = "") {
       const selectedValues = String(value || "").split(",").map(item => item.trim()).filter(Boolean);
-      const rendered = options.map(option => {
+      const optionValues = options.includes("") ? options : ["", ...options];
+      const rendered = optionValues.map(option => {
         const selected = selectedValues.includes(option) || value === option ? "selected" : "";
         return `<option ${selected}>${escapeHtml(option)}</option>`;
       }).join("");
-      return `<td><select class="admin-select" ${multiple ? "multiple" : ""}>${rendered}</select></td>`;
+      return `<td><select class="admin-select" ${multiple ? "multiple" : ""} ${attributes}>${rendered}</select></td>`;
     }
 
     function adminMatrixOptions(header) {
@@ -4050,12 +4051,19 @@
       const dataRows = rows.slice(Math.max(headerIndex, 0) + 1);
       if (head) head.innerHTML = `<tr>${headers.map(value => `<th>${value}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
+      const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
       body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
-        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(String(header || "").trim());
+        const normalizedHeader = String(header || "").trim();
+        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
+        const isVariableModuleCell = bodyId === "adminVmpRows"
+          && ["Modül", "Modul", "Module"].includes(normalizedHeader)
+          && row[sourceTypeIndex] === "Değişken";
+        if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
         const selectConfig = isLocalizationCountry ? null : adminMatrixOptions(header);
         return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`).join("");
       bindAdminEditable(body);
+      syncVmpModuleCells(body);
       if (bodyId === "adminFixedRows") requestAnimationFrame(syncFixedDaysScrollbars);
     }
 
@@ -4070,7 +4078,32 @@
         return selectConfig ? adminSelectCell("", selectConfig.options, selectConfig.multiple) : editableCell("");
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
       bindAdminEditable(body);
+      syncVmpModuleCells(body);
       markAdminDirty();
+    }
+
+    function syncVmpModuleCells(root = document) {
+      const body = root.id === "adminVmpRows" ? root : root.querySelector?.("#adminVmpRows");
+      if (!body) return;
+      const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
+      const sourceTypeIndex = headers.indexOf("Kaynak Tipi");
+      const moduleIndex = headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()));
+      if (sourceTypeIndex < 0 || moduleIndex < 0) return;
+      [...body.querySelectorAll("tr")].forEach(row => {
+        const sourceTypeSelect = row.children[sourceTypeIndex]?.querySelector("select");
+        const moduleSelect = row.children[moduleIndex]?.querySelector("select");
+        if (!sourceTypeSelect || !moduleSelect) return;
+        const isVariable = sourceTypeSelect.value === "Değişken";
+        if (isVariable) moduleSelect.value = "";
+        moduleSelect.disabled = isVariable;
+        if (!sourceTypeSelect.dataset.vmpSourceTypeBound) {
+          sourceTypeSelect.dataset.vmpSourceTypeBound = "true";
+          sourceTypeSelect.addEventListener("change", () => {
+            syncVmpModuleCells(body);
+            markAdminDirty();
+          });
+        }
+      });
     }
 
     function bindAdminEditable(root = document) {
@@ -4316,12 +4349,19 @@
     }
 
     function collectMatrixRows(headId, bodyId) {
+      if (bodyId === "adminVmpRows") syncVmpModuleCells(document.getElementById(bodyId));
       const headers = [...document.querySelectorAll(`#${headId} th`)]
         .map(th => th.textContent.trim())
         .filter(value => value && value !== "İşlem");
-      const rows = [...document.querySelectorAll(`#${bodyId} tr`)].map(row =>
-        [...row.children].slice(0, headers.length).map(adminCellValue)
-      ).filter(row => row.some(Boolean));
+      const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
+      const moduleIndex = bodyId === "adminVmpRows"
+        ? headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()))
+        : -1;
+      const rows = [...document.querySelectorAll(`#${bodyId} tr`)].map(row => {
+        const values = [...row.children].slice(0, headers.length).map(adminCellValue);
+        if (sourceTypeIndex >= 0 && moduleIndex >= 0 && values[sourceTypeIndex] === "Değişken") values[moduleIndex] = "";
+        return values;
+      }).filter(row => row.some(Boolean));
       return [headers, ...rows];
     }
 
