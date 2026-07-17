@@ -2595,16 +2595,37 @@
       return normalizedRows;
     }
 
+    function finalizeVariableModulePhaseRows(headers, dataRows) {
+      const cleanHeaders = headers.filter(Boolean);
+      const deduped = [];
+      const seen = new Set();
+      dataRows.forEach(row => {
+        const cleanRow = row.slice(0, cleanHeaders.length);
+        while (cleanRow.length < cleanHeaders.length) cleanRow.push("");
+        if (!cleanRow.some(value => String(value || "").trim())) return;
+        const key = cleanRow.map(value => String(value || "").trim()).join("\u001f");
+        if (seen.has(key)) return;
+        seen.add(key);
+        deduped.push(cleanRow);
+      });
+      deduped.sort((a, b) => [0, 1, 2, 3].reduce((result, index) => {
+        if (result) return result;
+        return String(a[index] || "").localeCompare(String(b[index] || ""), "tr-TR", { numeric: true, sensitivity: "base" });
+      }, 0));
+      return [cleanHeaders, ...deduped];
+    }
+
     function normalizeVariableModulePhaseRows(rows = []) {
       const normalizedRows = rows.map(row => [...row]);
       const headerIndex = normalizedRows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
       if (headerIndex < 0) return normalizedRows;
       const oldHeaders = normalizedRows[headerIndex].map(cell => String(cell || "").trim());
       if (oldHeaders.includes("Kapsam Sorusu") && oldHeaders.includes("Geliştirme Sorusu") && oldHeaders.includes("Modül")) {
-        return [oldHeaders.filter(Boolean), ...normalizedRows.slice(headerIndex + 1).map(row => {
+        const dataRows = normalizedRows.slice(headerIndex + 1).map(row => {
           const offset = normalizedRows[headerIndex][0] === "" && row.length === oldHeaders.length ? 1 : 0;
           return offset ? row.slice(1) : row;
-        })];
+        });
+        return finalizeVariableModulePhaseRows(oldHeaders, dataRows);
       }
       const sourceTypeIndex = oldHeaders.indexOf("Kaynak Tipi");
       const sourceIndex = oldHeaders.indexOf("Kaynak");
@@ -2639,7 +2660,7 @@
         compactRow.splice(compactHeaders.indexOf("Kaynak"), 1, scopeSource, developmentSource, moduleSource);
         return compactRow;
       });
-      return [newHeaders, ...dataRows];
+      return finalizeVariableModulePhaseRows(newHeaders, dataRows);
     }
 
     function normalizeFixedDaysRows(rows = []) {
