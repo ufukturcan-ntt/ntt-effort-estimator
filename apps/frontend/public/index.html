@@ -2989,6 +2989,8 @@
 
     function canonicalDevelopmentName(name = "") {
       const normalized = String(name).trim();
+      if (normalized === "İhtiyaç duyulan rapor sayısı") return "Toplam rapor sayısı";
+      if (normalized === "İhtiyaç duyulan çıktı-etiket-form sayısı") return "Toplam çıktı sayısı";
       if (normalized === "Üretim ana veri yaratma otomasyonu (FMS)") return "Üretim ana veri yaratma otomasyonu (FVB)";
       if (normalized === "Fashion Vertical Business (FVB)") return "Üretim ana veri yaratma otomasyonu (FVB)";
       if (normalized === "Varyant Konfigürasyonu") return "Üretim ana veri yaratma otomasyonu (Varyant konfigurasyonlu)";
