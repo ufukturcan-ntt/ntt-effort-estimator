@@ -3082,6 +3082,54 @@
       return parsed.length ? parsed : developmentEfforts;
     }
 
+    function scopeProjectEffortDefinitions() {
+      const rows = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []);
+      const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
+      if (headerIndex < 0) return [];
+      const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+      const scopeIndex = headers.indexOf("Kapsam Sorusu");
+      const moduleIndex = headers.findIndex(header => ["Hedef Modül", "Hedef ModÃ¼l"].includes(header));
+      if (scopeIndex < 0 || moduleIndex < 0) return [];
+      const phaseIndexes = phaseHeaders
+        .map(phase => [phase, headers.indexOf(phase)])
+        .filter(([, index]) => index >= 0);
+      return rows.slice(headerIndex + 1).map(row => {
+        const name = String(row[scopeIndex] || "").trim();
+        const moduleName = String(row[moduleIndex] || "").trim();
+        const values = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+        phaseIndexes.forEach(([phase, index]) => values[phase] = Number(row[index]) || 0);
+        return { name, moduleName, values };
+      }).filter(row => row.name && row.moduleName && sumValues(row.values) > 0);
+    }
+
+    function selectedScopeMultipliers(scopeAnswers = {}) {
+      const selected = new Map();
+      (window.scopeQuestions || []).forEach(item => {
+        const value = scopeAnswers[String(item.no)];
+        if (!value || value === "Seçiniz" || value === "Hayır") return;
+        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
+        if (multiplier > 0) selected.set(item.name, multiplier);
+      });
+      return selected;
+    }
+
+    function scopeProjectEffortAdditions(scopeAnswers = {}, moduleNames = []) {
+      const moduleSet = new Set(moduleNames);
+      const selected = selectedScopeMultipliers(scopeAnswers);
+      const additions = new Map(moduleNames.map(module => [module, Object.fromEntries(phaseHeaders.map(phase => [phase, 0]))]));
+      scopeProjectEffortDefinitions().forEach(({ name, moduleName, values }) => {
+        const multiplier = selected.get(name);
+        if (!multiplier) return;
+        const targets = moduleName === "Hepsi" ? moduleNames : (moduleSet.has(moduleName) ? [moduleName] : []);
+        targets.forEach(module => {
+          const current = additions.get(module);
+          if (!current) return;
+          phaseHeaders.forEach(phase => current[phase] += (Number(values[phase]) || 0) * multiplier);
+        });
+      });
+      return additions;
+    }
+
     function selectedDevelopmentMultipliers(scopeAnswers = {}, developmentAnswers = {}, options = {}) {
       const selected = new Map();
       const includeScopeDriven = Boolean(options.includeScopeDriven);
@@ -3135,6 +3183,7 @@
 
     const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
+    const developmentExcludedModules = new Set(["PMO", "Governance", "BASIS"]);
 
     function fixedEffortValues(source = fixedEffortState) {
       const entries = source instanceof Map ? [...source.entries()] : Object.entries(source || {});
@@ -3143,6 +3192,10 @@
 
     function fixedEffortTotal(source = fixedEffortState) {
       return Object.values(fixedEffortValues(source)).reduce((sum, value) => sum + value, 0);
+    }
+
+    function developmentModuleNames(moduleNames = selectedModuleNames()) {
+      return moduleNames.filter(name => !developmentExcludedModules.has(name));
     }
 
     const moduleState = new Map(moduleCatalog.map(item => [item.module, { selected: item.selected, team: item.team }]));
@@ -4024,14 +4077,18 @@
       const fixedRows = fixedRowsForSelection(implementation, systemType, size.fixedKey);
       const sizeRow = {};
       const fixedValues = fixedEffortValues();
-      const names = [...new Set([...selectedModuleNames(), ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
+      const selectedNames = selectedModuleNames();
+      const scopeAdditions = scopeProjectEffortAdditions(questionAnswers.scopeQuestions, selectedNames);
+      const names = [...new Set([...selectedNames, ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
       return names.map(name => {
         const base = fixedRows[name] || finalEffortBase[name] || {};
+        const scopeValues = scopeAdditions.get(name) || {};
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
         const values = Object.fromEntries(phaseHeaders.map(phase => {
           const baseValue = Number(base[phase]) || 0;
           const sizeValue = Number(sizeRow[phase]) || 0;
-          const calculated = (baseValue + sizeValue) * teamMultiplier;
+          const scopeValue = Number(scopeValues[phase]) || 0;
+          const calculated = (baseValue + sizeValue) * teamMultiplier + scopeValue;
           return [phase, calculated];
         }));
         const fixedEffort = fixedValues[name] || 0;
@@ -4078,7 +4135,7 @@
       const head = document.getElementById("developmentMatrixHead");
       const body = document.getElementById("developmentMatrixRows");
       if (!body) return 0;
-      const moduleNames = selectedModuleNames();
+      const moduleNames = developmentModuleNames();
       if (head) head.innerHTML = `<tr><th>Geliştirme</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>Toplam</th></tr>`;
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
@@ -4889,15 +4946,19 @@
       const sizeRow = {};
       const support = offerJson(offer.hypercare_inputs);
       const fixedValues = offerFixedEfforts(offer);
+      const selectedOfferModules = offerSelectedModules(offer);
+      const selectedOfferModuleNames = selectedOfferModules.map(item => item.module);
+      const scopeAdditions = scopeProjectEffortAdditions(offerJson(offer.scope_answers), selectedOfferModuleNames);
       const effortModules = [...new Map([
-        ...offerSelectedModules(offer).map(item => [item.module, item]),
+        ...selectedOfferModules.map(item => [item.module, item]),
         ...fixedEffortModules.filter(module => fixedValues[module] > 0).map(module => [module, { module, team: 1 }])
       ]).values()];
       return effortModules.map(({ module, team }) => {
         const base = fixedRows[module] || finalEffortBase[module] || {};
+        const scopeValues = scopeAdditions.get(module) || {};
         const values = Object.fromEntries(phaseHeaders.map(phase => [
           phase,
-          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team
+          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (Number(scopeValues[phase]) || 0)
         ]));
         const fixedEffort = fixedValues[module] || 0;
         const supportRow = hypercareExcludedModules.has(module) ? {} : (support[module] || {});
@@ -4911,6 +4972,7 @@
     }
 
     function developmentEffortRowsForOffer(offer, moduleNames) {
+      moduleNames = developmentModuleNames(moduleNames);
       const selectedDevelopments = selectedDevelopmentMultipliers(
         offerJson(offer.scope_answers),
         offerJson(offer.development_answers)
@@ -4942,7 +5004,8 @@
       if (!window.XLSX) throw new Error("Excel bileşeni yüklenemedi.");
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
-      const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
+      const developmentModules = developmentModuleNames(moduleNames);
+      const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
       const backlogRows = [["Backlog Kalemi", "Kategori", "Modül", "Efor Tipi / Geliştirme Maddesi", "Efor (Gün)"]];
       projectRows.forEach(row => {
         phaseHeaders.forEach(phase => {
@@ -4953,7 +5016,7 @@
         backlogRows.push([`${row.module}-Go-Live Support`, "Proje Eforu", row.module, "Go-Live Support", row.golive || 0]);
       });
       developmentRows.forEach(row => {
-        moduleNames.forEach(module => {
+        developmentModules.forEach(module => {
           const effort = row.values[module] || 0;
           if (effort > 0) backlogRows.push([`${module}-${row.name}`, "Geliştirme Eforu", module, row.name, effort]);
         });
@@ -5004,7 +5067,8 @@
       const definition = offerJson(offer.project_definition);
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
-      const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
+      const developmentModules = developmentModuleNames(moduleNames);
+      const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
       const localizationRows = offerLocalizationRows(offer, moduleNames);
       const scopeScore = offerScopeScore(offer);
       const size = projectSizeFromScore(scopeScore);
@@ -5012,7 +5076,7 @@
       const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
       const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
       const developmentTotal = developmentRows.reduce((sum, row) =>
-        sum + moduleNames.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0), 0);
+        sum + developmentModules.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0), 0);
       const localizationTotal = localizationRows.reduce((sum, row) => sum + sumPhases(row.values), 0);
       const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal;
       const logoUrl = new URL("assets/ntt-data-logo.png", window.location.href).href;
@@ -5050,8 +5114,8 @@
         fmt(sumPhases(row.values))
       ]);
       const developmentTableRows = developmentRows.map(row => {
-        const rowTotal = moduleNames.reduce((sum, module) => sum + (Number(row.values[module]) || 0), 0);
-        return { row: [row.name, ...moduleNames.map(module => row.values[module] ? fmt(row.values[module]) : ""), fmt(rowTotal)], total: rowTotal };
+        const rowTotal = developmentModules.reduce((sum, module) => sum + (Number(row.values[module]) || 0), 0);
+        return { row: [row.name, ...developmentModules.map(module => row.values[module] ? fmt(row.values[module]) : ""), fmt(rowTotal)], total: rowTotal };
       }).filter(item => item.total > 0).map(item => item.row);
       const summaryRows = [
         [t("standardProjectEffort"), fmt(projectTotal)],
@@ -5111,7 +5175,7 @@
           <h2>${escapeHtml(t("localizationEfforts"))}</h2>
           ${printTable([t("modules"), currentLanguage === "en" ? "Country" : "Ülke", ...phaseHeaders, currentLanguage === "en" ? "Total" : "Toplam"], localizationTableRows, t("noLocalizationEffort"))}
           <h2>${escapeHtml(t("developmentEfforts"))}</h2>
-          ${printTable([currentLanguage === "en" ? "Development" : "Geliştirme", ...moduleNames, currentLanguage === "en" ? "Total" : "Toplam"], developmentTableRows, t("noDevelopmentEffort"))}
+          ${printTable([currentLanguage === "en" ? "Development" : "Geliştirme", ...developmentModules, currentLanguage === "en" ? "Total" : "Toplam"], developmentTableRows, t("noDevelopmentEffort"))}
         </body>
         </html>`;
     }
@@ -5142,12 +5206,13 @@
     function recalculatedOfferEffort(offer) {
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
-      const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
+      const developmentModules = developmentModuleNames(moduleNames);
+      const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
       const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values) + (Number(row.fixedEffort) || 0), 0);
       const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
       const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
       const developmentTotal = developmentRows.reduce((sum, row) => {
-        return sum + moduleNames.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0);
+        return sum + developmentModules.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0);
       }, 0);
       const localizationTotal = localizationTotalForOffer(offer, moduleNames);
       const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal;
