@@ -2617,11 +2617,21 @@
     }
 
     function finalizeVariableModulePhaseRows(headers, dataRows) {
-      const cleanHeaders = headers.filter(Boolean);
+      const sourceHeaders = headers.filter(Boolean).map(header => canonicalPhaseName(String(header || "").trim()));
+      const isVmp = sourceHeaders.includes("Kaynak Tipi");
+      const cleanHeaders = isVmp
+        ? ["Kaynak Tipi", "Kapsam Sorusu", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", ...vmpPhaseHeaders]
+        : sourceHeaders;
       const deduped = [];
       const seen = new Set();
       dataRows.forEach(row => {
-        const cleanRow = row.slice(0, cleanHeaders.length);
+        const sourceRow = row.slice(0, sourceHeaders.length);
+        const cleanRow = isVmp
+          ? cleanHeaders.map(header => {
+              const sourceIndex = sourceHeaders.indexOf(header);
+              return sourceIndex >= 0 ? sourceRow[sourceIndex] ?? "" : "";
+            })
+          : sourceRow.slice(0, cleanHeaders.length);
         while (cleanRow.length < cleanHeaders.length) cleanRow.push("");
         if (!cleanRow.some(value => String(value || "").trim())) return;
         const key = cleanRow.map(value => String(value || "").trim()).join("\u001f");
@@ -2939,6 +2949,7 @@
     let localizationCatalog = buildLocalizationCatalog();
 
     const phaseHeaders = ["Analiz","Dokümantasyon","Dokümantasyon Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri Aktarım","Internal Entegrasyon Testi","Entegrasyon Testi","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Canlı Anaveri Kontrol","Canlı Anaveri Aktarım"];
+    const vmpPhaseHeaders = [...phaseHeaders, "Hypercare", "Canlı Destek"];
     const phaseNameAliases = {
       "Onay": "Dokümantasyon Onay",
       "QA Anaveri": "QA Anaveri Aktarım",
