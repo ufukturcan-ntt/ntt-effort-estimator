@@ -3183,6 +3183,7 @@
 
     const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
+    const fixedOnlyModules = new Set(["PMO", "Governance", "BASIS"]);
     const developmentExcludedModules = new Set(["PMO", "Governance", "BASIS"]);
 
     function fixedEffortValues(source = fixedEffortState) {
@@ -3196,6 +3197,10 @@
 
     function developmentModuleNames(moduleNames = selectedModuleNames()) {
       return moduleNames.filter(name => !developmentExcludedModules.has(name));
+    }
+
+    function isFixedOnlyModule(moduleName) {
+      return fixedOnlyModules.has(moduleName);
     }
 
     const moduleState = new Map(moduleCatalog.map(item => [item.module, { selected: item.selected, team: item.team }]));
@@ -4081,8 +4086,8 @@
       const scopeAdditions = scopeProjectEffortAdditions(questionAnswers.scopeQuestions, selectedNames);
       const names = [...new Set([...selectedNames, ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
       return names.map(name => {
-        const base = fixedRows[name] || finalEffortBase[name] || {};
-        const scopeValues = scopeAdditions.get(name) || {};
+        const base = isFixedOnlyModule(name) ? {} : (fixedRows[name] || finalEffortBase[name] || {});
+        const scopeValues = isFixedOnlyModule(name) ? {} : (scopeAdditions.get(name) || {});
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
         const values = Object.fromEntries(phaseHeaders.map(phase => {
           const baseValue = Number(base[phase]) || 0;
@@ -4954,8 +4959,8 @@
         ...fixedEffortModules.filter(module => fixedValues[module] > 0).map(module => [module, { module, team: 1 }])
       ]).values()];
       return effortModules.map(({ module, team }) => {
-        const base = fixedRows[module] || finalEffortBase[module] || {};
-        const scopeValues = scopeAdditions.get(module) || {};
+        const base = isFixedOnlyModule(module) ? {} : (fixedRows[module] || finalEffortBase[module] || {});
+        const scopeValues = isFixedOnlyModule(module) ? {} : (scopeAdditions.get(module) || {});
         const values = Object.fromEntries(phaseHeaders.map(phase => [
           phase,
           ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (Number(scopeValues[phase]) || 0)
