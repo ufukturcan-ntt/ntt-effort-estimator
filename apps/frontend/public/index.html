@@ -2194,6 +2194,7 @@
                     <th>Müşteri</th>
                     <th>Endüstri</th>
                     <th>Durum</th>
+                    <th>Toplam AG</th>
                     <th>Son Güncelleme</th>
                     <th>İşlem</th>
                   </tr>
@@ -2329,7 +2330,7 @@
         <div class="screen" id="localization">
           <section class="grid">
             <div class="panel">
-              <div class="panel-head"><h3 class="panel-title">Localization</h3><span class="pill">Ülke ve modül seçimi</span></div>
+              <div class="panel-head"><h3 class="panel-title">Localization</h3><span class="pill">Ülke seçimi</span></div>
               <div class="form-grid" id="localizationControls"></div>
             </div>
             <div class="panel">
@@ -3092,6 +3093,10 @@
       const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] = hypercareDefaults[item.module] || ["","","","",""];
       return [item.module, { weeks, daysPerWeek, shifts, locations, goliveDays }];
     }));
+    const hypercareExcludedModules = new Set(["PMO", "Governance", "BASIS"]);
+    function hypercareModuleNames() {
+      return selectedModuleNames().filter(name => !hypercareExcludedModules.has(name));
+    }
     function resetHypercareState(mode) {
       moduleCatalog.forEach(item => {
         const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] =
@@ -3771,25 +3776,37 @@
       });
     }
 
+    function selectedLocalizationCountries() {
+      return [...new Set(localizationCatalog.filter(item => item.selected).map(item => item.country))];
+    }
+
+    function setLocalizationCountry(country, selected) {
+      localizationCatalog.forEach(item => {
+        if (item.country === country) item.selected = selected;
+      });
+    }
+
+    function localizationCountrySelected(country) {
+      return localizationCatalog.some(item => item.country === country && item.selected);
+    }
+
     function renderLocalizationControls() {
       const target = document.getElementById("localizationControls");
       if (!target) return;
-      const selectedModules = new Set(selectedModuleNames());
-      const availableRows = localizationCatalog
-        .map((item, index) => ({ item, index }))
-        .filter(({ item }) => selectedModules.has(item.module));
-      target.innerHTML = availableRows.map(({ item, index }) => `
+      const countries = [...new Set(localizationCatalog.map(item => item.country).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, "tr-TR"));
+      target.innerHTML = countries.map(country => `
         <div class="input-field">
-          <label>${item.country} · ${item.module}</label>
-          <select data-localization-index="${index}">
-            <option value="true" ${item.selected ? "selected" : ""}>${t("exists")}</option>
-            <option value="false" ${!item.selected ? "selected" : ""}>${t("none")}</option>
+          <label>${country}</label>
+          <select data-localization-country="${escapeHtml(country)}">
+            <option value="true" ${localizationCountrySelected(country) ? "selected" : ""}>${t("exists")}</option>
+            <option value="false" ${!localizationCountrySelected(country) ? "selected" : ""}>${t("none")}</option>
           </select>
         </div>
-      `).join("") || `<div class="input-field"><label>Seçili modüller için lokalizasyon tanımı bulunmuyor.</label></div>`;
-      target.querySelectorAll("[data-localization-index]").forEach(select => {
+      `).join("") || `<div class="input-field"><label>Lokalizasyon tanımı bulunmuyor.</label></div>`;
+      target.querySelectorAll("[data-localization-country]").forEach(select => {
         select.addEventListener("change", () => {
-          localizationCatalog[Number(select.dataset.localizationIndex)].selected = select.value === "true";
+          setLocalizationCountry(select.dataset.localizationCountry, select.value === "true");
           markDirty();
           renderWorkbookDrivenScreens();
         });
@@ -3844,7 +3861,8 @@
 
     function activeLocalizations() {
       const selectedModules = new Set(selectedModuleNames());
-      return localizationCatalog.filter(item => item.selected && selectedModules.has(item.module));
+      const countries = new Set(selectedLocalizationCountries());
+      return localizationCatalog.filter(item => countries.has(item.country) && selectedModules.has(item.module));
     }
 
     function renderLocalizationEfforts() {
@@ -3855,7 +3873,7 @@
       const html = rows.length ? rows.map(row => `
         <div class="step">
           <span class="step-no">${row.country.slice(0,2).toUpperCase()}</span>
-          <div><strong>${row.country}</strong><span>${row.module} modülü · Proje eforlarıyla aynı faz yapısı</span></div>
+          <div><strong>${row.country}</strong><span>${row.module} modülü · Seçili ülkeye bağlı lokalizasyon</span></div>
           <b>${fmt(sumPhases(row.values))}g</b>
         </div>
       `).join("") : `<div class="step"><span class="step-no">0</span><div><strong>Ülke seçili değil</strong><span>Lokalizasyon eforu oluşmadı</span></div><b>0g</b></div>`;
@@ -3887,6 +3905,7 @@
     }
 
     function hypercareValue(moduleName) {
+      if (hypercareExcludedModules.has(moduleName)) return 0;
       const row = hypercareState.get(moduleName) || {};
       const factors = [row.weeks, row.daysPerWeek, row.shifts, row.locations].map(Number);
       return factors.every(value => Number.isFinite(value) && value > 0) ? factors.reduce((a, b) => a * b, 1) : 0;
@@ -3895,7 +3914,7 @@
     function renderHypercareRows() {
       const target = document.getElementById("hypercareRows");
       if (!target) return { hypercare: 0, golive: 0 };
-      const names = selectedModuleNames();
+      const names = hypercareModuleNames();
       target.innerHTML = names.map(name => {
         const row = hypercareState.get(name);
         const hypercare = hypercareValue(name);
@@ -3931,7 +3950,7 @@
     }
 
     function updateHypercareTotals() {
-      const names = selectedModuleNames();
+      const names = hypercareModuleNames();
       const hypercareTotal = names.reduce((sum, name) => sum + hypercareValue(name), 0);
       const goliveTotal = names.reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0);
       setText("hypercareTotal", fmt(hypercareTotal));
@@ -4819,12 +4838,12 @@
           phase,
           ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (phase === "Analiz" ? (fixedValues[module] || 0) : 0)
         ]));
-        const supportRow = support[module] || {};
+        const supportRow = hypercareExcludedModules.has(module) ? {} : (support[module] || {});
         const factors = [supportRow.weeks, supportRow.daysPerWeek, supportRow.shifts, supportRow.locations].map(Number);
         const hypercare = factors.every(value => Number.isFinite(value) && value > 0)
           ? factors.reduce((total, value) => total * value, 1)
           : 0;
-        const golive = Number(supportRow.goliveDays) || 0;
+        const golive = hypercareExcludedModules.has(module) ? 0 : (Number(supportRow.goliveDays) || 0);
         return { module, values, hypercare, golive };
       });
     }
@@ -4912,7 +4931,10 @@
     function offerLocalizationRows(offer, moduleNames) {
       const selection = offerJson(offer.localization_selection);
       const moduleSet = new Set(moduleNames);
-      return localizationCatalog.filter(item => moduleSet.has(item.module) && Boolean(selection[`${item.country}::${item.module}`]));
+      const countries = new Set(Object.entries(selection)
+        .filter(([, selected]) => Boolean(selected))
+        .map(([key]) => key.includes("::") ? key.split("::")[0] : key));
+      return localizationCatalog.filter(item => moduleSet.has(item.module) && countries.has(item.country));
     }
 
     function offerPrintHtml(offer) {
@@ -5041,8 +5063,11 @@
     function localizationTotalForOffer(offer, moduleNames) {
       const selection = offerJson(offer.localization_selection);
       const moduleSet = new Set(moduleNames);
+      const countries = new Set(Object.entries(selection)
+        .filter(([, selected]) => Boolean(selected))
+        .map(([key]) => key.includes("::") ? key.split("::")[0] : key));
       return localizationCatalog
-        .filter(item => moduleSet.has(item.module) && Boolean(selection[`${item.country}::${item.module}`]))
+        .filter(item => moduleSet.has(item.module) && countries.has(item.country))
         .reduce((sum, item) => sum + sumPhases(item.values), 0);
     }
 
@@ -5166,6 +5191,7 @@
             <td>${row.customer_name || ""}</td>
             <td>${row.industry || ""}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
+            <td><strong>${fmt(row.total_effort || 0)}</strong></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
             <td>
               <div class="quick-actions">
@@ -5468,8 +5494,8 @@
       const projectTotal = renderFinalEffort();
       const developmentTotal = renderDevelopmentEfforts();
       const localizationTotal = activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
-      const hypercareTotal = selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0);
-      const goliveTotal = selectedModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0);
+      const hypercareTotal = hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0);
+      const goliveTotal = hypercareModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0);
       setText("selectedDevelopmentEffort", fmt(developmentTotal));
       setText("developmentEffortTotal", fmt(developmentTotal));
       setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal));
@@ -5611,7 +5637,8 @@
       const projectName = document.getElementById("projectName")?.value || "";
       const implementationType = document.getElementById("projectImplementation")?.value || "";
       const moduleSelection = Object.fromEntries([...moduleState.entries()]);
-      const localizationSelection = Object.fromEntries(localizationCatalog.map(item => [`${item.country}::${item.module}`, item.selected]));
+      const localizationSelection = Object.fromEntries([...new Set(localizationCatalog.map(item => item.country).filter(Boolean))]
+        .map(country => [country, localizationCountrySelected(country)]));
       const fixedEfforts = fixedEffortValues();
       const hypercareInputs = Object.fromEntries([...hypercareState.entries()]);
       return {
@@ -5644,8 +5671,8 @@
           localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
           fixedEfforts,
           fixedEffortTotal: fixedEffortTotal(),
-          hypercareTotal: selectedModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
-          goliveTotal: selectedModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0),
+          hypercareTotal: hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
+          goliveTotal: hypercareModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0),
           grandTotal: numericText("finalGrandTotal")
         }
       };
@@ -5793,10 +5820,12 @@
         state.team = mode === "existing" && saved?.team ? String(saved.team) : "";
       });
       localizationCatalog.forEach(item => {
-        const key = `${item.country}::${item.module}`;
-        item.selected = mode === "existing" && Object.prototype.hasOwnProperty.call(savedLocalizations, key)
-          ? Boolean(savedLocalizations[key])
-          : mode === "existing" && item.module === "FI" && ["Rusya", "Birleşik Arap Emirlikleri"].includes(item.country);
+        const legacyKey = `${item.country}::${item.module}`;
+        item.selected = mode === "existing" && Object.prototype.hasOwnProperty.call(savedLocalizations, item.country)
+          ? Boolean(savedLocalizations[item.country])
+          : mode === "existing" && Object.prototype.hasOwnProperty.call(savedLocalizations, legacyKey)
+            ? Boolean(savedLocalizations[legacyKey])
+            : false;
       });
       fixedEffortModules.forEach(module => {
         fixedEffortState.set(module, mode === "existing" ? String(Number(savedFixedEfforts[module]) || "") : "");
