@@ -5143,7 +5143,7 @@
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
       const developmentRows = developmentEffortRowsForOffer(offer, moduleNames);
-      const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values), 0);
+      const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values) + (Number(row.fixedEffort) || 0), 0);
       const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
       const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
       const developmentTotal = developmentRows.reduce((sum, row) => {
