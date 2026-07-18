@@ -3154,6 +3154,28 @@
         change: "Değiştir",
         delete: "Sil",
         submit: "Onaya Gönder",
+        print: "Yazdır",
+        recalculateEffort: "Yeniden Efor Hesapla",
+        calculating: "Hesaplanıyor",
+        pdfPreparing: "PDF hazırlanıyor",
+        pdfPreparingButton: "PDF Hazırlanıyor",
+        pdfPopupBlocked: "PDF penceresi açılamadı. Tarayıcı popup iznini kontrol edin.",
+        pdfFailed: "PDF çıktısı hazırlanamadı.",
+        printOutputLead: "Project Definition, size bilgisi ve final efor çıktısı",
+        printDocumentTitle: "Teklif Efor Çıktısı",
+        printPreparedBy: "NDBS TR Satış Bütçeleme Standardizasyonu",
+        projectEfforts: "Proje Eforları",
+        localizationEfforts: "Lokalizasyon Eforları",
+        developmentEfforts: "Geliştirme Eforları",
+        finalSummary: "Final Özet",
+        standardProjectEffort: "Standart proje eforu",
+        developmentEffort: "Geliştirme eforu",
+        noProjectEffort: "Proje eforu bulunmuyor.",
+        noLocalizationEffort: "Lokalizasyon eforu bulunmuyor.",
+        noDevelopmentEffort: "Geliştirme eforu bulunmuyor.",
+        analysisEffort: "Analiz Eforu (gün)",
+        addedToAnalysisEffort: "Analiz eforuna eklenir",
+        fixedEffortSummary: "Sabit efor özeti",
         save: "Kaydet",
         saving: "Kaydediliyor",
         saved: "Kaydedildi",
@@ -3285,6 +3307,28 @@
         change: "Edit",
         delete: "Delete",
         submit: "Submit for Approval",
+        print: "Print",
+        recalculateEffort: "Recalculate Effort",
+        calculating: "Calculating",
+        pdfPreparing: "Preparing PDF",
+        pdfPreparingButton: "Preparing PDF",
+        pdfPopupBlocked: "The PDF window could not be opened. Please check the browser popup permission.",
+        pdfFailed: "The PDF output could not be prepared.",
+        printOutputLead: "Project Definition, size information and final effort output",
+        printDocumentTitle: "Offer Effort Output",
+        printPreparedBy: "NDBS TR Sales Budgeting Standardization",
+        projectEfforts: "Project Efforts",
+        localizationEfforts: "Localization Efforts",
+        developmentEfforts: "Development Efforts",
+        finalSummary: "Final Summary",
+        standardProjectEffort: "Standard project effort",
+        developmentEffort: "Development effort",
+        noProjectEffort: "No project effort found.",
+        noLocalizationEffort: "No localization effort found.",
+        noDevelopmentEffort: "No development effort found.",
+        analysisEffort: "Analysis Effort (days)",
+        addedToAnalysisEffort: "Added to analysis effort",
+        fixedEffortSummary: "Fixed effort summary",
         save: "Save",
         saving: "Saving",
         saved: "Saved",
@@ -3485,7 +3529,10 @@
       setTexts("#developments .metric span", [t("selectedDevelopment"), t("extraEffort")]);
       setTexts("#developments .metric small", [t("answeredDevelopment"), t("potentialImpact")]);
       setTextContent("#fixedefforts .panel:nth-child(1) .panel-title", t("fixedEfforts"));
-      setTextContent("#fixedefforts .panel:nth-child(2) .panel-title", currentLanguage === "en" ? "Fixed effort summary" : "Sabit efor özeti");
+      setTextContent("#fixedefforts .panel:nth-child(1) .pill", t("addedToAnalysisEffort"));
+      setTextContent("#fixedefforts thead th:nth-child(1)", t("modules"));
+      setTextContent("#fixedefforts thead th:nth-child(2)", t("analysisEffort"));
+      setTextContent("#fixedefforts .panel:nth-child(2) .panel-title", t("fixedEffortSummary"));
       setTextContent("#modules .panel-title", t("moduleSelection"));
       setTextContent("#modules .input-field label", t("teamSplit"));
       setTextContent("#teamSplitSelect option[value='no']", t("no"));
@@ -3756,7 +3803,7 @@
             setText("fixedEffortNavCount", `${fmt(total)}g`);
             if (summary) {
               summary.innerHTML = fixedEffortModules.map(module => `
-                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>Analiz eforu</small></div>
+                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${currentLanguage === "en" ? "Analysis effort" : "Analiz eforu"}</small></div>
               `).join("");
             }
             const projectTotal = renderFinalEffort();
@@ -4866,17 +4913,19 @@
         sum + moduleNames.reduce((moduleSum, module) => moduleSum + (Number(row.values[module]) || 0), 0), 0);
       const localizationTotal = localizationRows.reduce((sum, row) => sum + sumPhases(row.values), 0);
       const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal;
+      const logoUrl = new URL("assets/ntt-data-logo.png", window.location.href).href;
+      const dateLocale = currentLanguage === "en" ? "en-US" : "tr-TR";
       const infoRows = [
-        ["Proje No", offer.offer_no || ""],
-        ["Müşteri", offer.customer_name || definition.customer || ""],
-        ["Proje", offer.project_name || definition.project || offer.title || ""],
-        ["Endüstri", offer.industry || definition.industry || ""],
-        ["İmplementasyon Türü", offer.implementation_type || definition.implementation || ""],
-        ["Sistem Türü", offer.system_type || definition.system || ""],
+        [t("projectNo"), offer.offer_no || ""],
+        [t("customer"), offer.customer_name || definition.customer || ""],
+        [currentLanguage === "en" ? "Project" : "Proje", offer.project_name || definition.project || offer.title || ""],
+        [t("industry"), offer.industry || definition.industry || ""],
+        [t("implementationType"), offer.implementation_type || definition.implementation || ""],
+        [t("systemType"), offer.system_type || definition.system || ""],
         ["Size", size.label],
-        ["Kapsam Skoru", fmt(scopeScore)],
-        ["Durum", statusLabel(offer.status)],
-        ["Son Güncelleme", offer.updated_at ? new Date(offer.updated_at).toLocaleDateString("tr-TR") : ""]
+        [t("scopeScore"), fmt(scopeScore)],
+        [t("status"), statusLabel(offer.status)],
+        [t("updated"), offer.updated_at ? new Date(offer.updated_at).toLocaleDateString(dateLocale) : ""]
       ];
       const projectTableRows = projectRows.map(row => {
         const total = sumValues(row.values) + (Number(row.hypercare) || 0) + (Number(row.golive) || 0);
@@ -4885,7 +4934,7 @@
       const projectTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
       projectRows.forEach(row => phaseHeaders.forEach(phase => projectTotals[phase] += Number(row.values[phase]) || 0));
       if (projectRows.length) {
-        projectTableRows.push(["Toplam", ...phaseHeaders.map(phase => fmt(projectTotals[phase])), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
+        projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...phaseHeaders.map(phase => fmt(projectTotals[phase])), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
       }
       const localizationTableRows = localizationRows.map(row => [
         row.module,
@@ -4898,22 +4947,27 @@
         return { row: [row.name, ...moduleNames.map(module => row.values[module] ? fmt(row.values[module]) : ""), fmt(rowTotal)], total: rowTotal };
       }).filter(item => item.total > 0).map(item => item.row);
       const summaryRows = [
-        ["Standart proje eforu", fmt(projectTotal)],
-        ["Geliştirme eforu", fmt(developmentTotal)],
-        ["Lokalizasyon eforu", fmt(localizationTotal)],
+        [t("standardProjectEffort"), fmt(projectTotal)],
+        [t("developmentEffort"), fmt(developmentTotal)],
+        [t("localizationEffort"), fmt(localizationTotal)],
         ["Hypercare", fmt(hypercareTotal)],
         ["Go-Live Support", fmt(goliveTotal)],
-        ["Toplam efor", fmt(grandTotal)]
+        [currentLanguage === "en" ? "Total effort" : "Toplam efor", fmt(grandTotal)]
       ];
       return `<!doctype html>
-        <html lang="tr">
+        <html lang="${currentLanguage === "en" ? "en" : "tr"}">
         <head>
           <meta charset="utf-8">
-          <title>${escapeHtml(offer.offer_no || "Teklif")} PDF</title>
+          <title>${escapeHtml(offer.offer_no || t("printDocumentTitle"))} PDF</title>
           <style>
             @page { size: A4 landscape; margin: 12mm; }
             * { box-sizing: border-box; }
             body { font-family: Arial, sans-serif; color: #172033; margin: 0; font-size: 10px; }
+            .letterhead { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #005eb8; padding-bottom: 10px; margin-bottom: 14px; }
+            .letterhead img { width: 150px; height: auto; display: block; }
+            .letterhead-title { text-align: right; }
+            .letterhead-title strong { display: block; font-size: 18px; color: #005eb8; }
+            .letterhead-title span { display: block; margin-top: 3px; color: #5a6475; }
             h1 { margin: 0 0 4px; font-size: 22px; }
             h2 { margin: 18px 0 8px; font-size: 15px; page-break-after: avoid; }
             .meta { color: #5a6475; margin-bottom: 12px; }
@@ -4931,25 +4985,33 @@
           </style>
         </head>
         <body>
-          <h1>${escapeHtml(offer.offer_no || "")} · ${escapeHtml(offer.project_name || offer.title || "Teklif")}</h1>
-          <div class="meta">Project Definition, size bilgisi ve final efor çıktısı</div>
+          <header class="letterhead">
+            <img src="${escapeHtml(logoUrl)}" alt="NTT DATA">
+            <div class="letterhead-title">
+              <strong>${escapeHtml(t("printDocumentTitle"))}</strong>
+              <span>${escapeHtml(t("printPreparedBy"))}</span>
+              <span>${new Date().toLocaleDateString(dateLocale)}</span>
+            </div>
+          </header>
+          <h1>${escapeHtml(offer.offer_no || "")} · ${escapeHtml(offer.project_name || offer.title || t("printDocumentTitle"))}</h1>
+          <div class="meta">${escapeHtml(t("printOutputLead"))}</div>
           <h2>Project Definition</h2>
           <table class="info-table"><tbody>${infoRows.map(([key, value]) => `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>
-          <h2>Final Özet</h2>
+          <h2>${escapeHtml(t("finalSummary"))}</h2>
           <div class="grid">${summaryRows.map(([key, value]) => `<div class="metric"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)} g</strong></div>`).join("")}</div>
-          <h2>Proje Eforları</h2>
-          ${printTable(["Modül", ...phaseHeaders, "Hypercare", "Go-Live Support", "Toplam"], projectTableRows, "Proje eforu bulunmuyor.")}
-          <h2>Lokalizasyon Eforları</h2>
-          ${printTable(["Modül", "Ülke", ...phaseHeaders, "Toplam"], localizationTableRows, "Lokalizasyon eforu bulunmuyor.")}
-          <h2>Geliştirme Eforları</h2>
-          ${printTable(["Geliştirme", ...moduleNames, "Toplam"], developmentTableRows, "Geliştirme eforu bulunmuyor.")}
+          <h2>${escapeHtml(t("projectEfforts"))}</h2>
+          ${printTable([t("modules"), ...phaseHeaders, "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"))}
+          <h2>${escapeHtml(t("localizationEfforts"))}</h2>
+          ${printTable([t("modules"), currentLanguage === "en" ? "Country" : "Ülke", ...phaseHeaders, currentLanguage === "en" ? "Total" : "Toplam"], localizationTableRows, t("noLocalizationEffort"))}
+          <h2>${escapeHtml(t("developmentEfforts"))}</h2>
+          ${printTable([currentLanguage === "en" ? "Development" : "Geliştirme", ...moduleNames, currentLanguage === "en" ? "Total" : "Toplam"], developmentTableRows, t("noDevelopmentEffort"))}
         </body>
         </html>`;
     }
 
     function printOfferPdf(offer, printWindow = window.open("", "_blank")) {
       if (!printWindow) {
-        alert("PDF penceresi açılamadı. Tarayıcı popup iznini kontrol edin.");
+        alert(t("pdfPopupBlocked"));
         return;
       }
       printWindow.document.open();
@@ -5093,8 +5155,8 @@
                 <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
                 <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("change")}</button>
                 <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
-                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>Yeniden Efor Hesapla</button>
-                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button">Yazdır</button>
+                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("recalculateEffort")}</button>
+                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button">${t("print")}</button>
                 ${workflowButtons(row)}
               </div>
             </td>
@@ -5170,20 +5232,20 @@
           if (action === "print") {
             const printWindow = window.open("", "_blank");
             if (!printWindow) {
-              alert("PDF penceresi açılamadı. Tarayıcı popup iznini kontrol edin.");
+              alert(t("pdfPopupBlocked"));
               return;
             }
-            printWindow.document.write("<p style='font-family:Arial,sans-serif'>PDF hazırlanıyor...</p>");
+            printWindow.document.write(`<p style='font-family:Arial,sans-serif'>${escapeHtml(t("pdfPreparing"))}...</p>`);
             button.disabled = true;
             const originalText = button.textContent;
-            button.textContent = "PDF Hazırlanıyor";
+            button.textContent = t("pdfPreparingButton");
             try {
               const offer = await window.EffortApi.getOffer(offerId);
               printOfferPdf(offer, printWindow);
             } catch (error) {
               console.error(error);
               printWindow.close();
-              alert("PDF çıktısı hazırlanamadı.");
+              alert(t("pdfFailed"));
             } finally {
               button.disabled = false;
               button.textContent = originalText;
@@ -5195,7 +5257,7 @@
             confirmAction("Bu çalışmanın eforunu yeniden hesaplamak istediğinize emin misiniz?", async () => {
               button.disabled = true;
               const originalText = button.textContent;
-              button.textContent = "Hesaplanıyor";
+              button.textContent = t("calculating");
               try {
                 const offer = await window.EffortApi.getOffer(offerId);
                 const saved = await window.EffortApi.updateOffer(offerId, recalculatedOfferPayload(offer));
