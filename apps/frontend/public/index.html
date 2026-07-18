@@ -2352,7 +2352,7 @@
         <div class="screen" id="fixedefforts">
           <section class="grid">
             <div class="panel">
-              <div class="panel-head"><h3 class="panel-title">Sabit Efor</h3><span class="pill">Analiz eforuna eklenir</span></div>
+              <div class="panel-head"><h3 class="panel-title">Sabit Efor</h3><span class="pill">Proje eforlarında ayrı sütun</span></div>
               <div class="compact-table">
                 <table>
                   <thead><tr><th>Modül</th><th>Analiz Eforu (gün)</th></tr></thead>
@@ -3239,7 +3239,7 @@
         noLocalizationEffort: "Lokalizasyon eforu bulunmuyor.",
         noDevelopmentEffort: "Geliştirme eforu bulunmuyor.",
         analysisEffort: "Analiz Eforu (gün)",
-        addedToAnalysisEffort: "Analiz eforuna eklenir",
+        addedToAnalysisEffort: "Proje eforlarında ayrı sütun",
         fixedEffortSummary: "Sabit efor özeti",
         save: "Kaydet",
         saving: "Kaydediliyor",
@@ -3392,7 +3392,7 @@
         noLocalizationEffort: "No localization effort found.",
         noDevelopmentEffort: "No development effort found.",
         analysisEffort: "Analysis Effort (days)",
-        addedToAnalysisEffort: "Added to analysis effort",
+        addedToAnalysisEffort: "Shown as a separate project effort column",
         fixedEffortSummary: "Fixed effort summary",
         save: "Save",
         saving: "Saving",
@@ -4017,29 +4017,33 @@
         const values = Object.fromEntries(phaseHeaders.map(phase => {
           const baseValue = Number(base[phase]) || 0;
           const sizeValue = Number(sizeRow[phase]) || 0;
-          const fixedValue = phase === "Analiz" ? (fixedValues[name] || 0) : 0;
-          const calculated = (baseValue + sizeValue) * teamMultiplier + fixedValue;
+          const calculated = (baseValue + sizeValue) * teamMultiplier;
           return [phase, calculated];
         }));
-        return { module: name, values, total: sumValues(values) };
+        const fixedEffort = fixedValues[name] || 0;
+        return { module: name, values, fixedEffort, total: sumValues(values) + fixedEffort };
       });
     }
 
     function renderFinalEffort() {
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
-      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Hypercare</th><th>Go-Live Support</th><th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Sabit Efor</th><th>Hypercare</th><th>Go-Live Support</th><th>Toplam</th></tr>`;
       const rows = finalRowsForSelectedModules();
       const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+      let fixedEffortTotal = 0;
       if (body) {
         const rowHtml = rows.map(row => {
           phaseHeaders.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
+          const fixedEffort = Number(row.fixedEffort) || 0;
+          fixedEffortTotal += fixedEffort;
           const hypercare = hypercareValue(row.module);
           const golive = Number(hypercareState.get(row.module)?.goliveDays) || 0;
           return `
             <tr>
               <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
               ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
+              <td>${fmt(fixedEffort)}</td>
               <td>${fmt(hypercare)}</td>
               <td>${fmt(golive)}</td>
               <td><strong>${fmt(row.total + hypercare + golive)}</strong></td>
@@ -4048,8 +4052,8 @@
         }).join("");
         const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
         const goliveTotal = rows.reduce((sum, row) => sum + (Number(hypercareState.get(row.module)?.goliveDays) || 0), 0);
-        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + hypercareTotal + goliveTotal)}</strong></td></tr>`;
-        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 4}">Modül seçimi yapılmadı.</td></tr>`;
+        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
+        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 5}">Modül seçimi yapılmadı.</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
       setText("projectEffortTotal", fmt(total));
@@ -4879,15 +4883,16 @@
         const base = fixedRows[module] || finalEffortBase[module] || {};
         const values = Object.fromEntries(phaseHeaders.map(phase => [
           phase,
-          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (phase === "Analiz" ? (fixedValues[module] || 0) : 0)
+          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team
         ]));
+        const fixedEffort = fixedValues[module] || 0;
         const supportRow = hypercareExcludedModules.has(module) ? {} : (support[module] || {});
         const factors = [supportRow.weeks, supportRow.daysPerWeek, supportRow.shifts, supportRow.locations].map(Number);
         const hypercare = factors.every(value => Number.isFinite(value) && value > 0)
           ? factors.reduce((total, value) => total * value, 1)
           : 0;
         const golive = hypercareExcludedModules.has(module) ? 0 : (Number(supportRow.goliveDays) || 0);
-        return { module, values, hypercare, golive };
+        return { module, values, fixedEffort, hypercare, golive };
       });
     }
 
@@ -4929,6 +4934,7 @@
         phaseHeaders.forEach(phase => {
           backlogRows.push([`${row.module}-${phase}`, "Proje Eforu", row.module, phase, row.values[phase] || 0]);
         });
+        backlogRows.push([`${row.module}-Sabit Efor`, "Proje Eforu", row.module, "Sabit Efor", row.fixedEffort || 0]);
         backlogRows.push([`${row.module}-Hypercare`, "Proje Eforu", row.module, "Hypercare", row.hypercare || 0]);
         backlogRows.push([`${row.module}-Go-Live Support`, "Proje Eforu", row.module, "Go-Live Support", row.golive || 0]);
       });
@@ -4988,7 +4994,7 @@
       const localizationRows = offerLocalizationRows(offer, moduleNames);
       const scopeScore = offerScopeScore(offer);
       const size = projectSizeFromScore(scopeScore);
-      const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values), 0);
+      const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values) + (Number(row.fixedEffort) || 0), 0);
       const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
       const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
       const developmentTotal = developmentRows.reduce((sum, row) =>
@@ -5010,13 +5016,18 @@
         [t("updated"), offer.updated_at ? new Date(offer.updated_at).toLocaleDateString(dateLocale) : ""]
       ];
       const projectTableRows = projectRows.map(row => {
-        const total = sumValues(row.values) + (Number(row.hypercare) || 0) + (Number(row.golive) || 0);
-        return [row.module, ...phaseHeaders.map(phase => fmt(row.values[phase] || 0)), fmt(row.hypercare || 0), fmt(row.golive || 0), fmt(total)];
+        const fixedEffort = Number(row.fixedEffort) || 0;
+        const total = sumValues(row.values) + fixedEffort + (Number(row.hypercare) || 0) + (Number(row.golive) || 0);
+        return [row.module, ...phaseHeaders.map(phase => fmt(row.values[phase] || 0)), fmt(fixedEffort), fmt(row.hypercare || 0), fmt(row.golive || 0), fmt(total)];
       });
       const projectTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
-      projectRows.forEach(row => phaseHeaders.forEach(phase => projectTotals[phase] += Number(row.values[phase]) || 0));
+      let fixedEffortPrintTotal = 0;
+      projectRows.forEach(row => {
+        phaseHeaders.forEach(phase => projectTotals[phase] += Number(row.values[phase]) || 0);
+        fixedEffortPrintTotal += Number(row.fixedEffort) || 0;
+      });
       if (projectRows.length) {
-        projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...phaseHeaders.map(phase => fmt(projectTotals[phase])), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
+        projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...phaseHeaders.map(phase => fmt(projectTotals[phase])), fmt(fixedEffortPrintTotal), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
       }
       const localizationTableRows = localizationRows.map(row => [
         row.module,
@@ -5082,7 +5093,7 @@
           <h2>${escapeHtml(t("finalSummary"))}</h2>
           <div class="grid">${summaryRows.map(([key, value]) => `<div class="metric"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)} g</strong></div>`).join("")}</div>
           <h2>${escapeHtml(t("projectEfforts"))}</h2>
-          ${printTable([t("modules"), ...phaseHeaders, "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"))}
+          ${printTable([t("modules"), ...phaseHeaders, currentLanguage === "en" ? "Fixed Effort" : "Sabit Efor", "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"))}
           <h2>${escapeHtml(t("localizationEfforts"))}</h2>
           ${printTable([t("modules"), currentLanguage === "en" ? "Country" : "Ülke", ...phaseHeaders, currentLanguage === "en" ? "Total" : "Toplam"], localizationTableRows, t("noLocalizationEffort"))}
           <h2>${escapeHtml(t("developmentEfforts"))}</h2>
