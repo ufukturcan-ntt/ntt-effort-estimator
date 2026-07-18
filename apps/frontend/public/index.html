@@ -600,6 +600,11 @@
       margin: 0 auto;
     }
 
+    .app:not(.work-open) .content:has(#allworks.active) {
+      max-width: none;
+      margin-inline: 0;
+    }
+
     .welcome {
       background: #fff;
       border: 1px solid var(--line);
@@ -1147,9 +1152,44 @@
       vertical-align: top;
     }
 
+    #allworks {
+      width: min(100%, calc(100vw - 56px));
+      justify-self: center;
+    }
+
+    #allworks .panel {
+      width: 100%;
+    }
+
+    #allworks .list-table {
+      padding-inline: 12px;
+    }
+
+    #allworks table {
+      min-width: 1180px;
+    }
+
     #allworks th,
     #allworks td {
       text-align: left;
+      padding-inline: 10px;
+    }
+
+    #allworks th:nth-child(8),
+    #allworks td:nth-child(8) {
+      min-width: 520px;
+    }
+
+    #allworks td:nth-child(8) .quick-actions {
+      flex-wrap: nowrap;
+      gap: 6px;
+    }
+
+    #allworks td:nth-child(8) .button {
+      height: 32px;
+      padding-inline: 9px;
+      font-size: 12px;
+      white-space: nowrap;
     }
 
     .admin-select {
