@@ -3078,10 +3078,10 @@
           const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
           if (multiplier > 0) selected.set(item.name, multiplier);
         });
-        automaticDevelopmentLinks.forEach(link => {
-          if (scopeAnswers[String(link.scopeNo)] === "Evet") selected.set(link.name, 1);
-        });
       }
+      automaticDevelopmentLinks.forEach(link => {
+        if (scopeAnswers[String(link.scopeNo)] === "Evet") selected.set(link.name, 1);
+      });
       (window.developmentQuestions || []).forEach(item => {
         if (automaticDevelopmentQuestionNos.has(Number(item.no))) return;
         const value = developmentAnswers[String(item.no)];
