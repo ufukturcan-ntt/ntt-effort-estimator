@@ -3028,23 +3028,26 @@
       return parsed.length ? parsed : developmentEfforts;
     }
 
-    function selectedDevelopmentMultipliers(scopeAnswers = {}, developmentAnswers = {}) {
+    function selectedDevelopmentMultipliers(scopeAnswers = {}, developmentAnswers = {}, options = {}) {
       const selected = new Map();
-      (window.scopeQuestions || []).forEach(item => {
-        const value = scopeAnswers[String(item.no)];
-        if (!value || value === "Seçiniz" || value === "Hayır") return;
-        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
-        if (multiplier > 0) selected.set(item.name, multiplier);
-      });
+      const includeScopeDriven = Boolean(options.includeScopeDriven);
+      if (includeScopeDriven) {
+        (window.scopeQuestions || []).forEach(item => {
+          const value = scopeAnswers[String(item.no)];
+          if (!value || value === "Seçiniz" || value === "Hayır") return;
+          const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
+          if (multiplier > 0) selected.set(item.name, multiplier);
+        });
+        automaticDevelopmentLinks.forEach(link => {
+          if (scopeAnswers[String(link.scopeNo)] === "Evet") selected.set(link.name, 1);
+        });
+      }
       (window.developmentQuestions || []).forEach(item => {
         if (automaticDevelopmentQuestionNos.has(Number(item.no))) return;
         const value = developmentAnswers[String(item.no)];
         if (!value || value === "Seçiniz" || value === "Hayır") return;
         const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
         if (multiplier > 0) selected.set(canonicalDevelopmentName(item.name), multiplier);
-      });
-      automaticDevelopmentLinks.forEach(link => {
-        if (scopeAnswers[String(link.scopeNo)] === "Evet") selected.set(link.name, 1);
       });
       return selected;
     }
