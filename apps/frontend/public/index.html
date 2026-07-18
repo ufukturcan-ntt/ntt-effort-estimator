@@ -3003,8 +3003,6 @@
       if (normalized === "İhtiyaç duyulan rapor sayısı") return "Toplam rapor sayısı";
       if (normalized === "İhtiyaç duyulan çıktı-etiket-form sayısı") return "Toplam çıktı sayısı";
       if (normalized === "Üretim ana veri yaratma otomasyonu (FMS)") return "Üretim ana veri yaratma otomasyonu (FVB)";
-      if (normalized === "Fashion Vertical Business (FVB)") return "Üretim ana veri yaratma otomasyonu (FVB)";
-      if (normalized === "Varyant Konfigürasyonu") return "Üretim ana veri yaratma otomasyonu (Varyant konfigurasyonlu)";
       return normalized;
     }
 
@@ -3031,6 +3029,12 @@
 
     function selectedDevelopmentMultipliers(scopeAnswers = {}, developmentAnswers = {}) {
       const selected = new Map();
+      (window.scopeQuestions || []).forEach(item => {
+        const value = scopeAnswers[String(item.no)];
+        if (!value || value === "Seçiniz" || value === "Hayır") return;
+        const multiplier = item.answerType === "number" ? Number(value) || 0 : 1;
+        if (multiplier > 0) selected.set(item.name, multiplier);
+      });
       (window.developmentQuestions || []).forEach(item => {
         if (automaticDevelopmentQuestionNos.has(Number(item.no))) return;
         const value = developmentAnswers[String(item.no)];
