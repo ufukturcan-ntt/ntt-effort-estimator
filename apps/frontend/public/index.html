@@ -5122,6 +5122,17 @@
         const rowTotal = developmentModules.reduce((sum, module) => sum + (Number(row.values[module]) || 0), 0);
         return { row: [row.name, ...developmentModules.map(module => row.values[module] ? fmt(row.values[module]) : ""), fmt(rowTotal)], total: rowTotal };
       }).filter(item => item.total > 0).map(item => item.row);
+      if (developmentTableRows.length) {
+        const developmentColumnTotals = Object.fromEntries(developmentModules.map(module => [module, 0]));
+        developmentRows.forEach(row => {
+          developmentModules.forEach(module => developmentColumnTotals[module] += Number(row.values[module]) || 0);
+        });
+        developmentTableRows.push([
+          currentLanguage === "en" ? "Total" : "Toplam",
+          ...developmentModules.map(module => fmt(developmentColumnTotals[module])),
+          fmt(developmentTotal)
+        ]);
+      }
       const summaryRows = [
         [t("standardProjectEffort"), fmt(projectTotal)],
         [t("developmentEffort"), fmt(developmentTotal)],
