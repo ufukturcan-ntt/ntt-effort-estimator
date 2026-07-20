@@ -277,7 +277,7 @@ app.get("/api/offers", async (req, res, next) => {
     const { userId } = req.query;
     const result = await query(
       `select id, offer_no, title, customer_name, project_name, industry, implementation_type,
-              system_type, status, total_effort, updated_at
+              system_type, status, total_effort, project_definition, updated_at
        from offer
        where ($1::uuid is null or user_id = $1::uuid)
        order by updated_at desc

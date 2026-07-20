@@ -1179,7 +1179,7 @@
     }
 
     #allworks table {
-      min-width: 1180px;
+      min-width: 1260px;
     }
 
     #allworks th,
@@ -1188,17 +1188,17 @@
       padding-inline: 10px;
     }
 
-    #allworks th:nth-child(8),
-    #allworks td:nth-child(8) {
+    #allworks th:nth-child(9),
+    #allworks td:nth-child(9) {
       min-width: 590px;
     }
 
-    #allworks td:nth-child(8) .quick-actions {
+    #allworks td:nth-child(9) .quick-actions {
       flex-wrap: nowrap;
       gap: 6px;
     }
 
-    #allworks td:nth-child(8) .button {
+    #allworks td:nth-child(9) .button {
       height: 32px;
       padding-inline: 9px;
       font-size: 12px;
@@ -2247,6 +2247,7 @@
                     <th>Proje İsmi</th>
                     <th>Müşteri</th>
                     <th>Endüstri</th>
+                    <th>Versiyon</th>
                     <th>Durum</th>
                     <th>Toplam AG</th>
                     <th>Son Güncelleme</th>
@@ -3283,6 +3284,7 @@
         customer: "Müşteri",
         industry: "Endüstri",
         status: "Durum",
+        totalEffort: "Toplam AG",
         updated: "Son Güncelleme",
         action: "İşlem",
         previous: "‹ Önceki",
@@ -3437,6 +3439,7 @@
         customer: "Customer",
         industry: "Industry",
         status: "Status",
+        totalEffort: "Total AG",
         updated: "Last Update",
         action: "Action",
         previous: "‹ Previous",
@@ -3648,7 +3651,7 @@
       setTexts(".home-only .metric span", [t("totalPotentialEffort"), t("topCategory")]);
       setTexts(".home-only .metric small", [t("days"), t("activeOffers")]);
       setTextContent("#allworks .panel-title", t("allWorks"));
-      setTexts("#allworks th", [t("projectNo"), t("projectName"), t("customer"), t("industry"), t("status"), t("updated"), t("action")]);
+      setTexts("#allworks th", [t("projectNo"), t("projectName"), t("customer"), t("industry"), t("version"), t("status"), t("totalEffort"), t("updated"), t("action")]);
       setTextContent("#allWorksFooterText", cachedOffers.length ? document.getElementById("allWorksFooterText")?.textContent || "" : t("noRecords"));
       setTexts("#allworks .list-footer .button", [t("previous"), t("next")]);
       setTextContent("#project .panel-title", t("projectDefinition"));
@@ -5361,6 +5364,7 @@
             <td>${row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")}</td>
             <td>${row.customer_name || ""}</td>
             <td>${row.industry || ""}</td>
+            <td>${offerJson(row.project_definition).version || ""}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
             <td><strong>${fmt(row.total_effort || 0)}</strong></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
