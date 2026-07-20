@@ -814,7 +814,7 @@
     .summary-grid {
       padding: 18px;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -2455,6 +2455,7 @@
               <div class="panel-head"><h3 class="panel-title">Final özet</h3><span class="pill"><span id="finalGrandTotal">0</span>g</span></div>
               <div class="summary-grid">
                 <div class="metric"><span>Standart proje eforu</span><b id="projectEffortTotal">0</b><small>seçili modüller</small></div>
+                <div class="metric"><span>Sabit efor</span><b id="finalFixedEffortTotal">0</b><small>ayrı sütun</small></div>
                 <div class="metric"><span>Geliştirme eforu</span><b id="developmentEffortTotal">0</b><small>geliştirme matrisi</small></div>
                 <div class="metric"><span>Lokalizasyon eforu</span><b id="finalLocalizationTotal">0</b><small>seçili ülkeler</small></div>
                 <div class="metric"><span>Hypercare + Go-Live eforu</span><b id="finalHypercareTotal">0</b><small>destek planı</small></div>
@@ -4178,6 +4179,8 @@
 
     function renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal }) {
       const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal;
+      const fixedTotal = fixedEffortTotal();
+      setText("finalFixedEffortTotal", fmt(fixedTotal));
       setText("finalSummaryTotal", fmt(grandTotal));
       const mix = [
         ["Standart efor", projectTotal, "var(--blue)"],
