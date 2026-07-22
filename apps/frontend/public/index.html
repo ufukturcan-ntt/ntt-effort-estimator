@@ -1373,6 +1373,24 @@
       width: 96px;
     }
 
+    .compact-table .check-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 118px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .compact-table .check-row input {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      accent-color: var(--blue);
+    }
+
     .status {
       width: max-content;
       border-radius: 999px;
@@ -2372,7 +2390,7 @@
               <div class="panel-head"><h3 class="panel-title">Sabit Efor</h3><span class="pill">Proje eforlarında ayrı sütun</span></div>
               <div class="compact-table">
                 <table>
-                  <thead><tr><th>Modül</th><th>Analiz Eforu (gün)</th></tr></thead>
+                  <thead><tr><th>Modül</th><th>Analiz Eforu (gün)</th><th>Kapsam</th></tr></thead>
                   <tbody id="fixedEffortRows"></tbody>
                 </table>
               </div>
@@ -2527,14 +2545,14 @@
                     <div class="definition-list" id="adminVariableTypeOptions"></div>
                   </section>
                   <section>
-                    <div class="option-definition-head"><h4>Efor Etki Tipi</h4><button class="button primary" data-admin-add-list="adminEffortImpactTypeOptions" type="button">+ Seçenek</button></div>
+                    <div class="option-definition-head"><h4>Size Etki Tipi</h4><button class="button primary" data-admin-add-list="adminEffortImpactTypeOptions" type="button">+ Seçenek</button></div>
                     <div class="definition-list" id="adminEffortImpactTypeOptions"></div>
                   </section>
                 </div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Size Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
@@ -3187,6 +3205,7 @@
 
     const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
+    let abapFixedEffortIncluded = false;
     const fixedOnlyModules = new Set(["PMO", "Governance", "BASIS"]);
     const developmentExcludedModules = new Set(["PMO", "Governance", "BASIS"]);
 
@@ -3197,6 +3216,45 @@
 
     function fixedEffortTotal(source = fixedEffortState) {
       return Object.values(fixedEffortValues(source)).reduce((sum, value) => sum + value, 0);
+    }
+
+    function normalizeFixedEffortInclusion(value) {
+      if (typeof value === "boolean") return value;
+      const normalized = String(value || "").trim().toLowerCase();
+      return ["included", "include", "true", "yes", "evet", "dahil"].includes(normalized);
+    }
+
+    function fixedEffortInclusionPayload() {
+      return { ABAP: abapFixedEffortIncluded ? "included" : "notIncluded" };
+    }
+
+    function abapIncludedFromFinalEffort(finalEffort = {}) {
+      const inclusion = finalEffort.fixedEffortInclusion || finalEffort.fixedEffortInclusions || {};
+      return normalizeFixedEffortInclusion(inclusion.ABAP ?? finalEffort.abapFixedEffortIncluded);
+    }
+
+    function applyAbapFixedEffortCoverage(grouped, moduleNames, fixedValues = fixedEffortValues(), included = abapFixedEffortIncluded) {
+      const adjusted = new Map([...grouped.entries()].map(([name, values]) => [name, { ...values }]));
+      if (!included || !moduleNames.includes("ABAP")) {
+        return { grouped: adjusted, rawAbapTotal: 0, coveredAbapTotal: 0, billableAbapTotal: 0 };
+      }
+      let remainingCoverage = Math.max(Number(fixedValues.ABAP) || 0, 0);
+      let rawAbapTotal = 0;
+      let coveredAbapTotal = 0;
+      adjusted.forEach(values => {
+        const rawValue = Math.max(Number(values.ABAP) || 0, 0);
+        rawAbapTotal += rawValue;
+        const covered = Math.min(rawValue, remainingCoverage);
+        coveredAbapTotal += covered;
+        remainingCoverage -= covered;
+        values.ABAP = rawValue - covered;
+      });
+      return {
+        grouped: adjusted,
+        rawAbapTotal,
+        coveredAbapTotal,
+        billableAbapTotal: Math.max(rawAbapTotal - coveredAbapTotal, 0)
+      };
     }
 
     function developmentModuleNames(moduleNames = selectedModuleNames()) {
@@ -3677,6 +3735,7 @@
       setTextContent("#fixedefforts .panel:nth-child(1) .pill", t("addedToAnalysisEffort"));
       setTextContent("#fixedefforts thead th:nth-child(1)", t("modules"));
       setTextContent("#fixedefforts thead th:nth-child(2)", t("analysisEffort"));
+      setTextContent("#fixedefforts thead th:nth-child(3)", currentLanguage === "en" ? "Scope" : "Kapsam");
       setTextContent("#fixedefforts .panel:nth-child(2) .panel-title", t("fixedEffortSummary"));
       setTextContent("#modules .panel-title", t("moduleSelection"));
       setTextContent("#modules .input-field label", t("teamSplit"));
@@ -3948,6 +4007,12 @@
           <tr>
             <td><span class="module-chip"><span class="module-initial">${initials(module)}</span>${module}</span></td>
             <td><input type="number" min="0" step="0.5" data-fixed-effort="${module}" value="${fixedEffortState.get(module) || ""}" /></td>
+            <td>${module === "ABAP" ? `
+              <label class="check-row">
+                <input type="checkbox" data-fixed-effort-included="ABAP" ${abapFixedEffortIncluded ? "checked" : ""} />
+                <span>${abapFixedEffortIncluded ? "Included" : "Not Included"}</span>
+              </label>
+            ` : ""}</td>
           </tr>
         `).join("");
         target.querySelectorAll("[data-fixed-effort]").forEach(input => {
@@ -3960,7 +4025,7 @@
             setText("fixedEffortNavCount", `${fmt(total)}g`);
             if (summary) {
               summary.innerHTML = fixedEffortModules.map(module => `
-                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${currentLanguage === "en" ? "Analysis effort" : "Analiz eforu"}</small></div>
+                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${module === "ABAP" ? (abapFixedEffortIncluded ? "Included" : "Not Included") : (currentLanguage === "en" ? "Analysis effort" : "Analiz eforu")}</small></div>
               `).join("");
             }
             const projectTotal = renderFinalEffort();
@@ -3973,10 +4038,17 @@
             renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
           });
         });
+        target.querySelectorAll("[data-fixed-effort-included]").forEach(input => {
+          input.addEventListener("change", () => {
+            abapFixedEffortIncluded = input.checked;
+            markDirty();
+            renderWorkbookDrivenScreens();
+          });
+        });
       }
       if (summary) {
         summary.innerHTML = fixedEffortModules.map(module => `
-          <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>Analiz eforu</small></div>
+          <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${module === "ABAP" ? (abapFixedEffortIncluded ? "Included" : "Not Included") : (currentLanguage === "en" ? "Analysis effort" : "Analiz eforu")}</small></div>
         `).join("");
       }
       return total;
@@ -4168,8 +4240,10 @@
       selectedDevelopments.forEach((_, name) => {
         if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
       });
+      const coverage = applyAbapFixedEffortCoverage(grouped, moduleNames);
+      const displayGrouped = coverage.grouped;
       const colTotals = Object.fromEntries(moduleNames.map(module => [module, 0]));
-      const rowHtml = [...grouped.entries()].map(([name, values]) => {
+      const rowHtml = [...displayGrouped.entries()].map(([name, values]) => {
         const rowTotal = moduleNames.reduce((sum, module) => {
           colTotals[module] += values[module] || 0;
           return sum + (values[module] || 0);
@@ -4179,7 +4253,10 @@
       const total = Object.values(colTotals).reduce((sum, value) => sum + value, 0);
       const totalRow = `<tr><td><strong>Toplam</strong></td>${moduleNames.map(module => `<td><strong>${fmt(colTotals[module])}</strong></td>`).join("")}<td><strong>${fmt(total)}</strong></td></tr>`;
       const emptyRow = `<tr><td colspan="${moduleNames.length + 2}">Geliştirme eforu için seçim bekleniyor.</td></tr>`;
-      body.innerHTML = moduleNames.length ? (grouped.size ? rowHtml : emptyRow) + totalRow : emptyRow;
+      const coverageRow = coverage.coveredAbapTotal > 0
+        ? `<tr><td colspan="${moduleNames.length + 2}"><strong>ABAP sabit efor kapsamı:</strong> ${fmt(coverage.coveredAbapTotal)} gün geliştirme eforu sabit ABAP eforundan karşılandı.</td></tr>`
+        : "";
+      body.innerHTML = moduleNames.length ? (grouped.size ? rowHtml + coverageRow : emptyRow) + totalRow : emptyRow;
       setText("developmentEffortTotal", fmt(total));
       return total;
     }
@@ -4248,6 +4325,13 @@
       return [...new Set([...(window.scopeQuestions || []), ...(window.developmentQuestions || [])].map(item => item.name).filter(Boolean))];
     }
 
+    function adminQuestionNamesByType(type = "") {
+      const normalized = String(type || "").trim();
+      if (normalized === "Kapsam") return (window.scopeQuestions || []).map(item => item.name).filter(Boolean);
+      if (normalized === "Geliştirme") return (window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name)).filter(Boolean);
+      return adminQuestionNames();
+    }
+
     function uniqueOptionValues(values = []) {
       return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
     }
@@ -4297,6 +4381,23 @@
       return `<td><select class="admin-select" ${multiple ? "multiple" : ""} ${attributes}>${rendered}</select></td>`;
     }
 
+    function isNumberVariableType(value = "") {
+      return String(value || "").toLocaleLowerCase("tr-TR").includes("sayı");
+    }
+
+    function questionImpactTypeCell(targetId, hasSizeImpact, variableTypeValue, effortImpactType, fieldOptions) {
+      if (targetId !== "adminScopeRows") {
+        return adminSelectCell(effortImpactType || "Sabit", optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType || "Sabit"));
+      }
+      if (!hasSizeImpact) {
+        return adminSelectCell("", fieldOptions.effortImpactTypes, false, "data-scope-impact-type disabled");
+      }
+      if (!isNumberVariableType(variableTypeValue)) {
+        return adminSelectCell("Sabit", optionValuesWithCurrent(fieldOptions.effortImpactTypes, "Sabit"), false, "data-scope-impact-type disabled");
+      }
+      return adminSelectCell(effortImpactType || "Katsayı", optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType || "Katsayı"), false, "data-scope-impact-type");
+    }
+
     function adminMatrixOptions(header) {
       const normalized = String(header || "").trim();
       if (normalized === "Variable Type") return { options: ["Kapsam", "Geliştirme"], multiple: false };
@@ -4316,6 +4417,40 @@
       if (["Efor Bazı", "Efor BazÄ±"].includes(normalized)) return { options: ["Sabit", "Katsayı", "1 Farklı Şirket Kurgusu", "1 Entegrasyon bazında"], multiple: false };
       if (["Ülke", "Ulke", "Ãœlke"].includes(normalized)) return { options: localizationCatalog.map(item => item.country), multiple: false };
       return null;
+    }
+
+    function adminMatrixCellOptions(header, bodyId, row = [], headers = []) {
+      const normalized = String(header || "").trim();
+      if (bodyId === "adminRestrictionsRows" && isRestrictionQuestionHeader(header, headers)) {
+        const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
+        const type = row[typeIndex] || "";
+        return { options: ["", ...adminQuestionNamesByType(type)], multiple: false };
+      }
+      return adminMatrixOptions(header);
+    }
+
+    function restrictionHeaderIndex(headers = [], target = "") {
+      const normalizedTarget = String(target || "").trim();
+      return headers.findIndex(item => String(item || "").trim() === normalizedTarget);
+    }
+
+    function isRestrictionQuestionHeader(header, headers = []) {
+      const normalized = String(header || "").trim();
+      if (["Question", "Soru"].includes(normalized)) return true;
+      const questionIndex = restrictionHeaderIndex(headers, "Question");
+      return questionIndex >= 0 && headers[questionIndex] === header;
+    }
+
+    function restrictionDefaultRow(headers = []) {
+      return headers.map(header => {
+        const normalized = String(header || "").trim();
+        if (normalized === "Variable Type") return "Kapsam";
+        if (normalized === "Allowed Industries") return "All";
+        if (normalized === "Allowed Implementation Types") return "All";
+        if (normalized === "Allowed System Types") return "All";
+        if (normalized === "Active?") return "Yes";
+        return "";
+      });
     }
 
     function syncFixedDaysScrollbars() {
@@ -4366,11 +4501,12 @@
           && ["Modül", "Modul", "Module"].includes(normalizedHeader)
           && row[sourceTypeIndex] === "Değişken";
         if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
-        const selectConfig = isLocalizationCountry ? null : adminMatrixOptions(header);
+        const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, row, headers);
         return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`).join("");
       bindAdminEditable(body);
       syncVmpModuleCells(body);
+      syncRestrictionQuestionCells(body);
       if (bodyId === "adminFixedRows") requestAnimationFrame(syncFixedDaysScrollbars);
     }
 
@@ -4379,14 +4515,83 @@
       if (!body) return;
       const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
       if (!headers.length) return;
+      if (bodyId === "adminRestrictionsRows") {
+        addAdminRestrictionRow(body, headers);
+        return;
+      }
+      const defaultRow = bodyId === "adminRestrictionsRows" ? restrictionDefaultRow(headers) : headers.map(() => "");
       body.insertAdjacentHTML("beforeend", `<tr>${headers.map(header => {
-        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(String(header || "").trim());
-        const selectConfig = isLocalizationCountry ? null : adminMatrixOptions(header);
-        return selectConfig ? adminSelectCell("", selectConfig.options, selectConfig.multiple) : editableCell("");
+        const normalizedHeader = String(header || "").trim();
+        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
+        const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, defaultRow, headers);
+        const defaultValue = defaultRow[headers.findIndex(item => String(item || "").trim() === normalizedHeader)] || "";
+        return selectConfig ? adminSelectCell(defaultValue, selectConfig.options, selectConfig.multiple) : editableCell("");
       }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
       bindAdminEditable(body);
       syncVmpModuleCells(body);
+      syncRestrictionQuestionCells(body);
       markAdminDirty();
+    }
+
+    function addAdminRestrictionRow(body, headers = []) {
+      const rowValues = restrictionDefaultRow(headers);
+      const nextNo = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
+      const cells = headers.map((header, index) => {
+        const normalized = String(header || "").trim();
+        if (normalized === "No") return editableCell(nextNo);
+        if (normalized === "Variable Type") return adminSelectCell("Kapsam", ["Kapsam", "Geliştirme"]);
+        if (normalized === "Question") return adminSelectCell("", ["", ...adminQuestionNamesByType("Kapsam")], false, "data-restriction-question");
+        if (normalized === "Allowed Industries") return adminSelectCell(rowValues[index] || "All", ["All", ...adminDefinitionValues(0)], true);
+        if (normalized === "Allowed Implementation Types") return adminSelectCell(rowValues[index] || "All", ["All", ...adminDefinitionValues(1)], true);
+        if (normalized === "Allowed System Types") return adminSelectCell(rowValues[index] || "All", ["All", ...adminDefinitionValues(2)], true);
+        if (normalized === "Active?") return adminSelectCell("Yes", ["Yes", "No"]);
+        return editableCell(rowValues[index] || "");
+      }).join("");
+      body.insertAdjacentHTML("beforeend", `<tr>${cells}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      bindAdminEditable(body);
+      syncRestrictionQuestionCells(body);
+      markAdminDirty();
+    }
+
+    function syncRestrictionQuestionCells(root = document) {
+      const body = root.id === "adminRestrictionsRows" ? root : root.querySelector?.("#adminRestrictionsRows");
+      if (!body) return;
+      const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
+      const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
+      const questionIndex = restrictionHeaderIndex(headers, "Question");
+      if (typeIndex < 0 || questionIndex < 0) return;
+      [...body.querySelectorAll("tr")].forEach(row => {
+        const typeSelect = row.children[typeIndex]?.querySelector("select");
+        const questionCell = row.children[questionIndex];
+        if (!typeSelect || !questionCell) return;
+        let questionSelect = questionCell.querySelector("select");
+        if (!questionSelect) {
+          const currentText = questionCell.textContent.trim();
+          questionCell.removeAttribute("contenteditable");
+          questionCell.innerHTML = `<select class="admin-select" data-restriction-question></select>`;
+          questionSelect = questionCell.querySelector("select");
+          if (currentText) questionSelect.dataset.previousValue = currentText;
+        }
+        const refreshQuestionOptions = () => {
+          const current = questionSelect.value || questionSelect.dataset.previousValue || "";
+          const options = ["", ...adminQuestionNamesByType(typeSelect.value)];
+          questionSelect.innerHTML = options.map(option => `<option ${option === current ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+          if (![...questionSelect.options].some(option => option.value === current)) questionSelect.value = "";
+          delete questionSelect.dataset.previousValue;
+        };
+        refreshQuestionOptions();
+        if (!questionSelect.dataset.selectBound) {
+          questionSelect.dataset.selectBound = "true";
+          questionSelect.addEventListener("change", markAdminDirty);
+        }
+        if (!typeSelect.dataset.restrictionTypeBound) {
+          typeSelect.dataset.restrictionTypeBound = "true";
+          typeSelect.addEventListener("change", () => {
+            refreshQuestionOptions();
+            markAdminDirty();
+          });
+        }
+      });
     }
 
     function syncVmpModuleCells(root = document) {
@@ -4433,6 +4638,7 @@
             scoreInput.disabled = !checkbox.checked;
             if (!checkbox.checked) scoreInput.value = "";
           }
+          syncScopeImpactTypeCells(checkbox.closest("tbody") || root);
           markAdminDirty();
         });
       });
@@ -4449,6 +4655,11 @@
           button.closest("tr, .definition-row, .admin-module-card")?.remove();
           markAdminDirty();
         });
+      });
+      root.querySelectorAll("[data-admin-copy-question]").forEach(button => {
+        if (button.dataset.copyBound) return;
+        button.dataset.copyBound = "true";
+        button.addEventListener("click", () => copyScopeQuestionRow(button));
       });
     }
 
@@ -4554,6 +4765,9 @@
         const groupValue = item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme");
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
         const effortImpactType = item.effortImpactType || "Sabit";
+        const actionButtons = targetId === "adminScopeRows"
+          ? `<button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
+          : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
         return `
         <tr>
           ${editableCell(item.no)}
@@ -4563,12 +4777,13 @@
           ${editableCell(item.description)}
           <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
           <td><input class="admin-score-input" type="number" step="any" value="${Number(item.score) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
-          ${adminSelectCell(effortImpactType, optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType))}
-          <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
+          ${questionImpactTypeCell(targetId, hasSizeImpact, variableTypeValue, effortImpactType, fieldOptions)}
+          <td>${actionButtons}</td>
         </tr>
       `;
       }).join("");
       bindAdminEditable(target);
+      syncScopeImpactTypeCells(target);
     }
 
     function addAdminQuestion(targetId) {
@@ -4584,10 +4799,11 @@
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
         <td><input class="admin-score-input" type="number" step="any" disabled /></td>
-        ${adminSelectCell("Sabit", fieldOptions.effortImpactTypes)}
-        <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
+        ${questionImpactTypeCell(targetId, false, "Evet/Hayır", "", fieldOptions)}
+        <td>${targetId === "adminScopeRows" ? `<button class="button" data-admin-copy-question type="button">Kopyala</button>` : ""}<button class="button danger" data-admin-remove type="button">Sil</button></td>
       </tr>`);
       bindAdminEditable(target);
+      syncScopeImpactTypeCells(target);
       markAdminDirty();
     }
 
@@ -4602,6 +4818,84 @@
       const input = cell.querySelector("input");
       if (input) return input.value;
       return cell.textContent.trim();
+    }
+
+    function setInlineSelectOptions(select, options = [], value = "") {
+      const optionValues = options.includes("") ? options : ["", ...options];
+      select.innerHTML = optionValues.map(option => `<option ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+      select.value = optionValues.includes(value) ? value : "";
+    }
+
+    function syncScopeImpactTypeCells(root = document) {
+      const body = root.id === "adminScopeRows" ? root : root.querySelector?.("#adminScopeRows");
+      if (!body) return;
+      const fieldOptions = currentQuestionFieldOptions();
+      [...body.querySelectorAll("tr")].forEach(row => {
+        const variableTypeSelect = row.children[2]?.querySelector("select");
+        const sizeCheckbox = row.children[5]?.querySelector('input[type="checkbox"]');
+        const scoreInput = row.children[6]?.querySelector("input");
+        const impactSelect = row.children[7]?.querySelector("select");
+        if (!variableTypeSelect || !sizeCheckbox || !impactSelect) return;
+        const refresh = () => {
+          const hasSizeImpact = sizeCheckbox.checked;
+          if (scoreInput) {
+            scoreInput.disabled = !hasSizeImpact;
+            if (!hasSizeImpact) scoreInput.value = "";
+          }
+          if (!hasSizeImpact) {
+            setInlineSelectOptions(impactSelect, fieldOptions.effortImpactTypes, "");
+            impactSelect.disabled = true;
+            return;
+          }
+          if (!isNumberVariableType(variableTypeSelect.value)) {
+            setInlineSelectOptions(impactSelect, optionValuesWithCurrent(fieldOptions.effortImpactTypes, "Sabit"), "Sabit");
+            impactSelect.disabled = true;
+            return;
+          }
+          const current = impactSelect.value || "Katsayı";
+          setInlineSelectOptions(impactSelect, optionValuesWithCurrent(fieldOptions.effortImpactTypes, current), current);
+          impactSelect.disabled = false;
+        };
+        refresh();
+        if (!variableTypeSelect.dataset.scopeImpactBound) {
+          variableTypeSelect.dataset.scopeImpactBound = "true";
+          variableTypeSelect.addEventListener("change", () => {
+            refresh();
+            markAdminDirty();
+          });
+        }
+        if (!sizeCheckbox.dataset.scopeImpactBound) {
+          sizeCheckbox.dataset.scopeImpactBound = "true";
+          sizeCheckbox.addEventListener("change", refresh);
+        }
+      });
+    }
+
+    function copyScopeQuestionRow(button) {
+      const sourceRow = button.closest("tr");
+      const target = document.getElementById("adminScopeRows");
+      if (!sourceRow || !target) return;
+      const fieldOptions = currentQuestionFieldOptions();
+      const cells = [...sourceRow.children].slice(0, 8).map(adminCellValue);
+      const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
+      const groupValue = cells[1] || "Kapsam";
+      const variableTypeValue = cells[2] || "Evet/Hayır";
+      const hasSizeImpact = Boolean(cells[5]);
+      const effortImpactType = hasSizeImpact && isNumberVariableType(variableTypeValue) ? (cells[7] || "Katsayı") : (hasSizeImpact ? "Sabit" : "");
+      target.insertAdjacentHTML("beforeend", `<tr>
+        ${editableCell(nextNo)}
+        ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
+        ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
+        ${editableCell(`${cells[3] || "Yeni soru"} - Kopya`)}
+        ${editableCell(cells[4] || "")}
+        <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
+        <td><input class="admin-score-input" type="number" step="any" value="${Number(String(cells[6]).replace(",", ".")) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
+        ${questionImpactTypeCell("adminScopeRows", hasSizeImpact, variableTypeValue, effortImpactType, fieldOptions)}
+        <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+      </tr>`);
+      bindAdminEditable(target);
+      syncScopeImpactTypeCells(target);
+      markAdminDirty();
     }
 
     function collectDefinitionValues(targetId) {
@@ -4639,16 +4933,21 @@
     function collectQuestionAdminRows(targetId) {
       return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
         const cells = [...row.children].slice(0, 8).map(adminCellValue);
-        const answerType = String(cells[2] || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "number" : "yesno";
+        const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
+        const sizeImpact = Boolean(cells[5]);
+        let effortImpactType = cells[7];
+        if (targetId === "adminScopeRows") {
+          effortImpactType = !sizeImpact ? "" : (answerType === "yesno" ? "Sabit" : (effortImpactType || "Katsayı"));
+        }
         return {
           no: Number(cells[0]) || cells[0],
           group: cells[1],
           variableType: cells[2],
           name: cells[3],
           description: cells[4],
-          sizeImpact: Boolean(cells[5]),
+          sizeImpact,
           score: Number(String(cells[6]).replace(",", ".")) || 0,
-          effortImpactType: cells[7],
+          effortImpactType,
           answerType,
           active: true
         };
@@ -4953,6 +5252,10 @@
       return fixedEffortValues(finalEffort.fixedEfforts || offer.fixedEfforts || {});
     }
 
+    function offerAbapFixedEffortIncluded(offer) {
+      return abapIncludedFromFinalEffort(offerJson(offer?.final_effort));
+    }
+
     function projectEffortRowsForOffer(offer) {
       const implementation = offer.implementation_type || offerJson(offer.project_definition).implementation || "Conversion";
       const systemType = offer.system_type || offerJson(offer.project_definition).system || "All";
@@ -4988,6 +5291,8 @@
 
     function developmentEffortRowsForOffer(offer, moduleNames) {
       moduleNames = developmentModuleNames(moduleNames);
+      const fixedValues = offerFixedEfforts(offer);
+      const abapIncluded = offerAbapFixedEffortIncluded(offer);
       const selectedDevelopments = selectedDevelopmentMultipliers(
         offerJson(offer.scope_answers),
         offerJson(offer.development_answers)
@@ -5005,7 +5310,8 @@
       selectedDevelopments.forEach((_, name) => {
         if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
       });
-      return [...grouped.entries()].map(([name, values]) => ({ name, values }));
+      const coverage = applyAbapFixedEffortCoverage(grouped, moduleNames, fixedValues, abapIncluded);
+      return [...coverage.grouped.entries()].map(([name, values]) => ({ name, values }));
     }
 
     function backlogSheet(rows, widths) {
@@ -5267,7 +5573,9 @@
         finalEffort: {
           ...finalEffort,
           fixedEfforts,
-          fixedEffortTotal: fixedEffortTotal(fixedEfforts)
+          fixedEffortTotal: fixedEffortTotal(fixedEfforts),
+          fixedEffortInclusion: offerJson(offer.final_effort).fixedEffortInclusion || { ABAP: offerAbapFixedEffortIncluded(offer) ? "included" : "notIncluded" },
+          abapFixedEffortIncluded: offerAbapFixedEffortIncluded(offer)
         }
       };
     }
@@ -5869,6 +6177,8 @@
           localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
           fixedEfforts,
           fixedEffortTotal: fixedEffortTotal(),
+          fixedEffortInclusion: fixedEffortInclusionPayload(),
+          abapFixedEffortIncluded,
           hypercareTotal: hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
           goliveTotal: hypercareModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0),
           grandTotal: numericText("finalGrandTotal")
@@ -6005,7 +6315,9 @@
       const savedModules = offerJson(offer?.module_selection);
       const savedLocalizations = offerJson(offer?.localization_selection);
       const savedHypercare = offerJson(offer?.hypercare_inputs);
-      const savedFixedEfforts = offerJson(offer?.final_effort).fixedEfforts || {};
+      const savedFinalEffort = offerJson(offer?.final_effort);
+      const savedFixedEfforts = savedFinalEffort.fixedEfforts || {};
+      abapFixedEffortIncluded = mode === "existing" ? abapIncludedFromFinalEffort(savedFinalEffort) : false;
       const teamSplit = document.getElementById("teamSplitSelect");
       if (teamSplit) {
         const hasMultipleTeams = Object.values(savedModules).some(state => Number(state?.team) > 1);
