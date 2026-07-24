@@ -1111,6 +1111,13 @@
     .admin-question-table th:nth-child(8) { width: 12%; }
     .admin-question-table th:nth-child(9) { width: 7%; }
 
+    .admin-development-question-table th:nth-child(1) { width: 5%; }
+    .admin-development-question-table th:nth-child(2) { width: 12%; }
+    .admin-development-question-table th:nth-child(3) { width: 12%; }
+    .admin-development-question-table th:nth-child(4) { width: 24%; }
+    .admin-development-question-table th:nth-child(5) { width: 37%; }
+    .admin-development-question-table th:nth-child(6) { width: 10%; }
+
     .admin-question-table .admin-edit {
       min-height: 24px;
       padding: 3px 4px;
@@ -2353,7 +2360,7 @@
                 <div class="input-field"><label>Proje adı</label><input id="projectName" value="S4 Dönüşüm" /></div>
                 <div class="input-field"><label>Endüstri</label><select id="projectIndustry"><option value="">Seçiniz</option><option>Konfeksiyon</option><option>Perakende</option><option>Otomotiv</option><option>FMCG</option><option>Kimya</option><option>İlaç</option><option>Enerji</option><option>Tekstil</option><option>Ambalaj</option><option>Demir & Çelik</option></select></div>
                 <div class="input-field"><label>Implementasyon türü</label><select id="projectImplementation"><option value="">Seçiniz</option><option>Conversion</option><option>Greenfield</option><option>Brownfield</option><option>Rollout</option><option>Migration</option><option>Upgrade</option></select></div>
-                <div class="input-field"><label>Sistem türü</label><select id="projectSystem"><option value="">Seçiniz</option><option>SAP S/4HANA Private Cloud</option><option>SAP ECC</option><option>SAP Rise</option><option>SAP S/4HANA Public Cloud</option><option>SAP On-Premise</option></select></div>
+                <div class="input-field"><label>Sistem türü</label><select id="projectSystem"><option value="">Seçiniz</option><option>SAP S/4HANA Private Cloud</option><option>SAP ECC</option><option>SAP Rise</option><option>SAP S/4HANA Public Cloud</option><option>SAP On-Premise</option><option>SAP DM</option><option>Siemens OPCenter - Dicrete</option><option>Siemens OPCenter - Process Manufacturing</option><option>Siemens OPCenter - Pharma</option></select></div>
                 <div class="input-field"><label>Versiyon</label><input id="projectVersion" value="V1" /></div>
                 <div class="input-field" style="grid-column:1 / -1"><label>Notlar</label><textarea id="projectNotes">Dikkat edilmesi gereken varsayımlar ve satış notları.</textarea></div>
               </div>
@@ -2401,8 +2408,13 @@
 
         <div class="screen" id="library">
           <section class="panel">
-            <div class="panel-head"><h3 class="panel-title">Kütüphane</h3><span class="pill">İçerik eklenecek</span></div>
-            <div class="empty-state">Kütüphane içeriği sonraki adımda tanımlanacak.</div>
+            <div class="panel-head"><h3 class="panel-title">Kütüphane</h3><span class="pill"><span id="libraryScopeCount">0</span> Kapsamda</span></div>
+            <div class="list-table admin-dense-table">
+              <table>
+                <thead><tr><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Modül</th><th>Kapsamda</th></tr></thead>
+                <tbody id="libraryRows"></tbody>
+              </table>
+            </div>
           </section>
         </div>
 
@@ -2594,7 +2606,7 @@
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Efor Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+                <div class="list-table admin-question-table admin-development-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="restrictions">
                 <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><button class="button primary" data-admin-add-matrix="adminRestrictionsRows" type="button">+ Satır</button></div>
@@ -3328,11 +3340,18 @@
     window.scopeQuestions = enrichQuestionsFromExcel("scope", window.scopeQuestions, "Kapsam");
     window.developmentQuestions = enrichQuestionsFromExcel("development", window.developmentQuestions, "Geliştirme");
 
-    const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP"];
+    const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP", "MES Development"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
     let abapFixedEffortIncluded = false;
-    const fixedOnlyModules = new Set(["PMO", "Governance", "BASIS"]);
-    const developmentExcludedModules = new Set(["PMO", "Governance", "BASIS"]);
+    const fixedOnlyModules = new Set(["PMO", "Governance", "BASIS", "MES Development"]);
+    const developmentExcludedModules = new Set(["PMO", "Governance", "BASIS", "MES Development"]);
+    const mesBasisMultiplierSystemTypes = [
+      "SAP DM",
+      "Siemens OPCenter - Dicrete",
+      "Siemens OPCenter - Discrete",
+      "Siemens OPCenter - Process Manufacturing",
+      "Siemens OPCenter - Pharma"
+    ];
 
     function fixedEffortValues(source = fixedEffortState) {
       const entries = source instanceof Map ? [...source.entries()] : Object.entries(source || {});
@@ -3341,6 +3360,59 @@
 
     function fixedEffortTotal(source = fixedEffortState) {
       return Object.values(fixedEffortValues(source)).reduce((sum, value) => sum + value, 0);
+    }
+
+    function normalizedMatchText(value = "") {
+      return String(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/ı/g, "i")
+        .replace(/İ/g, "I")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function isMesBasisMultiplierSystem(systemType = "") {
+      const normalizedSystem = normalizedMatchText(systemType).replace(/\bdicrete\b/g, "discrete");
+      return mesBasisMultiplierSystemTypes.some(type =>
+        normalizedSystem === normalizedMatchText(type).replace(/\bdicrete\b/g, "discrete")
+      );
+    }
+
+    function qaSystemAnswerFromScopeAnswers(scopeAnswers = questionAnswers.scopeQuestions) {
+      const qaQuestion = (window.scopeQuestions || []).find(item => {
+        const name = normalizedMatchText(item.name);
+        return name.includes("qa") && name.includes("sistem") && name.includes("olacak");
+      });
+      if (!qaQuestion) return "";
+      return String(scopeAnswers[String(qaQuestion.no)] || "").trim();
+    }
+
+    function basisFixedEffortMultiplier(systemType = document.getElementById("projectSystem")?.value || "", scopeAnswers = questionAnswers.scopeQuestions) {
+      if (!isMesBasisMultiplierSystem(systemType)) return 1;
+      return ["evet", "yes", "true"].includes(normalizedMatchText(qaSystemAnswerFromScopeAnswers(scopeAnswers))) ? 3 : 2;
+    }
+
+    function effectiveFixedEffortValues(source = fixedEffortState, systemType = document.getElementById("projectSystem")?.value || "", scopeAnswers = questionAnswers.scopeQuestions) {
+      const values = fixedEffortValues(source);
+      values.BASIS = (Number(values.BASIS) || 0) * basisFixedEffortMultiplier(systemType, scopeAnswers);
+      return values;
+    }
+
+    function effectiveFixedEffortTotal(source = fixedEffortState, systemType = document.getElementById("projectSystem")?.value || "", scopeAnswers = questionAnswers.scopeQuestions) {
+      return Object.values(effectiveFixedEffortValues(source, systemType, scopeAnswers)).reduce((sum, value) => sum + value, 0);
+    }
+
+    function fixedEffortSummaryLabel(module) {
+      if (module === "ABAP") return abapFixedEffortIncluded ? "Included" : "Not Included";
+      if (module === "BASIS") {
+        const multiplier = basisFixedEffortMultiplier();
+        return multiplier > 1
+          ? `${currentLanguage === "en" ? "Analysis effort" : "Analiz eforu"} x${multiplier}`
+          : (currentLanguage === "en" ? "Analysis effort" : "Analiz eforu");
+      }
+      return currentLanguage === "en" ? "Analysis effort" : "Analiz eforu";
     }
 
     function normalizeFixedEffortInclusion(value) {
@@ -3395,7 +3467,7 @@
       const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] = hypercareDefaults[item.module] || ["","","","",""];
       return [item.module, { weeks, daysPerWeek, shifts, locations, goliveDays }];
     }));
-    const hypercareExcludedModules = new Set(["PMO", "Governance", "BASIS"]);
+    const hypercareExcludedModules = new Set(["PMO", "Governance", "BASIS", "MES Development"]);
     function hypercareModuleNames() {
       return selectedModuleNames().filter(name => !hypercareExcludedModules.has(name));
     }
@@ -3518,7 +3590,7 @@
         scopeInfo: "Size skoru ve kapsam soruları",
         developmentInfo: "Ek geliştirme ve entegrasyonlar",
         libraryInfo: "Teklif kütüphanesi ve referans içerikler",
-        fixedEffortInfo: "PMO, Governance, BASIS ve ABAP sabit eforları",
+        fixedEffortInfo: "PMO, Governance, BASIS, ABAP ve MES Development sabit eforları",
         moduleInfo: "SAP modül seçimi",
         localizationInfo: "Ülke bazlı lokalizasyon",
         hypercareInfo: "Go-live sonrası destek parametreleri",
@@ -3675,7 +3747,7 @@
         scopeInfo: "Size score and scope questions",
         developmentInfo: "Additional developments and integrations",
         libraryInfo: "Offer library and reference content",
-        fixedEffortInfo: "Fixed PMO, Governance, BASIS and ABAP efforts",
+        fixedEffortInfo: "Fixed PMO, Governance, BASIS, ABAP and MES Development efforts",
         moduleInfo: "SAP module selection",
         localizationInfo: "Country-based localization",
         hypercareInfo: "Post go-live support parameters",
@@ -4130,8 +4202,8 @@
     function renderFixedEfforts() {
       const target = document.getElementById("fixedEffortRows");
       const summary = document.getElementById("fixedEffortSummary");
-      const values = fixedEffortValues();
-      const total = fixedEffortTotal();
+      const values = effectiveFixedEffortValues();
+      const total = effectiveFixedEffortTotal();
       setText("fixedEffortTotal", fmt(total));
       setText("fixedEffortNavCount", `${fmt(total)}g`);
       if (target) {
@@ -4151,13 +4223,13 @@
           input.addEventListener("input", () => {
             fixedEffortState.set(input.dataset.fixedEffort, input.value);
             markDirty();
-            const values = fixedEffortValues();
-            const total = fixedEffortTotal();
+            const values = effectiveFixedEffortValues();
+            const total = effectiveFixedEffortTotal();
             setText("fixedEffortTotal", fmt(total));
             setText("fixedEffortNavCount", `${fmt(total)}g`);
             if (summary) {
               summary.innerHTML = fixedEffortModules.map(module => `
-                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${module === "ABAP" ? (abapFixedEffortIncluded ? "Included" : "Not Included") : (currentLanguage === "en" ? "Analysis effort" : "Analiz eforu")}</small></div>
+                <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${fixedEffortSummaryLabel(module)}</small></div>
               `).join("");
             }
             const projectTotal = renderFinalEffort();
@@ -4180,7 +4252,7 @@
       }
       if (summary) {
         summary.innerHTML = fixedEffortModules.map(module => `
-          <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${module === "ABAP" ? (abapFixedEffortIncluded ? "Included" : "Not Included") : (currentLanguage === "en" ? "Analysis effort" : "Analiz eforu")}</small></div>
+          <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${fixedEffortSummaryLabel(module)}</small></div>
         `).join("");
       }
       return total;
@@ -4293,7 +4365,7 @@
       const size = projectSizeFromScore(currentScopeScore());
       const fixedRows = fixedRowsForSelection(implementation, systemType, size.fixedKey);
       const sizeRow = {};
-      const fixedValues = fixedEffortValues();
+      const fixedValues = effectiveFixedEffortValues(fixedEffortState, systemType, questionAnswers.scopeQuestions);
       const selectedNames = selectedModuleNames();
       const scopeAdditions = scopeProjectEffortAdditions(questionAnswers.scopeQuestions, selectedNames);
       const names = [...new Set([...selectedNames, ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
@@ -4393,9 +4465,59 @@
       return total;
     }
 
+    function developmentLibraryModuleMap() {
+      const map = new Map();
+      developmentEffortDefinitions().forEach(([, name, moduleName]) => {
+        if (!name || !moduleName) return;
+        if (!map.has(name)) map.set(name, new Set());
+        map.get(name).add(moduleName);
+      });
+      return map;
+    }
+
+    function renderLibraryRows() {
+      const body = document.getElementById("libraryRows");
+      if (!body) return;
+      const moduleMap = developmentLibraryModuleMap();
+      const rows = (window.developmentQuestions || [])
+        .filter(item => !automaticDevelopmentQuestionNos.has(Number(item.no)))
+        .map(item => {
+          const key = String(item.no);
+          const canonicalName = canonicalDevelopmentName(item.name);
+          const selectedValue = questionAnswers.developmentQuestions[key];
+          const checked = Boolean(selectedValue && selectedValue !== "Seçiniz" && selectedValue !== "Hayır");
+          const modules = [...(moduleMap.get(canonicalName) || [])].join(", ");
+          return { item, key, checked, modules };
+        });
+      body.innerHTML = rows.map(({ item, key, checked, modules }) => `
+        <tr>
+          <td>${escapeHtml(canonicalDevelopmentName(item.name))}</td>
+          <td>${escapeHtml(item.description || "")}</td>
+          <td>${escapeHtml(modules)}</td>
+          <td class="admin-check-cell"><input type="checkbox" data-library-development="${escapeHtml(key)}" ${checked ? "checked" : ""} /></td>
+        </tr>
+      `).join("") || `<tr><td colspan="4">Kütüphane kaydı bulunamadı.</td></tr>`;
+      setText("libraryScopeCount", rows.filter(row => row.checked).length);
+      body.querySelectorAll("[data-library-development]").forEach(checkbox => {
+        checkbox.addEventListener("change", () => {
+          const key = checkbox.dataset.libraryDevelopment;
+          const item = (window.developmentQuestions || []).find(question => String(question.no) === key);
+          if (!key || !item) return;
+          if (checkbox.checked) {
+            questionAnswers.developmentQuestions[key] = item.answerType === "number" ? "1" : "Evet";
+          } else {
+            delete questionAnswers.developmentQuestions[key];
+          }
+          markDirty();
+          updateQuestionMetrics();
+          renderWorkbookDrivenScreens();
+        });
+      });
+    }
+
     function renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal }) {
       const grandTotal = projectTotal + developmentTotal + localizationTotal + hypercareTotal;
-      const fixedTotal = fixedEffortTotal();
+      const fixedTotal = effectiveFixedEffortTotal();
       setText("finalFixedEffortTotal", fmt(fixedTotal));
       setText("finalSummaryTotal", fmt(grandTotal));
       const mix = [
@@ -4450,7 +4572,9 @@
     }
 
     function adminDefinitionValues(index) {
-      return [...new Set((window.adminSeedData?.projectDefinitions || []).slice(1).map(row => row[index]).filter(Boolean))];
+      const values = (window.adminSeedData?.projectDefinitions || []).slice(1).map(row => row[index]).filter(Boolean);
+      if (index === 2) values.push(...mesBasisMultiplierSystemTypes);
+      return [...new Set(values)];
     }
 
     function adminQuestionNames() {
@@ -4791,7 +4915,7 @@
       root.querySelectorAll("[data-admin-copy-question]").forEach(button => {
         if (button.dataset.copyBound) return;
         button.dataset.copyBound = "true";
-        button.addEventListener("click", () => copyScopeQuestionRow(button));
+        button.addEventListener("click", () => copyAdminQuestionRow(button));
       });
     }
 
@@ -4897,9 +5021,19 @@
         const groupValue = item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme");
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
         const effortImpactType = item.effortImpactType || "Sabit";
-        const actionButtons = targetId === "adminScopeRows"
-          ? `<button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
-          : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
+        const actionButtons = `<button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`;
+        if (targetId === "adminDevelopmentRows") {
+          return `
+        <tr>
+          ${editableCell(item.no)}
+          ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
+          ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
+          ${editableCell(item.name)}
+          ${editableCell(item.description)}
+          <td>${actionButtons}</td>
+        </tr>
+      `;
+        }
         return `
         <tr>
           ${editableCell(item.no)}
@@ -4915,7 +5049,7 @@
       `;
       }).join("");
       bindAdminEditable(target);
-      syncScopeImpactTypeCells(target);
+      if (targetId === "adminScopeRows") syncScopeImpactTypeCells(target);
     }
 
     function addAdminQuestion(targetId) {
@@ -4924,6 +5058,18 @@
       const no = target.querySelectorAll("tr").length + 1;
       const group = targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme";
       const fieldOptions = currentQuestionFieldOptions();
+      if (targetId === "adminDevelopmentRows") {
+        target.insertAdjacentHTML("beforeend", `<tr>
+          ${editableCell(no)}
+          ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
+          ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
+          ${["Yeni geliştirme", "Açıklama"].map(editableCell).join("")}
+          <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+        </tr>`);
+        bindAdminEditable(target);
+        markAdminDirty();
+        return;
+      }
       target.insertAdjacentHTML("beforeend", `<tr>
         ${editableCell(no)}
         ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
@@ -4932,7 +5078,7 @@
         <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
         <td><input class="admin-score-input" type="number" step="any" disabled /></td>
         ${questionImpactTypeCell(targetId, false, "Evet/Hayır", "", fieldOptions)}
-        <td>${targetId === "adminScopeRows" ? `<button class="button" data-admin-copy-question type="button">Kopyala</button>` : ""}<button class="button danger" data-admin-remove type="button">Sil</button></td>
+        <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
       </tr>`);
       bindAdminEditable(target);
       syncScopeImpactTypeCells(target);
@@ -5003,11 +5149,28 @@
       });
     }
 
-    function copyScopeQuestionRow(button) {
+    function copyAdminQuestionRow(button) {
       const sourceRow = button.closest("tr");
-      const target = document.getElementById("adminScopeRows");
+      const target = sourceRow?.closest("tbody");
       if (!sourceRow || !target) return;
       const fieldOptions = currentQuestionFieldOptions();
+      if (target.id === "adminDevelopmentRows") {
+        const cells = [...sourceRow.children].slice(0, 5).map(adminCellValue);
+        const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
+        const groupValue = cells[1] || "Geliştirme";
+        const variableTypeValue = cells[2] || "Evet/Hayır";
+        target.insertAdjacentHTML("beforeend", `<tr>
+          ${editableCell(nextNo)}
+          ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
+          ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
+          ${editableCell(`${cells[3] || "Yeni geliştirme"} - Kopya`)}
+          ${editableCell(cells[4] || "")}
+          <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+        </tr>`);
+        bindAdminEditable(target);
+        markAdminDirty();
+        return;
+      }
       const cells = [...sourceRow.children].slice(0, 8).map(adminCellValue);
       const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const groupValue = cells[1] || "Kapsam";
@@ -5064,6 +5227,22 @@
 
     function collectQuestionAdminRows(targetId) {
       return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
+        if (targetId === "adminDevelopmentRows") {
+          const cells = [...row.children].slice(0, 5).map(adminCellValue);
+          const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
+          return {
+            no: Number(cells[0]) || cells[0],
+            group: cells[1],
+            variableType: cells[2],
+            name: cells[3],
+            description: cells[4],
+            sizeImpact: false,
+            score: 0,
+            effortImpactType: "",
+            answerType,
+            active: true
+          };
+        }
         const cells = [...row.children].slice(0, 8).map(adminCellValue);
         const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
         const sizeImpact = Boolean(cells[5]);
@@ -5344,6 +5523,7 @@
       renderLocalizationControls();
       const fixedEffortTotalValue = renderFixedEfforts();
       const localizationTotal = renderLocalizationEfforts();
+      renderLibraryRows();
       const projectTotal = renderFinalEffort();
       const developmentTotal = renderDevelopmentEfforts();
       const support = renderHypercareRows();
@@ -5395,7 +5575,7 @@
       const fixedRows = fixedRowsForSelection(implementation, systemType, sizeKey);
       const sizeRow = {};
       const support = offerJson(offer.hypercare_inputs);
-      const fixedValues = offerFixedEfforts(offer);
+      const fixedValues = effectiveFixedEffortValues(offerFixedEfforts(offer), systemType, offerJson(offer.scope_answers));
       const selectedOfferModules = offerSelectedModules(offer);
       const selectedOfferModuleNames = selectedOfferModules.map(item => item.module);
       const scopeAdditions = scopeProjectEffortAdditions(offerJson(offer.scope_answers), selectedOfferModuleNames);
@@ -5705,7 +5885,7 @@
         finalEffort: {
           ...finalEffort,
           fixedEfforts,
-          fixedEffortTotal: fixedEffortTotal(fixedEfforts),
+          fixedEffortTotal: effectiveFixedEffortTotal(fixedEfforts, offer.system_type || definition.system || "", offerJson(offer.scope_answers)),
           fixedEffortInclusion: offerJson(offer.final_effort).fixedEffortInclusion || { ABAP: offerAbapFixedEffortIncluded(offer) ? "included" : "notIncluded" },
           abapFixedEffortIncluded: offerAbapFixedEffortIncluded(offer)
         }
@@ -6196,6 +6376,7 @@
           else delete questionAnswers[targetId][key];
           markDirty();
           updateQuestionMetrics();
+          renderWorkbookDrivenScreens();
         });
         control.addEventListener("change", () => {
           const key = control.closest(".question-card")?.dataset.questionKey;
@@ -6204,6 +6385,7 @@
           else delete questionAnswers[targetId][key];
           markDirty();
           updateQuestionMetrics();
+          renderWorkbookDrivenScreens();
         });
       });
       const countTarget = targetId === "scopeQuestions" ? "scopeVisibleCount" : "developmentVisibleCount";
@@ -6308,7 +6490,7 @@
           developmentTotal: numericText("developmentEffortTotal"),
           localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
           fixedEfforts,
-          fixedEffortTotal: fixedEffortTotal(),
+          fixedEffortTotal: effectiveFixedEffortTotal(),
           fixedEffortInclusion: fixedEffortInclusionPayload(),
           abapFixedEffortIncluded,
           hypercareTotal: hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
