@@ -1310,7 +1310,31 @@
       padding: 0 10px;
     }
 
-    .fixed-days-filters label {
+    .fixed-days-copy {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+      gap: 12px;
+      padding: 12px 10px 0;
+      align-items: end;
+    }
+
+    .fixed-days-copy-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .fixed-days-copy-group strong {
+      grid-column: 1 / -1;
+      font-size: 12px;
+    }
+
+    .fixed-days-filters label,
+    .fixed-days-copy label {
       display: grid;
       gap: 4px;
       color: var(--muted);
@@ -1319,6 +1343,7 @@
     }
 
     .fixed-days-filters select,
+    .fixed-days-copy select,
     .admin-number-input {
       min-width: 0;
       border: 1px solid var(--line);
@@ -1351,7 +1376,9 @@
     }
 
     @media (max-width: 760px) {
-      .fixed-days-filters {
+      .fixed-days-filters,
+      .fixed-days-copy,
+      .fixed-days-copy-group {
         grid-template-columns: 1fr;
       }
 
@@ -2062,6 +2089,9 @@
             <button class="nav-item detail-nav" data-screen="developments" title="Developments">
               <span class="nav-icon">G</span><span>Developments</span><span class="nav-count">24</span>
             </button>
+            <button class="nav-item detail-nav" data-screen="library" title="Kütüphane">
+              <span class="nav-icon">K</span><span>Kütüphane</span><span class="nav-count">L</span>
+            </button>
             <button class="nav-item detail-nav" data-screen="fixedefforts" title="Sabit Efor">
               <span class="nav-icon">S</span><span>Sabit Efor</span><span class="nav-count" id="fixedEffortNavCount">0g</span>
             </button>
@@ -2119,9 +2149,10 @@
                 <div class="wizard-step"><span class="step-no">1</span><div><strong>Project Definition</strong><span>Müşteri, sektör, sistem, implementasyon</span></div><b>Hazır</b></div>
                 <div class="wizard-step"><span class="step-no">2</span><div><strong>Scope</strong><span>Size skoru ve kapsam soruları</span></div><b>L</b></div>
                 <div class="wizard-step"><span class="step-no">3</span><div><strong>Developments</strong><span>Ek geliştirme ve entegrasyonlar</span></div><b>24</b></div>
-                <div class="wizard-step"><span class="step-no">4</span><div><strong>Modules</strong><span>SAP modül seçimi</span></div><b>33</b></div>
-                <div class="wizard-step"><span class="step-no">5</span><div><strong>Localization</strong><span>Ülke bazlı lokalizasyon</span></div><b>2</b></div>
-                <div class="wizard-step"><span class="step-no">6</span><div><strong>Hypercare</strong><span>Go-live sonrası destek parametreleri</span></div><b>268g</b></div>
+                <div class="wizard-step"><span class="step-no">4</span><div><strong>Kütüphane</strong><span>Teklif kütüphanesi ve referans içerikler</span></div><b>L</b></div>
+                <div class="wizard-step"><span class="step-no">5</span><div><strong>Modules</strong><span>SAP modül seçimi</span></div><b>33</b></div>
+                <div class="wizard-step"><span class="step-no">6</span><div><strong>Localization</strong><span>Ülke bazlı lokalizasyon</span></div><b>2</b></div>
+                <div class="wizard-step"><span class="step-no">7</span><div><strong>Hypercare</strong><span>Go-live sonrası destek parametreleri</span></div><b>268g</b></div>
               </div>
             </div>
           </section>
@@ -2368,6 +2399,13 @@
           </section>
         </div>
 
+        <div class="screen" id="library">
+          <section class="panel">
+            <div class="panel-head"><h3 class="panel-title">Kütüphane</h3><span class="pill">İçerik eklenecek</span></div>
+            <div class="empty-state">Kütüphane içeriği sonraki adımda tanımlanacak.</div>
+          </section>
+        </div>
+
         <div class="screen" id="modules">
           <section class="panel">
             <div class="panel-head"><h3 class="panel-title">Modül Seçimi</h3><span class="pill"><span id="selectedModuleCount">0</span> Var</span></div>
@@ -2569,6 +2607,21 @@
                   <label><span>İmplementasyon Türü</span><select id="fixedDaysImplementationFilter"></select></label>
                   <label><span>Sistem Türü</span><select id="fixedDaysSystemFilter"></select></label>
                 </div>
+                <div class="fixed-days-copy">
+                  <div class="fixed-days-copy-group">
+                    <strong>Kaynak</strong>
+                    <label><span>Size</span><select id="fixedCopySourceSize"></select></label>
+                    <label><span>İmplementasyon Türü</span><select id="fixedCopySourceImplementation"></select></label>
+                    <label><span>Sistem Türü</span><select id="fixedCopySourceSystem"></select></label>
+                  </div>
+                  <div class="fixed-days-copy-group">
+                    <strong>Hedef</strong>
+                    <label><span>Size</span><select id="fixedCopyTargetSize"></select></label>
+                    <label><span>İmplementasyon Türü</span><select id="fixedCopyTargetImplementation"></select></label>
+                    <label><span>Sistem Türü</span><select id="fixedCopyTargetSystem"></select></label>
+                  </div>
+                  <button class="button primary" id="copyFixedDaysButton" type="button">Kopyala</button>
+                </div>
                 <div class="fixed-scroll-top" id="fixedDaysScrollTop" aria-label="Fixed Days yatay kaydırma"><div></div></div>
                 <div class="list-table admin-dense-table"><table><thead id="adminFixedHead"></thead><tbody id="adminFixedRows"></tbody></table></div>
               </section>
@@ -2740,18 +2793,6 @@
       if (sourceTypeIndex < 0 || sourceIndex < 0) return normalizedRows;
       const scopeNames = new Set((window.scopeQuestions || []).map(item => String(item.name || "").trim()));
       const developmentNames = new Set((window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name)));
-      const restrictions = window.adminSeedData?.restrictions || [];
-      const restrictionHeaderIndex = restrictions.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
-      if (restrictionHeaderIndex >= 0) {
-        const restrictionHeaders = restrictions[restrictionHeaderIndex].map(cell => String(cell || "").trim());
-        const typeIndex = restrictionHeaders.indexOf("Variable Type");
-        const questionIndex = restrictionHeaders.indexOf("Question");
-        restrictions.slice(restrictionHeaderIndex + 1).forEach(row => {
-          const question = String(row[questionIndex] || "").trim();
-          if (row[typeIndex] === "Kapsam") scopeNames.add(question);
-          if (row[typeIndex] === "Geliştirme") developmentNames.add(canonicalDevelopmentName(question));
-        });
-      }
       const newHeaders = oldHeaders.filter(Boolean);
       const compactSourceIndex = newHeaders.indexOf("Kaynak");
       newHeaders.splice(compactSourceIndex, 1, "Kapsam Sorusu", "Geliştirme Sorusu", "Modül");
@@ -2866,6 +2907,88 @@
       };
     }
 
+    function fixedDaysCopySelection(prefix) {
+      return {
+        size: document.getElementById(`${prefix}Size`)?.value || "SMALL",
+        implementation: document.getElementById(`${prefix}Implementation`)?.value || "All",
+        systemType: document.getElementById(`${prefix}System`)?.value || "All"
+      };
+    }
+
+    function fixedDaysSelectOptions() {
+      return {
+        sizes: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"],
+        implementations: ["All", ...adminDefinitionValues(1)],
+        systems: ["All", ...adminDefinitionValues(2)]
+      };
+    }
+
+    function fillSelect(select, values = [], selectedValue = "") {
+      if (!select) return;
+      const cleanValues = uniqueOptionValues(values);
+      select.innerHTML = cleanValues.map(value => `<option>${escapeHtml(value)}</option>`).join("");
+      select.value = cleanValues.includes(selectedValue) ? selectedValue : (cleanValues[0] || "");
+    }
+
+    function initializeFixedDaysCopyControls() {
+      const options = fixedDaysSelectOptions();
+      [
+        ["fixedCopySource", fixedDaysEditorSelection()],
+        ["fixedCopyTarget", fixedDaysEditorSelection()]
+      ].forEach(([prefix, defaults]) => {
+        fillSelect(document.getElementById(`${prefix}Size`), options.sizes, defaults.size);
+        fillSelect(document.getElementById(`${prefix}Implementation`), options.implementations, defaults.implementation);
+        fillSelect(document.getElementById(`${prefix}System`), options.systems, defaults.systemType);
+      });
+      const button = document.getElementById("copyFixedDaysButton");
+      if (button && !button.dataset.fixedCopyBound) {
+        button.dataset.fixedCopyBound = "true";
+        button.addEventListener("click", copyFixedDaysSelection);
+      }
+    }
+
+    function fixedDaysSelectionMatches(row, headers, selection) {
+      return row[headers.indexOf("Size")] === selection.size
+        && row[headers.indexOf("Implementation Type")] === selection.implementation
+        && row[headers.indexOf("System Type")] === selection.systemType;
+    }
+
+    function copyFixedDaysSelection() {
+      persistFixedDaysEditor();
+      const source = fixedDaysCopySelection("fixedCopySource");
+      const target = fixedDaysCopySelection("fixedCopyTarget");
+      if (source.size === target.size && source.implementation === target.implementation && source.systemType === target.systemType) {
+        alert("Kaynak ve hedef aynı olamaz.");
+        return;
+      }
+      const normalized = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const headers = normalized[0] || [];
+      const sourceRows = normalized.slice(1).filter(row => fixedDaysSelectionMatches(row, headers, source));
+      if (!sourceRows.length) {
+        alert("Kaynak seçim için kopyalanacak kayıt bulunamadı.");
+        return;
+      }
+      if (!confirm("Hedef seçimdeki mevcut Fixed Days kayıtları silinip kaynak kayıtlar kopyalanacak. Devam edilsin mi?")) return;
+      const sizeIndex = headers.indexOf("Size");
+      const implementationIndex = headers.indexOf("Implementation Type");
+      const systemIndex = headers.indexOf("System Type");
+      const retained = normalized.slice(1).filter(row => !fixedDaysSelectionMatches(row, headers, target));
+      const copied = sourceRows.map(row => {
+        const next = [...row];
+        next[sizeIndex] = target.size;
+        next[implementationIndex] = target.implementation;
+        next[systemIndex] = target.systemType;
+        return next;
+      });
+      window.adminSeedData.fixedDays = [headers, ...retained, ...copied];
+      const active = fixedDaysEditorSelection();
+      if (active.size === target.size && active.implementation === target.implementation && active.systemType === target.systemType) {
+        renderFixedDaysEditor();
+      }
+      markAdminDirty();
+      alert(`${copied.length} Fixed Days kaydı hedef seçime kopyalandı.`);
+    }
+
     function fixedDaysRowTotal(row, headers) {
       return phaseHeaders.reduce((sum, phase) => sum + (Number(row[headers.indexOf(phase)]) || 0), 0);
     }
@@ -2947,9 +3070,10 @@
       const system = document.getElementById("fixedDaysSystemFilter");
       if (!size || !implementation || !system) return;
       const current = fixedDaysEditorSelection();
-      size.innerHTML = ["SMALL", "MEDIUM", "LARGE", "X-LARGE"].map(value => `<option>${value}</option>`).join("");
-      implementation.innerHTML = ["All", ...adminDefinitionValues(1)].map(value => `<option>${escapeHtml(value)}</option>`).join("");
-      system.innerHTML = ["All", ...adminDefinitionValues(2)].map(value => `<option>${escapeHtml(value)}</option>`).join("");
+      const fixedOptions = fixedDaysSelectOptions();
+      size.innerHTML = fixedOptions.sizes.map(value => `<option>${value}</option>`).join("");
+      implementation.innerHTML = fixedOptions.implementations.map(value => `<option>${escapeHtml(value)}</option>`).join("");
+      system.innerHTML = fixedOptions.systems.map(value => `<option>${escapeHtml(value)}</option>`).join("");
       size.value = current.size;
       implementation.value = current.implementation === "All" ? (adminDefinitionValues(1)[0] || "All") : current.implementation;
       system.value = current.systemType === "All" && ["Conversion", "Greenfield"].includes(implementation.value)
@@ -2996,6 +3120,7 @@
           requestAnimationFrame(syncFixedDaysScrollbars);
         });
       }
+      initializeFixedDaysCopyControls();
       renderFixedDaysEditor();
     }
 
@@ -3387,11 +3512,12 @@
         approved: "Onaylandı",
         reference: "Referans",
         offerSteps: "Teklif adımları",
-        sections7: "8 bölüm",
+        sections7: "9 bölüm",
         ready: "Hazır",
         projectInfo: "Müşteri, sektör, sistem, implementasyon",
         scopeInfo: "Size skoru ve kapsam soruları",
         developmentInfo: "Ek geliştirme ve entegrasyonlar",
+        libraryInfo: "Teklif kütüphanesi ve referans içerikler",
         fixedEffortInfo: "PMO, Governance, BASIS ve ABAP sabit eforları",
         moduleInfo: "SAP modül seçimi",
         localizationInfo: "Ülke bazlı lokalizasyon",
@@ -3400,6 +3526,7 @@
         modules: "Modüller",
         scope: "Kapsam",
         developments: "Developments",
+        library: "Kütüphane",
         fixedEfforts: "Sabit Efor",
         localization: "Localization",
         hypercare: "Hypercare",
@@ -3542,11 +3669,12 @@
         approved: "Approved",
         reference: "Reference",
         offerSteps: "Offer steps",
-        sections7: "8 sections",
+        sections7: "9 sections",
         ready: "Ready",
         projectInfo: "Customer, industry, system, implementation",
         scopeInfo: "Size score and scope questions",
         developmentInfo: "Additional developments and integrations",
+        libraryInfo: "Offer library and reference content",
         fixedEffortInfo: "Fixed PMO, Governance, BASIS and ABAP efforts",
         moduleInfo: "SAP module selection",
         localizationInfo: "Country-based localization",
@@ -3555,6 +3683,7 @@
         modules: "Modules",
         scope: "Scope",
         developments: "Developments",
+        library: "Library",
         fixedEfforts: "Fixed Effort",
         localization: "Localization",
         hypercare: "Hypercare",
@@ -3681,6 +3810,7 @@
         t("modules"),
         t("scope"),
         t("developments"),
+        t("library"),
         t("fixedEfforts"),
         t("localization"),
         t("hypercare"),
@@ -3697,12 +3827,13 @@
         t("projectInfo"),
         t("scopeInfo"),
         t("developmentInfo"),
+        t("libraryInfo"),
         t("fixedEffortInfo"),
         t("moduleInfo"),
         t("localizationInfo"),
         t("hypercareInfo")
       ]);
-      setTexts("#overview .wizard-step b", [t("ready"), "L", "24", "S", "33", "2", "268g"]);
+      setTexts("#overview .wizard-step b", [t("ready"), "L", "24", "L", "S", "33", "2", "268g"]);
       setTextContent("#overview > .panel .panel-title", t("recentWorks"));
       const empty = document.querySelector("#recentWorkGrid .empty-state");
       if (empty) empty.textContent = cachedOffers.length ? "" : t("loadingRecords");
@@ -3731,6 +3862,7 @@
       setTextContent("#developmentSelectedPill", `${document.getElementById("selectedDevelopmentCount")?.textContent || "0"} ${t("selected")}`);
       setTexts("#developments .metric span", [t("selectedDevelopment"), t("extraEffort")]);
       setTexts("#developments .metric small", [t("answeredDevelopment"), t("potentialImpact")]);
+      setTextContent("#library .panel-title", t("library"));
       setTextContent("#fixedefforts .panel:nth-child(1) .panel-title", t("fixedEfforts"));
       setTextContent("#fixedefforts .panel:nth-child(1) .pill", t("addedToAnalysisEffort"));
       setTextContent("#fixedefforts thead th:nth-child(1)", t("modules"));
@@ -6415,7 +6547,7 @@
       openScreen(screenId, { workMode: true });
     }
 
-    const offerScreens = new Set(["project", "modules", "scope", "developments", "fixedefforts", "localization", "hypercare", "effort"]);
+    const offerScreens = new Set(["project", "modules", "scope", "developments", "library", "fixedefforts", "localization", "hypercare", "effort"]);
 
     function guardedOpenWork(screenId = "project") {
       if (offerScreens.has(screenId)) {
@@ -6434,6 +6566,7 @@
       ["modules", "modules"],
       ["scope", "scope"],
       ["developments", "developments"],
+      ["library", "library"],
       ["fixedefforts", "fixedEfforts"],
       ["localization", "localization"],
       ["hypercare", "hypercare"],
