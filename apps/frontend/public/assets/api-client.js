@@ -36,6 +36,12 @@ window.EffortApi = {
       body: JSON.stringify({ currentPassword, newPassword })
     });
   },
+  translate(texts, targetLang = "EN-US", sourceLang = "TR") {
+    return this.request("/api/translate", {
+      method: "POST",
+      body: JSON.stringify({ texts, targetLang, sourceLang })
+    });
+  },
   listOffers() {
     return this.request("/api/offers");
   },

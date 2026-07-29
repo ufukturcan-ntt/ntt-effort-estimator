@@ -3829,6 +3829,227 @@
       return i18n[currentLanguage]?.[key] || i18n.tr[key] || key;
     }
 
+    const recordTranslations = {
+      "Seçiniz": "Select",
+      "Toplam": "Total",
+      "Modül": "Module",
+      "Ülke": "Country",
+      "Geliştirme": "Development",
+      "Kapsam": "Scope",
+      "Sabit Efor": "Fixed Effort",
+      "Standart efor": "Standard effort",
+      "Geliştirme eforu": "Development effort",
+      "Lokalizasyon eforu": "Localization effort",
+      "Toplam efor": "Total effort",
+      "Hypercare + Go-Live eforu": "Hypercare + Go-Live effort",
+      "Konfeksiyon": "Apparel",
+      "Perakende": "Retail",
+      "Otomotiv": "Automotive",
+      "Kimya": "Chemicals",
+      "İlaç": "Pharmaceuticals",
+      "Enerji": "Energy",
+      "Tekstil": "Textile",
+      "Ambalaj": "Packaging",
+      "Demir & Çelik": "Iron & Steel",
+      "Zorunlu Modüller": "Mandatory Modules",
+      "Farklı Şirket Yapısı": "Different Company Structure",
+      "Şirket Kodu": "Company Code",
+      "Ürün Tipi": "Product Type",
+      "Üretim Yeri": "Plant",
+      "SD Alanı": "SD Area",
+      "Farklı süreçlere sahip depoların sayısı": "Number of warehouses with different processes",
+      "3rd party MES Entegrasyonu": "3rd party MES Integration",
+      "Varyant Konfigürasyonu": "Variant Configuration",
+      "Teslimat Planı": "Scheduling Agreement",
+      "Otomasyon & Mekanizasyon": "Automation & Mechanization",
+      "Optimizasyon Planlaması": "Optimization Planning",
+      "Harita Planlaması": "Map Planning",
+      "Yükleme Optimizasyonu": "Load Optimization",
+      "Dokümantasyon Dili": "Documentation Language",
+      "Sistem Dili": "System Language",
+      "Validasyon": "Validation",
+      "Süreç Dokümantasyonu yapılacak mı?": "Will process documentation be prepared?",
+      "Birim Test Sayısı": "Number of Unit Tests",
+      "Entegrasyon Testi Tekrar Sayısı": "Number of Integration Test Repetitions",
+      "Entegrasyon Testi Sayısı (Her ŞK/ÜY için ayrı mı)": "Number of Integration Tests (separate for each company code/plant?)",
+      "Anahtar Kullanıcı Eğitimi olacak mı?": "Will key user training be provided?",
+      "Son Kullanıcı Eğitimi olacak mı? Olacak ise kaç farklı lokasyonda olacak? (Modül bazında)": "Will end user training be provided? If yes, in how many locations? (by module)",
+      "Performans Testi": "Performance Test",
+      "Stres Testi": "Stress Test",
+      "Saha Testi": "Field Test",
+      "Ekip ayrıştırma gerekecek mi?": "Will team split be required?",
+      "Ambalaj bazlı örneklendirme süreçleri": "Packaging-based sampling processes",
+      "Kredi Yönetimi": "Credit Management",
+      "Prim yönetimi": "Bonus Management",
+      "Onay Stratejileri": "Approval Strategies",
+      "Belge Ayrıştırma": "Document Splitting",
+      "Depo İçi Kaynak Yönetimi ve Stratejileri": "In-warehouse Resource Management and Strategies",
+      "CVI Dönüşüm Karmaşıklığı": "CVI Conversion Complexity",
+      "Finansal Dönüşüm Kapsamı": "Financial Conversion Scope",
+      "3rd Party Entegrasyon Sayısı": "Number of 3rd Party Integrations",
+      "Vistex / Add-On Kullanımı": "Vistex / Add-On Usage",
+      "SRM / Ariba / İthalat Paketi": "SRM / Ariba / Import Package",
+      "PPDS / IBP Kullanımı": "PPDS / IBP Usage",
+      "BW / SAC / Reporting Entegrasyonu": "BW / SAC / Reporting Integration",
+      "Fiori ve Custom UI Kapsamı": "Fiori and Custom UI Scope",
+      "Rebate / Pricing Karmaşıklığı": "Rebate / Pricing Complexity",
+      "SUM / SPDD-SPAU Teknik Karmaşıklığı": "SUM / SPDD-SPAU Technical Complexity",
+      "Planlama kokpitleri vasıtası ile üretim önerileri oluşturulması": "Creating production proposals via planning cockpits",
+      "Üretimde Kantar Entegrasyonu": "Weighbridge Integration in Production",
+      "MES olmadan üretim hattından anlık veri girişi": "Real-time shop-floor data entry without MES",
+      "Banka Entegrasyonu": "Bank Integration",
+      "Paso Merdane": "Pass Rolling Mill",
+      "Hakediş": "Progress Payment",
+      "Giriş Kantar": "Inbound Weighbridge",
+      "Çıkış Kantar": "Outbound Weighbridge",
+      "El terminali (giriş, nakil, çekme, mal çıkış)": "Handheld terminal (goods receipt, transfer, picking, goods issue)",
+      "CRM entegrasyonları": "CRM Integrations",
+      "Dış sistem sipariş entegrasyonları": "External System Order Integrations",
+      "Teklif maliyetlendirme ekranı": "Quotation Costing Screen",
+      "it.foreign trade & Gümrük ve diğer 3rd parti entegrasyonlar": "it.foreign trade, Customs and other 3rd party integrations",
+      "Dış sistem Çizelgeleme Entegrasyonu": "External System Scheduling Integration",
+      "Üretim ana veri yaratma otomasyonu (Varyant konfigurasyonlu)": "Production master data creation automation (variant-configured)",
+      "Üretim ana veri yaratma otomasyonu (FVB)": "Production master data creation automation (FVB)",
+      "Üretime hazıredim saha uygulamaları": "Production readiness field applications",
+      "Üretime hazıredim tartım uygulamaları": "Production readiness weighing applications",
+      "It.capacity veya custom çizelgeleme programları": "It.capacity or custom scheduling programs",
+      "Kesim-trim planlama": "Cutting-trim planning",
+      "Zimmet": "Asset Assignment",
+      "3PL entegrasyonu": "3PL Integration",
+      "Potens - HF takibi var mı?": "Potency - HF tracking",
+      "Analiz": "Analysis",
+      "Dokümantasyon": "Documentation",
+      "Dokümantasyon Onay": "Documentation Approval",
+      "Uyarlama": "Configuration",
+      "Birim Test": "Unit Test",
+      "QA Sistem Ayağa Kaldırma": "QA System Setup",
+      "QA Anaveri Aktarım": "QA Master Data Migration",
+      "Internal Entegrasyon Testi": "Internal Integration Test",
+      "Entegrasyon Testi": "Integration Test",
+      "Eğitim": "Training",
+      "Yetkilendirme": "Authorization",
+      "Canlı Sistem Ayağa Kaldırma": "Production System Setup",
+      "Canlı Anaveri Kontrol": "Production Master Data Check",
+      "Canlı Anaveri Aktarım": "Production Master Data Migration",
+      "Canlı Destek": "Go-Live Support"
+    };
+
+    const recordDescriptionTranslations = {
+      "İhtiyacı bulunmakta mıdır?": "Is it required?",
+      "Kapsam dahilinde midir?": "Is it in scope?",
+      "Farklı şirket kodu sayısı": "Number of different company codes",
+      "Farklı üretim yeri sayısı": "Number of different plants",
+      "Kaç adet EDI bulunmaktadır.": "How many EDI integrations are there?",
+      "Var? Yok?": "Exists? Not exists?"
+    };
+
+    const recordPhraseTranslations = [
+      ["İhtiyacı bulunmakta mıdır?", "Is it required?"],
+      ["bulunmakta mıdır?", "is required?"],
+      ["kullanılacak mı?", "will be used?"],
+      ["olacak mı?", "will be provided?"],
+      ["Kaç farklı", "How many different"],
+      ["kaç farklı", "how many different"],
+      ["sayısı", "number"],
+      ["Farklı", "Different"],
+      ["farklı", "different"],
+      ["şirket", "company"],
+      ["Şirket", "Company"],
+      ["üretim", "production"],
+      ["Üretim", "Production"],
+      ["ürün", "product"],
+      ["Ürün", "Product"],
+      ["depo", "warehouse"],
+      ["Depo", "Warehouse"],
+      ["entegrasyon", "integration"],
+      ["Entegrasyon", "Integration"],
+      ["ana veri", "master data"],
+      ["Ana veri", "Master data"],
+      ["dönüşüm", "conversion"],
+      ["Dönüşüm", "Conversion"],
+      ["kapsam", "scope"],
+      ["Kapsam", "Scope"],
+      ["test", "test"],
+      ["Test", "Test"],
+      ["eğitim", "training"],
+      ["Eğitim", "Training"],
+      ["dokümantasyon", "documentation"],
+      ["Dokümantasyon", "Documentation"],
+      ["ihtiyacı", "requirement"],
+      ["için", "for"],
+      ["bazında", "based on"],
+      ["adet", "count"],
+      ["süreç", "process"],
+      ["Süreç", "Process"],
+      ["yönetimi", "management"],
+      ["Yönetimi", "Management"]
+    ];
+
+    const translationCacheKey = "effortTranslationCache:v1";
+    const translationCache = new Map(Object.entries(JSON.parse(sessionStorage.getItem(translationCacheKey) || "{}")));
+    const pendingTranslations = new Set();
+    let translationTimer = null;
+    let translationRenderTimer = null;
+
+    function persistTranslationCache() {
+      sessionStorage.setItem(translationCacheKey, JSON.stringify(Object.fromEntries(translationCache.entries())));
+    }
+
+    function shouldTranslateRecord(text) {
+      if (!text || text.length < 2) return false;
+      if (/^\d+([.,]\d+)?$/.test(text)) return false;
+      if (/^[A-Z0-9/&+(). -]{1,18}$/.test(text)) return false;
+      return true;
+    }
+
+    function scheduleTranslatedViewRefresh() {
+      clearTimeout(translationRenderTimer);
+      translationRenderTimer = setTimeout(() => {
+        refreshProjectDefinitionSelects?.();
+        renderModuleGroups?.();
+        renderLocalizationControls?.();
+        refreshQuestionLists?.();
+        renderWorkbookDrivenScreens?.();
+        renderAllWorks?.();
+      }, 120);
+    }
+
+    async function flushTranslationQueue() {
+      translationTimer = null;
+      if (currentLanguage !== "en" || !window.EffortApi || !currentUser || !pendingTranslations.size) return;
+      const texts = [...pendingTranslations].slice(0, 80);
+      texts.forEach(text => pendingTranslations.delete(text));
+      try {
+        const response = await window.EffortApi.translate(texts, "EN-US", "TR");
+        Object.entries(response?.translations || {}).forEach(([source, translated]) => {
+          translationCache.set(source, translated || source);
+        });
+        persistTranslationCache();
+        scheduleTranslatedViewRefresh();
+      } catch (error) {
+        console.warn("Çeviri servisi kullanılamadı.", error);
+      }
+      if (pendingTranslations.size) translationTimer = setTimeout(flushTranslationQueue, 150);
+    }
+
+    function queueRecordTranslation(text) {
+      if (!shouldTranslateRecord(text) || translationCache.has(text) || pendingTranslations.has(text)) return;
+      pendingTranslations.add(text);
+      if (!translationTimer) translationTimer = setTimeout(flushTranslationQueue, 120);
+    }
+
+    function displayRecord(value) {
+      const text = String(value ?? "");
+      if (currentLanguage !== "en" || !text) return text;
+      if (translationCache.has(text)) return translationCache.get(text);
+      queueRecordTranslation(text);
+      return text;
+    }
+
+    function displayPhase(value) {
+      return displayRecord(value);
+    }
+
     function setTextContent(selector, value) {
       const el = document.querySelector(selector);
       if (el) el.textContent = value;
@@ -3976,9 +4197,11 @@
       });
       setAdminMenuLabels();
       renderAllWorks?.();
+      refreshProjectDefinitionSelects?.();
       renderModuleGroups?.();
       renderLocalizationControls?.();
       refreshQuestionLists?.();
+      renderWorkbookDrivenScreens?.();
       rerenderScreenNavigation?.();
     }
 
@@ -4151,7 +4374,7 @@
       const showTeam = isTeamSplitEnabled();
       target.innerHTML = groups.map(group => `
         <div class="module-group">
-          <h4>${group}</h4>
+          <h4>${escapeHtml(displayRecord(group))}</h4>
           ${sortByModuleName(moduleCatalog.filter(item => item.group === group)).map(item => {
             const state = moduleState.get(item.module);
             return `
@@ -4201,7 +4424,7 @@
         .sort((a, b) => a.localeCompare(b, "tr-TR"));
       target.innerHTML = countries.map(country => `
         <div class="input-field">
-          <label>${country}</label>
+          <label>${escapeHtml(displayRecord(country))}</label>
           <select data-localization-country="${escapeHtml(country)}">
             <option value="true" ${localizationCountrySelected(country) ? "selected" : ""}>${t("exists")}</option>
             <option value="false" ${!localizationCountrySelected(country) ? "selected" : ""}>${t("none")}</option>
@@ -4303,7 +4526,7 @@
     function renderLocalizationEffortTable(rows = activeLocalizations()) {
       const head = document.getElementById("localizationEffortHead");
       const body = document.getElementById("localizationEffortRows");
-      if (head) head.innerHTML = `<tr><th>Modül</th><th>Ülke</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>${displayRecord("Modül")}</th><th>${displayRecord("Ülke")}</th>${phaseHeaders.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
       if (!body) return;
       const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
       const rowHtml = rows.map(row => {
@@ -4311,14 +4534,14 @@
         return `
           <tr>
             <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
-            <td><span class="module-chip"><span class="module-initial">${row.country.slice(0,2).toUpperCase()}</span>${row.country}</span></td>
+            <td><span class="module-chip"><span class="module-initial">${row.country.slice(0,2).toUpperCase()}</span>${escapeHtml(displayRecord(row.country))}</span></td>
             ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
             <td><strong>${fmt(sumPhases(row.values))}</strong></td>
           </tr>
         `;
       }).join("");
-      const totalRow = `<tr><td colspan="2"><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
-      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 3}">Lokalizasyon seçimi yapılmadı.</td></tr>`;
+      const totalRow = `<tr><td colspan="2"><strong>${displayRecord("Toplam")}</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
+      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 3}">${currentLanguage === "en" ? "Localization selection is pending." : "Lokalizasyon seçimi yapılmadı."}</td></tr>`;
     }
 
     function hypercareValue(moduleName) {
@@ -4406,7 +4629,7 @@
     function renderFinalEffort() {
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
-      if (head) head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Sabit Efor</th><th>Hypercare</th><th>Go-Live Support</th><th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>${displayRecord("Modül")}</th>${phaseHeaders.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Sabit Efor")}</th><th>Hypercare</th><th>Go-Live Support</th><th>${displayRecord("Toplam")}</th></tr>`;
       const rows = finalRowsForSelectedModules();
       const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
       let fixedEffortTotal = 0;
@@ -4430,8 +4653,8 @@
         }).join("");
         const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
         const goliveTotal = rows.reduce((sum, row) => sum + (Number(hypercareState.get(row.module)?.goliveDays) || 0), 0);
-        const totalRow = `<tr><td><strong>Toplam</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
-        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 5}">Modül seçimi yapılmadı.</td></tr>`;
+        const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
+        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 5}">${currentLanguage === "en" ? "Module selection is pending." : "Modül seçimi yapılmadı."}</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
       setText("projectEffortTotal", fmt(total));
@@ -4443,7 +4666,7 @@
       const body = document.getElementById("developmentMatrixRows");
       if (!body) return 0;
       const moduleNames = developmentModuleNames();
-      if (head) head.innerHTML = `<tr><th>Geliştirme</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>Toplam</th></tr>`;
+      if (head) head.innerHTML = `<tr><th>${displayRecord("Geliştirme")}</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
       const selectedDevelopments = selectedDevelopmentMultipliers(
@@ -4470,13 +4693,13 @@
           colTotals[module] += values[module] || 0;
           return sum + (values[module] || 0);
         }, 0);
-        return `<tr><td><strong>${name}</strong></td>${moduleNames.map(module => `<td>${values[module] ? fmt(values[module]) : ""}</td>`).join("")}<td><strong>${fmt(rowTotal)}</strong></td></tr>`;
+        return `<tr><td><strong>${escapeHtml(displayRecord(name))}</strong></td>${moduleNames.map(module => `<td>${values[module] ? fmt(values[module]) : ""}</td>`).join("")}<td><strong>${fmt(rowTotal)}</strong></td></tr>`;
       }).join("");
       const total = Object.values(colTotals).reduce((sum, value) => sum + value, 0);
-      const totalRow = `<tr><td><strong>Toplam</strong></td>${moduleNames.map(module => `<td><strong>${fmt(colTotals[module])}</strong></td>`).join("")}<td><strong>${fmt(total)}</strong></td></tr>`;
-      const emptyRow = `<tr><td colspan="${moduleNames.length + 2}">Geliştirme eforu için seçim bekleniyor.</td></tr>`;
+      const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${moduleNames.map(module => `<td><strong>${fmt(colTotals[module])}</strong></td>`).join("")}<td><strong>${fmt(total)}</strong></td></tr>`;
+      const emptyRow = `<tr><td colspan="${moduleNames.length + 2}">${currentLanguage === "en" ? "Selection is pending for development effort." : "Geliştirme eforu için seçim bekleniyor."}</td></tr>`;
       const coverageRow = coverage.coveredAbapTotal > 0
-        ? `<tr><td colspan="${moduleNames.length + 2}"><strong>ABAP sabit efor kapsamı:</strong> ${fmt(coverage.coveredAbapTotal)} gün geliştirme eforu sabit ABAP eforundan karşılandı.</td></tr>`
+        ? `<tr><td colspan="${moduleNames.length + 2}"><strong>${currentLanguage === "en" ? "ABAP fixed effort coverage:" : "ABAP sabit efor kapsamı:"}</strong> ${fmt(coverage.coveredAbapTotal)} ${currentLanguage === "en" ? "days of development effort were covered by fixed ABAP effort." : "gün geliştirme eforu sabit ABAP eforundan karşılandı."}</td></tr>`
         : "";
       body.innerHTML = moduleNames.length ? (grouped.size ? rowHtml + coverageRow : emptyRow) + totalRow : emptyRow;
       setText("developmentEffortTotal", fmt(total));
@@ -4509,12 +4732,12 @@
       }).filter(item => item.definition);
       body.innerHTML = rows.map(({ key, definition, description, module }) => `
         <tr>
-          <td>${escapeHtml(definition)}</td>
-          <td>${escapeHtml(description)}</td>
+          <td>${escapeHtml(displayRecord(definition))}</td>
+          <td>${escapeHtml(displayRecord(description))}</td>
           <td>${escapeHtml(module)}</td>
           <td class="admin-check-cell"><input type="checkbox" data-library-item="${escapeHtml(key)}" ${librarySelections.has(key) ? "checked" : ""} /></td>
         </tr>
-      `).join("") || `<tr><td colspan="4">Kütüphane kaydı bulunamadı.</td></tr>`;
+      `).join("") || `<tr><td colspan="4">${currentLanguage === "en" ? "No library records found." : "Kütüphane kaydı bulunamadı."}</td></tr>`;
       setText("libraryScopeCount", rows.filter(row => librarySelections.has(row.key)).length);
       body.querySelectorAll("[data-library-item]").forEach(checkbox => {
         checkbox.addEventListener("change", () => {
@@ -4553,11 +4776,11 @@
       setText("finalFixedEffortTotal", fmt(fixedTotal));
       setText("finalSummaryTotal", fmt(grandTotal));
       const mix = [
-        ["Standart efor", projectTotal, "var(--blue)"],
-        ["Geliştirme eforu", developmentTotal, "var(--amber)"],
+        [displayRecord("Standart efor"), projectTotal, "var(--blue)"],
+        [displayRecord("Geliştirme eforu"), developmentTotal, "var(--amber)"],
         ["Hypercare + Go-Live eforu", hypercareTotal, "var(--green)"],
-        ["Lokalizasyon eforu", localizationTotal, "#6658d3"],
-        ["Toplam efor", grandTotal, "var(--ink)"]
+        [displayRecord("Lokalizasyon eforu"), localizationTotal, "#6658d3"],
+        [displayRecord("Toplam efor"), grandTotal, "var(--ink)"]
       ];
       renderMiniBars("effortMixDashboard", mix);
       const groupTotals = Object.fromEntries(["S4Core", "NTT Own IP", "Advanced Solution"].map(group => [group, 0]));
@@ -5425,7 +5648,7 @@
       const select = document.getElementById(id);
       if (!select) return;
       const current = select.value;
-      select.innerHTML = `<option value="">Seçiniz</option>${values.map(value => `<option>${escapeHtml(value)}</option>`).join("")}`;
+      select.innerHTML = `<option value="">${currentLanguage === "en" ? "Select" : "Seçiniz"}</option>${values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(displayRecord(value))}</option>`).join("")}`;
       if (values.includes(current)) select.value = current;
     }
 
@@ -6499,8 +6722,8 @@
         return `
           <div class="question-card" data-question-key="${key}">
             <div>
-              <strong>${index + 1}. ${item.name}</strong>
-              <small>${item.description}</small>
+              <strong>${index + 1}. ${escapeHtml(displayRecord(item.name))}</strong>
+              <small>${escapeHtml(displayRecord(item.description))}</small>
             </div>
             ${control}
           </div>

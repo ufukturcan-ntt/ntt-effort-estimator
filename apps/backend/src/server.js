@@ -13,6 +13,9 @@ const frontendOrigin = process.env.FRONTEND_ORIGIN || "*";
 const appPublicUrl = process.env.APP_PUBLIC_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "";
 const approvalToken = process.env.ADMIN_APPROVAL_TOKEN;
 const sessionSecret = process.env.SESSION_SECRET || process.env.ADMIN_APPROVAL_TOKEN;
+const deeplApiKey = process.env.DEEPL_API_KEY || "";
+const deeplApiUrl = (process.env.DEEPL_API_URL || "https://api-free.deepl.com").replace(/\/$/, "");
+const translationCache = new Map();
 
 app.use(cors({ origin: frontendOrigin === "*" ? true : frontendOrigin }));
 app.use(express.json({ limit: "5mb" }));
@@ -93,6 +96,58 @@ function concurrencyConflict(message = "Bu kayıt başka bir kullanıcı tarafı
   const error = new Error(message);
   error.statusCode = 409;
   return error;
+}
+
+function translationKey(sourceLang, targetLang, text) {
+  return `${String(sourceLang || "").toUpperCase()}::${String(targetLang || "").toUpperCase()}::${text}`;
+}
+
+async function deeplTranslateBatch(texts, targetLang = "EN-US", sourceLang = "TR") {
+  const uniqueTexts = [...new Set(texts.map(text => String(text || "").trim()).filter(Boolean))].slice(0, 80);
+  if (!uniqueTexts.length) return {};
+  const result = {};
+  const missing = [];
+  uniqueTexts.forEach(text => {
+    const key = translationKey(sourceLang, targetLang, text);
+    if (translationCache.has(key)) result[text] = translationCache.get(key);
+    else missing.push(text);
+  });
+  if (!missing.length) return result;
+  if (!deeplApiKey) {
+    missing.forEach(text => {
+      translationCache.set(translationKey(sourceLang, targetLang, text), text);
+      result[text] = text;
+    });
+    return result;
+  }
+  const response = await fetch(`${deeplApiUrl}/v2/translate`, {
+    method: "POST",
+    headers: {
+      "Authorization": `DeepL-Auth-Key ${deeplApiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      text: missing,
+      source_lang: sourceLang,
+      target_lang: targetLang,
+      preserve_formatting: true,
+      context: "SAP project effort estimator UI labels, module names, effort phases and proposal records."
+    })
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    const error = new Error(`DeepL translation failed: ${detail || response.status}`);
+    error.statusCode = response.status >= 400 && response.status < 500 ? 400 : 502;
+    throw error;
+  }
+  const data = await response.json();
+  (data.translations || []).forEach((item, index) => {
+    const source = missing[index];
+    const translated = item?.text || source;
+    translationCache.set(translationKey(sourceLang, targetLang, source), translated);
+    result[source] = translated;
+  });
+  return result;
 }
 
 function publicBaseUrl() {
@@ -266,6 +321,23 @@ app.put("/api/account/password", requireAuth, async (req, res, next) => {
     );
     if (!result.rowCount) return res.status(400).json({ error: "Mevcut şifre hatalı" });
     res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/translate", requireAuth, async (req, res, next) => {
+  try {
+    const texts = Array.isArray(req.body?.texts) ? req.body.texts : [];
+    if (texts.length > 100) return res.status(400).json({ error: "Tek seferde en fazla 100 metin çevrilebilir" });
+    const cleanTexts = texts.map(text => String(text || "").trim()).filter(Boolean);
+    if (cleanTexts.some(text => text.length > 1000)) return res.status(400).json({ error: "Çevrilecek tek metin 1000 karakteri geçemez" });
+    const sourceLang = String(req.body?.sourceLang || "TR").toUpperCase();
+    const targetLang = String(req.body?.targetLang || "EN-US").toUpperCase();
+    if (!["TR"].includes(sourceLang)) return res.status(400).json({ error: "Desteklenmeyen kaynak dil" });
+    if (!["EN", "EN-US", "EN-GB"].includes(targetLang)) return res.status(400).json({ error: "Desteklenmeyen hedef dil" });
+    const translations = await deeplTranslateBatch(cleanTexts, targetLang, sourceLang);
+    res.json({ translations, provider: deeplApiKey ? "deepl" : "passthrough" });
   } catch (error) {
     next(error);
   }

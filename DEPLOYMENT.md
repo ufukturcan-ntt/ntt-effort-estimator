@@ -21,6 +21,8 @@ Bu proje iki parçaya ayrıldı:
    - `APP_PUBLIC_URL`: Railway backend public URL'i.
    - `APPROVER_EMAIL`: kullanıcı kayıt onay mailinin gideceği kişi.
    - `ADMIN_APPROVAL_TOKEN`: maildeki onay linki için gizli token.
+   - `DEEPL_API_KEY`: İngilizce arayüzde kayıtların anlık çevrilmesi için DeepL API anahtarı.
+   - `DEEPL_API_URL`: opsiyonel DeepL endpoint'i. Free plan için `https://api-free.deepl.com`, Pro plan için `https://api.deepl.com`.
    - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: mail gönderimi için SMTP ayarları.
 
 İlk admin hesabı:
