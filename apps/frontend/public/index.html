@@ -3985,7 +3985,7 @@
       ["Yönetimi", "Management"]
     ];
 
-    const translationCacheKey = "effortTranslationCache:v1";
+    const translationCacheKey = "effortTranslationCache:v2";
     const translationCache = new Map(Object.entries(JSON.parse(sessionStorage.getItem(translationCacheKey) || "{}")));
     const pendingTranslations = new Set();
     let translationTimer = null;
@@ -3993,6 +3993,11 @@
 
     function persistTranslationCache() {
       sessionStorage.setItem(translationCacheKey, JSON.stringify(Object.fromEntries(translationCache.entries())));
+    }
+
+    function looksTurkishText(text) {
+      return /[çğıöşüÇĞİÖŞÜ]/.test(String(text || ""))
+        || /\b(ve|veya|ile|için|kapsam|soru|dönüşüm|karmaşıklığı|olacak|mı|modül|ana|veri|yaratma|aktarımı)\b/i.test(String(text || ""));
     }
 
     function shouldTranslateRecord(text) {
@@ -4023,10 +4028,13 @@
       try {
         const response = await window.EffortApi.translate(texts, "EN-US", "TR");
         Object.entries(response?.translations || {}).forEach(([source, translated]) => {
-          translationCache.set(source, translated || source);
+          const translatedText = translated || source;
+          if (response?.provider !== "passthrough" && (translatedText !== source || !looksTurkishText(source))) {
+            translationCache.set(source, translatedText);
+          }
         });
         persistTranslationCache();
-        scheduleTranslatedViewRefresh();
+        if (response?.provider !== "passthrough") scheduleTranslatedViewRefresh();
       } catch (error) {
         console.warn("Çeviri servisi kullanılamadı.", error);
       }
@@ -4047,7 +4055,12 @@
     function displayRecord(value) {
       const text = String(value ?? "");
       if (currentLanguage !== "en" || !text) return text;
-      if (translationCache.has(text)) return translationCache.get(text);
+      if (translationCache.has(text)) {
+        const cached = translationCache.get(text);
+        if (cached !== text || !looksTurkishText(text)) return cached;
+        translationCache.delete(text);
+        persistTranslationCache();
+      }
       queueRecordTranslation(text);
       return text;
     }
