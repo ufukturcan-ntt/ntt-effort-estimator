@@ -4016,7 +4016,8 @@
 
     async function flushTranslationQueue() {
       translationTimer = null;
-      if (currentLanguage !== "en" || !window.EffortApi || !currentUser || !pendingTranslations.size) return;
+      if (currentLanguage !== "en" || !window.EffortApi || !pendingTranslations.size) return;
+      if (!currentUser) return;
       const texts = [...pendingTranslations].slice(0, 80);
       texts.forEach(text => pendingTranslations.delete(text));
       try {
@@ -4036,6 +4037,11 @@
       if (!shouldTranslateRecord(text) || translationCache.has(text) || pendingTranslations.has(text)) return;
       pendingTranslations.add(text);
       if (!translationTimer) translationTimer = setTimeout(flushTranslationQueue, 120);
+    }
+
+    function wakeTranslationQueue() {
+      if (currentLanguage !== "en" || !currentUser || !pendingTranslations.size || translationTimer) return;
+      translationTimer = setTimeout(flushTranslationQueue, 80);
     }
 
     function displayRecord(value) {
@@ -4203,6 +4209,7 @@
       refreshQuestionLists?.();
       renderWorkbookDrivenScreens?.();
       rerenderScreenNavigation?.();
+      wakeTranslationQueue();
     }
 
     const phases = [
@@ -7307,6 +7314,7 @@
         setWorkMode(false);
         openScreen("overview");
         applyLanguage();
+        wakeTranslationQueue();
       } catch (error) {
         console.error(error);
         alert("Giriş yapılamadı. Email/şifre hatalı olabilir veya kullanıcı henüz onaylanmamış olabilir.");
