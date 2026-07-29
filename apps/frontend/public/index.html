@@ -2123,6 +2123,7 @@
             <button class="admin-tree-item" data-admin-section="question-options" type="button" onclick="openAdminSection('question-options')"><span class="nav-icon">S</span><span>Soru Alan Seçenekleri</span><span class="nav-count">SO</span></button>
             <button class="admin-tree-item" data-admin-section="scope" type="button" onclick="openAdminSection('scope')"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="development" type="button" onclick="openAdminSection('development')"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
+            <button class="admin-tree-item" data-admin-section="library" type="button" onclick="openAdminSection('library')"><span class="nav-icon">K</span><span>Kütüphane Tanımları</span><span class="nav-count">KT</span></button>
             <button class="admin-tree-item" data-admin-section="restrictions" type="button" onclick="openAdminSection('restrictions')"><span class="nav-icon">R</span><span>Question Restrictions</span><span class="nav-count">R</span></button>
             <button class="admin-tree-item" data-admin-section="fixed" type="button" onclick="openAdminSection('fixed')"><span class="nav-icon">F</span><span>Fixed Days</span><span class="nav-count">FD</span></button>
             <button class="admin-tree-item" data-admin-section="localization" type="button" onclick="openAdminSection('localization')"><span class="nav-icon">L</span><span>Localization Efforts</span><span class="nav-count">LE</span></button>
@@ -2552,7 +2553,7 @@
             <div class="admin-content">
               <section class="panel admin-section active" data-admin-panel="users">
                 <div class="panel-head"><h3 class="panel-title">Kullanıcı Listesi</h3><span class="pill"><span id="adminUserCount">0</span> kullanıcı</span></div>
-                <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Durum</th><th>Rol</th><th>Kayıt Tarihi</th><th>İşlem</th></tr></thead><tbody id="adminUsersRows"></tbody></table></div>
+                <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Durum</th><th>Rol</th><th>Talep Tarihi</th><th>Onay Tarihi</th><th>İşlem</th></tr></thead><tbody id="adminUsersRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="approvals">
                 <div class="panel-head"><h3 class="panel-title">Onay Ayarları</h3><span class="pill">E-posta</span></div>
@@ -2565,7 +2566,16 @@
                     <label for="offerApproverEmail">Teklif onay adresi</label>
                     <input id="offerApproverEmail" type="email" autocomplete="off" />
                   </div>
+                  <div class="input-field">
+                    <label for="currentAdminPassword">Mevcut şifre</label>
+                    <input id="currentAdminPassword" type="password" autocomplete="current-password" />
+                  </div>
+                  <div class="input-field">
+                    <label for="newAdminPassword">Yeni şifre (en az 12 karakter)</label>
+                    <input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" />
+                  </div>
                 </div>
+                <button class="button" id="changeAdminPasswordButton" type="button">Şifremi Değiştir</button>
               </section>
               <section class="panel admin-section" data-admin-panel="industries">
                 <div class="panel-head"><h3 class="panel-title">Endüstri Tanımları</h3><button class="button primary" data-admin-add-list="adminIndustryList" type="button">+ Endüstri</button></div>
@@ -2607,6 +2617,10 @@
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
                 <div class="list-table admin-question-table admin-development-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="library">
+                <div class="panel-head"><h3 class="panel-title">Kütüphane Tanımları</h3><button class="button primary" data-admin-add-matrix="adminLibraryRows" type="button">+ Kütüphane Kaydı</button></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminLibraryHead"></thead><tbody id="adminLibraryRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="restrictions">
                 <div class="panel-head"><h3 class="panel-title">Question Restrictions</h3><button class="button primary" data-admin-add-matrix="adminRestrictionsRows" type="button">+ Satır</button></div>
@@ -2762,9 +2776,9 @@
       const sourceHeaders = headers.filter(Boolean).map(header => canonicalPhaseName(String(header || "").trim()));
       const isVmp = sourceHeaders.includes("Kaynak Tipi");
       const cleanHeaders = isVmp
-        ? ["Kaynak Tipi", "Kapsam Sorusu", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", ...vmpPhaseHeaders]
+        ? ["Kaynak Tipi", "Kapsam Sorusu", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", "Tarih", ...vmpPhaseHeaders]
         : sourceHeaders;
-      const deduped = [];
+      const cleanedRows = [];
       const seen = new Set();
       dataRows.forEach(row => {
         const sourceRow = row.slice(0, sourceHeaders.length);
@@ -2776,16 +2790,18 @@
           : sourceRow.slice(0, cleanHeaders.length);
         while (cleanRow.length < cleanHeaders.length) cleanRow.push("");
         if (!cleanRow.some(value => String(value || "").trim())) return;
-        const key = cleanRow.map(value => String(value || "").trim()).join("\u001f");
-        if (seen.has(key)) return;
-        seen.add(key);
-        deduped.push(cleanRow);
+        if (!isVmp) {
+          const key = cleanRow.map(value => String(value || "").trim()).join("\u001f");
+          if (seen.has(key)) return;
+          seen.add(key);
+        }
+        cleanedRows.push(cleanRow);
       });
-      deduped.sort((a, b) => [0, 1, 2, 3].reduce((result, index) => {
+      cleanedRows.sort((a, b) => [0, 1, 2, 3].reduce((result, index) => {
         if (result) return result;
         return String(a[index] || "").localeCompare(String(b[index] || ""), "tr-TR", { numeric: true, sensitivity: "base" });
       }, 0));
-      return [cleanHeaders, ...deduped];
+      return [cleanHeaders, ...cleanedRows];
     }
 
     function normalizeVariableModulePhaseRows(rows = []) {
@@ -2795,7 +2811,7 @@
       const oldHeaders = normalizedRows[headerIndex].map(cell => String(cell || "").trim());
       if (oldHeaders.includes("Kapsam Sorusu") && oldHeaders.includes("Geliştirme Sorusu") && oldHeaders.includes("Modül")) {
         const dataRows = normalizedRows.slice(headerIndex + 1).map(row => {
-          const offset = normalizedRows[headerIndex][0] === "" && row.length === oldHeaders.length ? 1 : 0;
+          const offset = normalizedRows[headerIndex][0] === "" && row.length > oldHeaders.filter(Boolean).length && String(row[0] || "").trim() === "" ? 1 : 0;
           return offset ? row.slice(1) : row;
         });
         return finalizeVariableModulePhaseRows(oldHeaders, dataRows);
@@ -3486,6 +3502,8 @@
     let currentOfferId = null;
     let currentOfferStatus = "DRAFT";
     let currentOfferAccessMode = "edit";
+    let currentOfferUpdatedAt = "";
+    let adminConfigVersions = {};
     let cachedOffers = [];
     let cachedPendingApprovals = [];
     let currentLanguage = localStorage.getItem("effortLanguage") || document.getElementById("languageSelect")?.value || "tr";
@@ -4465,54 +4483,68 @@
       return total;
     }
 
-    function developmentLibraryModuleMap() {
-      const map = new Map();
-      developmentEffortDefinitions().forEach(([, name, moduleName]) => {
-        if (!name || !moduleName) return;
-        if (!map.has(name)) map.set(name, new Set());
-        map.get(name).add(moduleName);
-      });
-      return map;
-    }
-
     function renderLibraryRows() {
       const body = document.getElementById("libraryRows");
       if (!body) return;
-      const moduleMap = developmentLibraryModuleMap();
-      const rows = (window.developmentQuestions || [])
-        .filter(item => !automaticDevelopmentQuestionNos.has(Number(item.no)))
-        .map(item => {
-          const key = String(item.no);
-          const canonicalName = canonicalDevelopmentName(item.name);
-          const selectedValue = questionAnswers.developmentQuestions[key];
-          const checked = Boolean(selectedValue && selectedValue !== "Seçiniz" && selectedValue !== "Hayır");
-          const modules = [...(moduleMap.get(canonicalName) || [])].join(", ");
-          return { item, key, checked, modules };
-        });
-      body.innerHTML = rows.map(({ item, key, checked, modules }) => `
+      const matrix = normalizeLibraryItems(window.adminSeedData?.libraryItems || []);
+      const headers = matrix[0] || [];
+      const idIndex = headers.indexOf("ID");
+      const definitionIndex = headers.indexOf("Geliştirme Tanımı");
+      const descriptionIndex = headers.indexOf("Geliştirme Açıklaması");
+      const moduleIndex = headers.indexOf("Modül");
+      const rows = matrix.slice(1).map((row, index) => {
+        const definition = String(row[definitionIndex] || "").trim();
+        const legacyKey = `${definition}::${String(row[moduleIndex] || "").trim()}::${index}`;
+        const id = String(row[idIndex] || "");
+        if (librarySelections.has(legacyKey)) {
+          librarySelections.delete(legacyKey);
+          librarySelections.add(id);
+        }
+        return {
+          key: id,
+          definition,
+          description: row[descriptionIndex] || "",
+          module: row[moduleIndex] || ""
+        };
+      }).filter(item => item.definition);
+      body.innerHTML = rows.map(({ key, definition, description, module }) => `
         <tr>
-          <td>${escapeHtml(canonicalDevelopmentName(item.name))}</td>
-          <td>${escapeHtml(item.description || "")}</td>
-          <td>${escapeHtml(modules)}</td>
-          <td class="admin-check-cell"><input type="checkbox" data-library-development="${escapeHtml(key)}" ${checked ? "checked" : ""} /></td>
+          <td>${escapeHtml(definition)}</td>
+          <td>${escapeHtml(description)}</td>
+          <td>${escapeHtml(module)}</td>
+          <td class="admin-check-cell"><input type="checkbox" data-library-item="${escapeHtml(key)}" ${librarySelections.has(key) ? "checked" : ""} /></td>
         </tr>
       `).join("") || `<tr><td colspan="4">Kütüphane kaydı bulunamadı.</td></tr>`;
-      setText("libraryScopeCount", rows.filter(row => row.checked).length);
-      body.querySelectorAll("[data-library-development]").forEach(checkbox => {
+      setText("libraryScopeCount", rows.filter(row => librarySelections.has(row.key)).length);
+      body.querySelectorAll("[data-library-item]").forEach(checkbox => {
         checkbox.addEventListener("change", () => {
-          const key = checkbox.dataset.libraryDevelopment;
-          const item = (window.developmentQuestions || []).find(question => String(question.no) === key);
-          if (!key || !item) return;
-          if (checkbox.checked) {
-            questionAnswers.developmentQuestions[key] = item.answerType === "number" ? "1" : "Evet";
-          } else {
-            delete questionAnswers.developmentQuestions[key];
-          }
+          const key = checkbox.dataset.libraryItem;
+          if (!key) return;
+          if (checkbox.checked) librarySelections.add(key);
+          else librarySelections.delete(key);
           markDirty();
-          updateQuestionMetrics();
-          renderWorkbookDrivenScreens();
+          setText("libraryScopeCount", body.querySelectorAll("[data-library-item]:checked").length);
         });
       });
+    }
+
+    function newLibraryId() {
+      return crypto.randomUUID();
+    }
+
+    function normalizeLibraryItems(matrix = []) {
+      const fallbackHeaders = ["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"];
+      if (!Array.isArray(matrix) || !matrix.length) return [fallbackHeaders];
+      const sourceHeaders = Array.isArray(matrix[0]) ? matrix[0].map(value => String(value || "").trim()) : [];
+      const hasId = sourceHeaders.includes("ID");
+      const headers = hasId ? sourceHeaders : ["ID", ...sourceHeaders];
+      const rows = matrix.slice(1).filter(Array.isArray).map(row => {
+        const values = hasId ? [...row] : [newLibraryId(), ...row];
+        const idIndex = headers.indexOf("ID");
+        if (!values[idIndex]) values[idIndex] = newLibraryId();
+        return values;
+      });
+      return [headers.length > 1 ? headers : fallbackHeaders, ...rows];
     }
 
     function renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal }) {
@@ -4546,7 +4578,7 @@
       const max = Math.max(...rows.map(row => row[1]), 1);
       target.innerHTML = rows.map(([label, value, color]) => `
         <div class="mini-bar">
-          <strong>${label}</strong>
+          <strong>${escapeHtml(label)}</strong>
           <div class="mini-bar-track"><i style="--w:${Math.max(2, value / max * 100)}%;--c:${color}"></i></div>
           <span>${fmt(value)}${suffix}</span>
         </div>
@@ -4554,11 +4586,11 @@
     }
 
     function editableCell(value = "") {
-      return `<td contenteditable="true">${value || ""}</td>`;
+      return `<td contenteditable="true">${escapeHtml(value || "")}</td>`;
     }
 
     function editableDiv(value = "") {
-      return `<div class="admin-edit" contenteditable="true">${value || ""}</div>`;
+      return `<div class="admin-edit" contenteditable="true">${escapeHtml(value || "")}</div>`;
     }
 
     function escapeHtml(value = "") {
@@ -4635,6 +4667,21 @@
         return `<option ${selected}>${escapeHtml(option)}</option>`;
       }).join("");
       return `<td><select class="admin-select" ${multiple ? "multiple" : ""} ${attributes}>${rendered}</select></td>`;
+    }
+
+    function todayInputDate() {
+      const date = new Date();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    function isDateHeader(header = "") {
+      return ["Tarih", "Date"].includes(String(header || "").trim());
+    }
+
+    function adminDateCell(value = "") {
+      return `<td><input class="admin-date-input" type="date" value="${escapeHtml(value || "")}" /></td>`;
     }
 
     function isNumberVariableType(value = "") {
@@ -4739,6 +4786,7 @@
       const body = document.getElementById(bodyId);
       if (!body || !rows?.length) return;
       if (bodyId === "adminVmpRows") rows = normalizeVariableModulePhaseRows(rows);
+      if (bodyId === "adminLibraryRows") rows = normalizeLibraryItems(rows);
       const headerIndex = rows.findIndex(row => {
         if (bodyId === "adminFixedRows") return row.includes("Column1") || row.includes("Modül");
         if (bodyId === "adminLocalizationRows") return row.includes("Ülke") || row.includes("Ulke") || row.includes("Ãœlke");
@@ -4747,11 +4795,16 @@
       });
       const headers = rows[Math.max(headerIndex, 0)];
       const dataRows = rows.slice(Math.max(headerIndex, 0) + 1);
-      if (head) head.innerHTML = `<tr>${headers.map(value => `<th>${value}</th>`).join("")}<th>İşlem</th></tr>`;
+      if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${bodyId === "adminLibraryRows" && value === "ID" ? "hidden" : ""}>${escapeHtml(value)}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
       const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
+      const actionButtons = bodyId === "adminVmpRows"
+        ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
+        : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
       body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
         const normalizedHeader = String(header || "").trim();
+        if (bodyId === "adminLibraryRows" && normalizedHeader === "ID") return `<td hidden>${escapeHtml(row[index] || newLibraryId())}</td>`;
+        if (isDateHeader(normalizedHeader)) return adminDateCell(row[index] || "");
         const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
         const isVariableModuleCell = bodyId === "adminVmpRows"
           && ["Modül", "Modul", "Module"].includes(normalizedHeader)
@@ -4759,7 +4812,7 @@
         if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
         const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, row, headers);
         return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
-      }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`).join("");
+      }).join("")}<td>${actionButtons}</td></tr>`).join("");
       bindAdminEditable(body);
       syncVmpModuleCells(body);
       syncRestrictionQuestionCells(body);
@@ -4776,13 +4829,20 @@
         return;
       }
       const defaultRow = bodyId === "adminRestrictionsRows" ? restrictionDefaultRow(headers) : headers.map(() => "");
+      if (bodyId === "adminLibraryRows") defaultRow[headers.indexOf("ID")] = newLibraryId();
+      if (bodyId === "adminVmpRows" && headers.some(isDateHeader)) defaultRow[headers.findIndex(isDateHeader)] = todayInputDate();
+      const actionButtons = bodyId === "adminVmpRows"
+        ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
+        : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
       body.insertAdjacentHTML("beforeend", `<tr>${headers.map(header => {
         const normalizedHeader = String(header || "").trim();
+        if (bodyId === "adminLibraryRows" && normalizedHeader === "ID") return `<td hidden>${escapeHtml(defaultRow[headers.indexOf("ID")])}</td>`;
+        if (isDateHeader(normalizedHeader)) return adminDateCell(defaultRow[headers.findIndex(item => String(item || "").trim() === normalizedHeader)] || todayInputDate());
         const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
         const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, defaultRow, headers);
         const defaultValue = defaultRow[headers.findIndex(item => String(item || "").trim() === normalizedHeader)] || "";
         return selectConfig ? adminSelectCell(defaultValue, selectConfig.options, selectConfig.multiple) : editableCell("");
-      }).join("")}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      }).join("")}<td>${actionButtons}</td></tr>`);
       bindAdminEditable(body);
       syncVmpModuleCells(body);
       syncRestrictionQuestionCells(body);
@@ -4874,6 +4934,33 @@
       });
     }
 
+    function copyAdminMatrixRow(button) {
+      const sourceRow = button.closest("tr");
+      const body = sourceRow?.closest("tbody");
+      if (!sourceRow || !body) return;
+      const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
+      if (!headers.length) return;
+      const values = [...sourceRow.children].slice(0, headers.length).map(adminCellValue);
+      const dateIndex = headers.findIndex(isDateHeader);
+      if (dateIndex >= 0) values[dateIndex] = todayInputDate();
+      const sourceTypeIndex = body.id === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
+      const cells = headers.map((header, index) => {
+        const normalizedHeader = String(header || "").trim();
+        if (isDateHeader(normalizedHeader)) return adminDateCell(values[index] || todayInputDate());
+        const isVariableModuleCell = body.id === "adminVmpRows"
+          && ["Modül", "Modul", "Module"].includes(normalizedHeader)
+          && values[sourceTypeIndex] === "Değişken";
+        if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
+        const selectConfig = adminMatrixCellOptions(header, body.id, values, headers);
+        return selectConfig ? adminSelectCell(values[index], selectConfig.options, selectConfig.multiple) : editableCell(values[index] || "");
+      }).join("");
+      sourceRow.insertAdjacentHTML("afterend", `<tr>${cells}<td><button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      bindAdminEditable(body);
+      syncVmpModuleCells(body);
+      syncRestrictionQuestionCells(body);
+      markAdminDirty();
+    }
+
     function bindAdminEditable(root = document) {
       root.querySelectorAll("[contenteditable]").forEach(cell => {
         if (cell.dataset.editBound) return;
@@ -4903,6 +4990,11 @@
         input.dataset.scoreBound = "true";
         input.addEventListener("input", markAdminDirty);
       });
+      root.querySelectorAll(".admin-date-input").forEach(input => {
+        if (input.dataset.dateBound) return;
+        input.dataset.dateBound = "true";
+        input.addEventListener("change", markAdminDirty);
+      });
       root.querySelectorAll("[data-admin-remove]").forEach(button => {
         if (button.dataset.removeBound) return;
         button.dataset.removeBound = "true";
@@ -4916,6 +5008,11 @@
         if (button.dataset.copyBound) return;
         button.dataset.copyBound = "true";
         button.addEventListener("click", () => copyAdminQuestionRow(button));
+      });
+      root.querySelectorAll("[data-admin-copy-matrix-row]").forEach(button => {
+        if (button.dataset.copyBound) return;
+        button.dataset.copyBound = "true";
+        button.addEventListener("click", () => copyAdminMatrixRow(button));
       });
     }
 
@@ -5289,6 +5386,7 @@
         moduleCatalog: collectAdminModules(),
         scopeQuestions: collectQuestionAdminRows("adminScopeRows"),
         developmentQuestions: collectQuestionAdminRows("adminDevelopmentRows"),
+        libraryItems: collectMatrixRows("adminLibraryHead", "adminLibraryRows"),
         questionFieldOptions: {
           variableGroups: collectDefinitionValues("adminVariableGroupOptions"),
           variableTypes: collectDefinitionValues("adminVariableTypeOptions"),
@@ -5338,6 +5436,7 @@
     }
 
     function applyAdminConfig(config = {}) {
+      if (config.__meta?.versions) adminConfigVersions = { ...config.__meta.versions };
       ["scopeQuestions", "developmentQuestions"].forEach(key => {
         if (!config[key]) return;
         const dataKey = key === "scopeQuestions" ? "scope" : "development";
@@ -5366,6 +5465,7 @@
       if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
       if (config.localizationEfforts) window.adminSeedData.localizationEfforts = config.localizationEfforts;
       if (config.variableModulePhase) window.adminSeedData.variableModulePhase = config.variableModulePhase;
+      if (config.libraryItems) window.adminSeedData.libraryItems = normalizeLibraryItems(config.libraryItems);
       if (config.scopeQuestions) window.scopeQuestions = config.scopeQuestions;
       if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
       if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
@@ -5407,13 +5507,19 @@
         button.textContent = "Kaydediliyor";
       }
       try {
-        await Promise.all(Object.entries(config).map(([entity, payload]) => window.EffortApi.saveAdminEntity(entity, payload, currentUser.id)));
-        applyAdminConfig(config);
+        config.__meta = { versions: adminConfigVersions };
+        const savedConfig = await window.EffortApi.saveAdminConfig(config);
+        applyAdminConfig(savedConfig || config);
         renderLocalizationControls();
         renderWorkbookDrivenScreens();
         renderAdminPage();
         markAdminClean();
         alert("Admin ayarları kaydedildi.");
+      } catch (error) {
+        if (String(error.message || "").includes("başka bir kullanıcı")) {
+          await loadAdminConfig();
+        }
+        throw error;
       } finally {
         if (button) {
           button.disabled = false;
@@ -5471,6 +5577,7 @@
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
+      renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
       renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", data.restrictions || []);
       initializeFixedDaysEditor();
       renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", data.localizationEfforts || []);
@@ -5494,6 +5601,26 @@
       if (addGroupButton && !addGroupButton.dataset.bound) {
         addGroupButton.dataset.bound = "true";
         addGroupButton.addEventListener("click", addAdminModuleGroup);
+      }
+      const passwordButton = document.getElementById("changeAdminPasswordButton");
+      if (passwordButton && !passwordButton.dataset.bound) {
+        passwordButton.dataset.bound = "true";
+        passwordButton.addEventListener("click", async () => {
+          const currentPassword = document.getElementById("currentAdminPassword")?.value || "";
+          const newPassword = document.getElementById("newAdminPassword")?.value || "";
+          if (newPassword.length < 12) return alert("Yeni şifre en az 12 karakter olmalı.");
+          passwordButton.disabled = true;
+          try {
+            await window.EffortApi.changePassword(currentPassword, newPassword);
+            document.getElementById("currentAdminPassword").value = "";
+            document.getElementById("newAdminPassword").value = "";
+            alert("Şifreniz değiştirildi.");
+          } catch (error) {
+            alert(`Şifre değiştirilemedi: ${error.message}`);
+          } finally {
+            passwordButton.disabled = false;
+          }
+        });
       }
       ["userApproverEmail", "offerApproverEmail"].forEach(id => {
         const input = document.getElementById(id);
@@ -5868,6 +5995,7 @@
       const finalEffort = recalculatedOfferEffort(offer);
       const fixedEfforts = offerFixedEfforts(offer);
       return {
+        expectedUpdatedAt: offer.updated_at || "",
         title: offer.title || offer.project_name || definition.project || "Yeni Teklif",
         customerName: offer.customer_name || definition.customer || "",
         projectName: offer.project_name || definition.project || "",
@@ -5886,6 +6014,7 @@
           ...finalEffort,
           fixedEfforts,
           fixedEffortTotal: effectiveFixedEffortTotal(fixedEfforts, offer.system_type || definition.system || "", offerJson(offer.scope_answers)),
+          librarySelections: offerJson(offer.final_effort).librarySelections || [],
           fixedEffortInclusion: offerJson(offer.final_effort).fixedEffortInclusion || { ABAP: offerAbapFixedEffortIncluded(offer) ? "included" : "notIncluded" },
           abapFixedEffortIncluded: offerAbapFixedEffortIncluded(offer)
         }
@@ -5900,6 +6029,7 @@
       definition.project = copiedProject;
       return {
         ...payload,
+        sourceOfferId: offer.id,
         userId: currentUser?.id,
         offerNo: undefined,
         status: "DRAFT",
@@ -5913,6 +6043,7 @@
 
     function workflowButtons(row) {
       const status = String(row.status || "DRAFT").toUpperCase();
+      if (!isOfferOwner(row)) return "";
       if (status === "DRAFT") {
         return `<button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button">${t("submit")}</button>`;
       }
@@ -5920,6 +6051,10 @@
         return `<button class="button primary" data-work-action="backlog" data-offer-id="${row.id}" type="button" ${status === "APPROVED" ? "" : "disabled"}>Backlog</button>`;
       }
       return "";
+    }
+
+    function isOfferOwner(offer) {
+      return Boolean(offer?.is_owner || (offer?.user_id && offer.user_id === currentUser?.id));
     }
 
     function renderOfferCategoryDashboard(targetId, field, color) {
@@ -5982,22 +6117,22 @@
       if (target) {
         target.innerHTML = visibleRows.map(row => `
           <tr>
-            <td>${row.offer_no || ""}</td>
-            <td>${row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")}</td>
-            <td>${row.customer_name || ""}</td>
-            <td>${row.industry || ""}</td>
-            <td>${offerJson(row.project_definition).version || ""}</td>
+            <td>${escapeHtml(row.offer_no || "")}</td>
+            <td>${escapeHtml(row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif"))}</td>
+            <td>${escapeHtml(row.customer_name || "")}</td>
+            <td>${escapeHtml(row.industry || "")}</td>
+            <td>${escapeHtml(offerJson(row.project_definition).version || "")}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
             <td><strong>${fmt(row.total_effort || 0)}</strong></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
             <td>
               <div class="quick-actions">
                 <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
-                <button class="button" data-work-action="copy" data-offer-id="${row.id}" type="button">${t("copy")}</button>
-                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("change")}</button>
-                <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
-                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("recalculateEffort")}</button>
-                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button">${t("print")}</button>
+                <button class="button" data-work-action="copy" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) ? "" : "disabled"}>${t("copy")}</button>
+                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("change")}</button>
+                <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("delete")}</button>
+                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("recalculateEffort")}</button>
+                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) ? "" : "disabled"}>${t("print")}</button>
                 ${workflowButtons(row)}
               </div>
             </td>
@@ -6011,17 +6146,17 @@
         recentTarget.innerHTML = cachedOffers.slice(0, 3).map(row => `
           <article class="work-card">
             <span class="status">${statusLabel(row.status)}</span>
-            <h4>${row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")}</h4>
+            <h4>${escapeHtml(row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif"))}</h4>
             <div class="work-meta">
-              <span><strong>${currentLanguage === "en" ? "Customer" : "Müşteri"}:</strong> ${row.customer_name || (currentLanguage === "en" ? "Not specified" : "Belirtilmedi")}</span>
-              <span>${row.offer_no || ""}</span>
-              <span>${fmt(row.total_effort || 0)} ${t("days")} · ${row.implementation_type || ""}</span>
+              <span><strong>${currentLanguage === "en" ? "Customer" : "Müşteri"}:</strong> ${escapeHtml(row.customer_name || (currentLanguage === "en" ? "Not specified" : "Belirtilmedi"))}</span>
+              <span>${escapeHtml(row.offer_no || "")}</span>
+              <span>${fmt(row.total_effort || 0)} ${t("days")} · ${escapeHtml(row.implementation_type || "")}</span>
               <span>${currentLanguage === "en" ? "Last update" : "Son güncelleme"}: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</span>
             </div>
             <div class="work-actions">
               <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
-              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("edit")}</button>
-              <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() === "APPROVED" ? "disabled" : ""}>${t("delete")}</button>
+              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("edit")}</button>
+              <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("delete")}</button>
             </div>
           </article>
         `).join("") || `<div class="empty-state">${currentLanguage === "en" ? "No saved offers yet." : "Henüz kayıtlı teklif bulunmuyor."}</div>`;
@@ -6039,7 +6174,8 @@
           const offerId = button.dataset.offerId;
           if (offerId && window.EffortApi) {
             if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
-            await window.EffortApi.deleteOffer(offerId);
+            const offer = cachedOffers.find(item => item.id === offerId);
+            await window.EffortApi.deleteOffer(offerId, offer?.updated_at || "");
             await loadOffers();
           }
         });
@@ -6078,7 +6214,8 @@
           }
           if (action === "delete") {
             confirmAction("Bu çalışmayı silmek istediğinize emin misiniz?", async () => {
-              await window.EffortApi.deleteOffer(offerId);
+              const offer = cachedOffers.find(item => item.id === offerId);
+              await window.EffortApi.deleteOffer(offerId, offer?.updated_at || "");
               await loadOffers();
             });
           }
@@ -6159,7 +6296,7 @@
         return;
       }
       try {
-        cachedOffers = await window.EffortApi.listOffers(currentUser.id);
+        cachedOffers = await window.EffortApi.listOffers();
         renderAllWorks();
       } catch (error) {
         console.error(error);
@@ -6173,11 +6310,11 @@
       if (!target) return;
       target.innerHTML = cachedPendingApprovals.map(offer => `
         <tr>
-          <td>${offer.offer_no || ""}</td>
-          <td>${offer.project_name || offer.title || "Yeni teklif"}</td>
-          <td>${offer.customer_name || ""}</td>
-          <td>${offer.industry || ""}</td>
-          <td>${offer.submitted_by_name || offer.submitted_by_email || "-"}</td>
+          <td>${escapeHtml(offer.offer_no || "")}</td>
+          <td>${escapeHtml(offer.project_name || offer.title || "Yeni teklif")}</td>
+          <td>${escapeHtml(offer.customer_name || "")}</td>
+          <td>${escapeHtml(offer.industry || "")}</td>
+          <td>${escapeHtml(offer.submitted_by_name || offer.submitted_by_email || "-")}</td>
           <td>${fmt(offer.total_effort || 0)}g</td>
           <td>${offer.submitted_at ? new Date(offer.submitted_at).toLocaleDateString("tr-TR") : ""}</td>
           <td>
@@ -6228,6 +6365,7 @@
     }
 
     const questionAnswers = { scopeQuestions: {}, developmentQuestions: {} };
+    const librarySelections = new Set();
 
     function getProjectFilters() {
       return {
@@ -6491,6 +6629,7 @@
           localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
           fixedEfforts,
           fixedEffortTotal: effectiveFixedEffortTotal(),
+          librarySelections: [...librarySelections],
           fixedEffortInclusion: fixedEffortInclusionPayload(),
           abapFixedEffortIncluded,
           hypercareTotal: hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
@@ -6509,11 +6648,13 @@
         });
       }
       const payload = collectOfferPayload();
+      if (currentOfferId && currentOfferUpdatedAt) payload.expectedUpdatedAt = currentOfferUpdatedAt;
       const saved = currentOfferId
         ? await window.EffortApi.updateOffer(currentOfferId, payload)
         : await window.EffortApi.saveOffer(payload);
       currentOfferId = saved.id;
       currentOfferStatus = saved.status || currentOfferStatus || "DRAFT";
+      currentOfferUpdatedAt = saved.updated_at || currentOfferUpdatedAt || "";
       currentOfferMode = "existing";
       cachedOffers = [saved, ...cachedOffers.filter(offer => offer.id !== saved.id)];
       renderAllWorks();
@@ -6539,6 +6680,7 @@
         const submitted = await window.EffortApi.submitOffer(saved.id, currentUser?.id);
         currentOfferId = submitted.id;
         currentOfferStatus = submitted.status || "SUBMITTED";
+        currentOfferUpdatedAt = submitted.updated_at || currentOfferUpdatedAt || "";
         cachedOffers = [submitted, ...cachedOffers.filter(offer => offer.id !== submitted.id)];
         renderAllWorks();
         markClean();
@@ -6595,6 +6737,7 @@
             </select>
           </td>
           <td>${row.created_at ? new Date(row.created_at).toLocaleString("tr-TR") : ""}</td>
+          <td>${row.approved_at ? new Date(row.approved_at).toLocaleString("tr-TR") : ""}</td>
           <td>
             <div class="quick-actions">
               <button class="button primary" data-save-user-role="${row.id}" type="button" ${row.id === currentUser.id ? "disabled" : ""}>Kaydet</button>
@@ -6602,7 +6745,7 @@
             </div>
           </td>
         </tr>
-      `).join("") || `<tr><td colspan="6">Kayıtlı kullanıcı bulunmuyor.</td></tr>`;
+      `).join("") || `<tr><td colspan="7">Kayıtlı kullanıcı bulunmuyor.</td></tr>`;
       body.querySelectorAll("[data-save-user-role]").forEach(button => {
         button.addEventListener("click", async () => {
           const select = body.querySelector(`[data-user-role="${button.dataset.saveUserRole}"]`);
@@ -6661,9 +6804,12 @@
         });
         questionAnswers.scopeQuestions = offerJson(offer?.scope_answers);
         questionAnswers.developmentQuestions = offerJson(offer?.development_answers);
+        librarySelections.clear();
+        (savedFinalEffort.librarySelections || []).forEach(key => librarySelections.add(String(key)));
       } else {
         questionAnswers.scopeQuestions = {};
         questionAnswers.developmentQuestions = {};
+        librarySelections.clear();
       }
       renderModuleGroups();
       renderLocalizationControls();
@@ -6830,9 +6976,11 @@
         return;
       }
       const definition = offerJson(offer?.project_definition);
+      if (!isOfferOwner(offer)) accessMode = "view";
       currentOfferId = offer?.id || null;
       currentOfferStatus = offer?.status || "DRAFT";
       currentOfferAccessMode = accessMode;
+      currentOfferUpdatedAt = offer?.updated_at || "";
       setProjectForm(offer ? {
         customer: offer.customer_name || definition.customer || "",
         project: offer.project_name || definition.project || "",
@@ -6863,6 +7011,7 @@
       currentOfferId = null;
       currentOfferStatus = "DRAFT";
       currentOfferAccessMode = "edit";
+      currentOfferUpdatedAt = "";
       currentOfferMode = "new";
       setProjectForm({
         customer: "",
@@ -6962,7 +7111,8 @@
         const offerId = button.dataset.offerId;
         if (offerId && window.EffortApi) {
           if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
-          await window.EffortApi.deleteOffer(offerId);
+          const offer = cachedOffers.find(item => item.id === offerId);
+          await window.EffortApi.deleteOffer(offerId, offer?.updated_at || "");
           await loadOffers();
           return;
         }

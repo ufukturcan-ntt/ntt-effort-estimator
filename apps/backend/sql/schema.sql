@@ -80,14 +80,3 @@ create table if not exists admin_config (
   payload jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
-
-insert into app_user (username, email, display_name, role, is_admin, status, password_hash, approved_at)
-values ('ufuk.turcan', 'ufuk.turcan@nttdata.com', 'Ufuk Turcan', 'ADMIN', true, 'APPROVED', crypt('admin123', gen_salt('bf')), now())
-on conflict (username) do update
-set display_name = excluded.display_name,
-    email = coalesce(app_user.email, excluded.email),
-    role = excluded.role,
-    is_admin = true,
-    status = 'APPROVED',
-    password_hash = coalesce(app_user.password_hash, excluded.password_hash),
-    approved_at = coalesce(app_user.approved_at, now());
