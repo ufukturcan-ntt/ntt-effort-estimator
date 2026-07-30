@@ -273,6 +273,16 @@ app.post("/api/login", async (req, res, next) => {
   }
 });
 
+app.get("/api/me", requireAuth, async (req, res, next) => {
+  try {
+    const user = { ...req.user };
+    user.can_approve_offers = await isOfferApprover(user.id);
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/register", async (req, res, next) => {
   try {
     const { email, password, displayName } = req.body || {};

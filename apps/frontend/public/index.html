@@ -3507,6 +3507,8 @@
     let cachedOffers = [];
     let cachedPendingApprovals = [];
     let currentLanguage = localStorage.getItem("effortLanguage") || document.getElementById("languageSelect")?.value || "tr";
+    const lastScreenKey = "effortLastScreen";
+    const lastOfferKey = "effortLastOffer";
 
     const i18n = {
       tr: {
@@ -6899,6 +6901,7 @@
       currentOfferStatus = saved.status || currentOfferStatus || "DRAFT";
       currentOfferUpdatedAt = saved.updated_at || currentOfferUpdatedAt || "";
       currentOfferMode = "existing";
+      sessionStorage.setItem(lastOfferKey, JSON.stringify({ id: currentOfferId, accessMode: currentOfferAccessMode || "edit" }));
       cachedOffers = [saved, ...cachedOffers.filter(offer => offer.id !== saved.id)];
       renderAllWorks();
       markClean();
@@ -7106,6 +7109,7 @@
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
       document.querySelectorAll(".screen").forEach(x => x.classList.remove("active"));
       document.getElementById(screenId)?.classList.add("active");
+      if (currentUser) sessionStorage.setItem(lastScreenKey, screenId);
       if (screenId === "admin") {
         const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
         openAdminSection(activeSection);
@@ -7224,6 +7228,9 @@
       currentOfferStatus = offer?.status || "DRAFT";
       currentOfferAccessMode = accessMode;
       currentOfferUpdatedAt = offer?.updated_at || "";
+      if (currentOfferId) {
+        sessionStorage.setItem(lastOfferKey, JSON.stringify({ id: currentOfferId, accessMode }));
+      }
       setProjectForm(offer ? {
         customer: offer.customer_name || definition.customer || "",
         project: offer.project_name || definition.project || "",
@@ -7256,6 +7263,7 @@
       currentOfferAccessMode = "edit";
       currentOfferUpdatedAt = "";
       currentOfferMode = "new";
+      sessionStorage.removeItem(lastOfferKey);
       setProjectForm({
         customer: "",
         project: "",
@@ -7270,6 +7278,56 @@
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
+    }
+
+    function showAuthenticatedApp() {
+      applyUserPermissions();
+      document.getElementById("loginShell")?.classList.add("is-hidden");
+      document.getElementById("appShell")?.classList.remove("is-locked");
+    }
+
+    function storedScreenId() {
+      const stored = sessionStorage.getItem(lastScreenKey) || "overview";
+      return document.getElementById(stored) ? stored : "overview";
+    }
+
+    function storedOfferContext() {
+      try {
+        return JSON.parse(sessionStorage.getItem(lastOfferKey) || "null");
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    async function restoreAuthenticatedSession() {
+      if (!window.EffortApi || !sessionStorage.getItem("effortAccessToken")) return false;
+      try {
+        currentUser = await window.EffortApi.me();
+        try {
+          await loadAdminConfig();
+        } catch (adminError) {
+          console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
+        }
+        await loadOffers();
+        showAuthenticatedApp();
+        const screenId = storedScreenId();
+        const offerContext = storedOfferContext();
+        if (offerScreens.has(screenId) && offerContext?.id) {
+          await openExistingWork(offerContext.id, offerContext.accessMode || "edit");
+          if (screenId !== "project") openWork(screenId);
+        } else {
+          openScreen(screenId);
+        }
+        applyLanguage();
+        wakeTranslationQueue();
+        return true;
+      } catch (error) {
+        console.warn("Oturum geri yüklenemedi.", error);
+        currentUser = null;
+        window.EffortApi.logout?.();
+        sessionStorage.removeItem(lastOfferKey);
+        return false;
+      }
     }
 
     document.getElementById("showRegisterButton").addEventListener("click", () => {
@@ -7321,9 +7379,7 @@
           console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
         }
         await loadOffers();
-        applyUserPermissions();
-        document.getElementById("loginShell").classList.add("is-hidden");
-        document.getElementById("appShell").classList.remove("is-locked");
+        showAuthenticatedApp();
         setWorkMode(false);
         openScreen("overview");
         applyLanguage();
@@ -7445,18 +7501,23 @@
       renderWorkbookDrivenScreens();
     });
 
-    bindAdminNavigation();
-    renderRows("moduleRows", modules.slice(0, 12));
-    renderPhases();
-    refreshProjectDefinitionSelects();
-    renderModuleGroups();
-    renderLocalizationControls();
-    renderWorkbookDrivenScreens();
-    renderScreenNavigation();
-    renderAdminPage();
-    renderAllWorks();
-    refreshQuestionLists();
-    applyLanguage();
+    async function initializeApp() {
+      bindAdminNavigation();
+      renderRows("moduleRows", modules.slice(0, 12));
+      renderPhases();
+      refreshProjectDefinitionSelects();
+      renderModuleGroups();
+      renderLocalizationControls();
+      renderWorkbookDrivenScreens();
+      renderScreenNavigation();
+      renderAdminPage();
+      renderAllWorks();
+      refreshQuestionLists();
+      applyLanguage();
+      await restoreAuthenticatedSession();
+    }
+
+    initializeApp();
   </script>
 </body>
 </html>

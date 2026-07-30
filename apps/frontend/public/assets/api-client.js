@@ -27,6 +27,12 @@ window.EffortApi = {
         return user;
       });
   },
+  me() {
+    return this.request("/api/me");
+  },
+  logout() {
+    sessionStorage.removeItem("effortAccessToken");
+  },
   register(payload) {
     return this.request("/api/register", { method: "POST", body: JSON.stringify(payload) });
   },
