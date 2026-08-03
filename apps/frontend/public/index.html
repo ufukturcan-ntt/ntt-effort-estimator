@@ -121,6 +121,10 @@
       grid-row: 1;
     }
 
+    .app.admin-mode aside .brand {
+      display: none;
+    }
+
     .app.admin-mode .content {
       grid-column: 2;
       grid-row: 1;
@@ -304,7 +308,37 @@
       gap: 10px;
       flex-wrap: wrap;
       justify-content: end;
+      position: relative;
     }
+
+    .user-menu-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.28);
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .user-menu {
+      position: absolute;
+      top: 48px;
+      right: 0;
+      width: 320px;
+      padding: 14px;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 18px 42px rgba(10,31,51,.22);
+      display: none;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .user-menu.open { display: grid; }
 
     .select, .search, .button {
       height: 38px;
@@ -1132,6 +1166,22 @@
     .admin-development-question-table th:nth-child(5) { width: 37%; }
     .admin-development-question-table th:nth-child(6) { width: 10%; }
 
+    .admin-development-question-table td,
+    .admin-development-question-table .admin-edit {
+      white-space: nowrap;
+    }
+
+    .admin-development-question-table .admin-edit {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admin-question-table .quick-actions {
+      display: inline-flex;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
     .admin-question-table .admin-edit {
       min-height: 24px;
       padding: 3px 4px;
@@ -1153,7 +1203,7 @@
 
     .admin-question-table .button {
       min-height: 24px;
-      width: 100%;
+      width: auto;
       padding: 3px 4px;
       font-size: 10px;
     }
@@ -2084,6 +2134,19 @@
         </div>
         <div class="actions">
           <input class="search" id="search" placeholder="Modül veya faz ara" />
+          <button class="user-menu-button" id="userMenuButton" type="button" title="Kullanıcı">U</button>
+          <div class="user-menu" id="userMenu">
+            <strong id="userMenuName">Kullanıcı</strong>
+            <div class="input-field">
+              <label for="currentAdminPassword">Mevcut şifre</label>
+              <input id="currentAdminPassword" type="password" autocomplete="current-password" />
+            </div>
+            <div class="input-field">
+              <label for="newAdminPassword">Yeni şifre (en az 12 karakter)</label>
+              <input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" />
+            </div>
+            <button class="button" id="changeAdminPasswordButton" type="button">Şifremi Değiştir</button>
+          </div>
         </div>
       </header>
 
@@ -2130,12 +2193,11 @@
           <nav class="admin-tree" aria-label="Admin menüsü">
             <button class="admin-tree-item active" data-admin-section="users" type="button" onclick="openAdminSection('users')"><span class="nav-icon">K</span><span>Kullanıcı Listesi</span><span class="nav-count">U</span></button>
             <button class="admin-tree-item" data-admin-section="approvals" type="button" onclick="openAdminSection('approvals')"><span class="nav-icon">O</span><span>Onay Ayarları</span><span class="nav-count">@</span></button>
-            <button class="admin-tree-item" data-admin-section="industries" type="button" onclick="openAdminSection('industries')"><span class="nav-icon">E</span><span>Endüstri</span><span class="nav-count">D</span></button>
-            <button class="admin-tree-item" data-admin-section="implementations" type="button" onclick="openAdminSection('implementations')"><span class="nav-icon">İ</span><span>İmplementasyon Türü</span><span class="nav-count">I</span></button>
-            <button class="admin-tree-item" data-admin-section="systems" type="button" onclick="openAdminSection('systems')"><span class="nav-icon">S</span><span>Sistem Türü</span><span class="nav-count">S</span></button>
+            <button class="admin-tree-item" data-admin-section="definitions" type="button" onclick="openAdminSection('definitions')"><span class="nav-icon">T</span><span>Temel Tanımlar</span><span class="nav-count">D</span></button>
             <button class="admin-tree-item" data-admin-section="modules" type="button" onclick="openAdminSection('modules')"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
             <button class="admin-tree-item" data-admin-section="question-options" type="button" onclick="openAdminSection('question-options')"><span class="nav-icon">S</span><span>Soru Alan Seçenekleri</span><span class="nav-count">SO</span></button>
             <button class="admin-tree-item" data-admin-section="scope" type="button" onclick="openAdminSection('scope')"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
+            <button class="admin-tree-item" data-admin-section="scope-impact" type="button" onclick="openAdminSection('scope-impact')"><span class="nav-icon">S</span><span>Kapsam Size Etkisi</span><span class="nav-count">SI</span></button>
             <button class="admin-tree-item" data-admin-section="development" type="button" onclick="openAdminSection('development')"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="library" type="button" onclick="openAdminSection('library')"><span class="nav-icon">K</span><span>Kütüphane Tanımları</span><span class="nav-count">KT</span></button>
             <button class="admin-tree-item" data-admin-section="restrictions" type="button" onclick="openAdminSection('restrictions')"><span class="nav-icon">R</span><span>Question Restrictions</span><span class="nav-count">R</span></button>
@@ -2580,28 +2642,24 @@
                     <label for="offerApproverEmail">Teklif onay adresi</label>
                     <input id="offerApproverEmail" type="email" autocomplete="off" />
                   </div>
-                  <div class="input-field">
-                    <label for="currentAdminPassword">Mevcut şifre</label>
-                    <input id="currentAdminPassword" type="password" autocomplete="current-password" />
-                  </div>
-                  <div class="input-field">
-                    <label for="newAdminPassword">Yeni şifre (en az 12 karakter)</label>
-                    <input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" />
-                  </div>
                 </div>
-                <button class="button" id="changeAdminPasswordButton" type="button">Şifremi Değiştir</button>
               </section>
-              <section class="panel admin-section" data-admin-panel="industries">
-                <div class="panel-head"><h3 class="panel-title">Endüstri Tanımları</h3><button class="button primary" data-admin-add-list="adminIndustryList" type="button">+ Endüstri</button></div>
-                <div class="definition-list" id="adminIndustryList"></div>
-              </section>
-              <section class="panel admin-section" data-admin-panel="implementations">
-                <div class="panel-head"><h3 class="panel-title">İmplementasyon Türleri</h3><button class="button primary" data-admin-add-list="adminImplementationList" type="button">+ İmplementasyon</button></div>
-                <div class="definition-list" id="adminImplementationList"></div>
-              </section>
-              <section class="panel admin-section" data-admin-panel="systems">
-                <div class="panel-head"><h3 class="panel-title">Sistem Türleri</h3><button class="button primary" data-admin-add-list="adminSystemList" type="button">+ Sistem</button></div>
-                <div class="definition-list" id="adminSystemList"></div>
+              <section class="panel admin-section" data-admin-panel="definitions">
+                <div class="panel-head"><h3 class="panel-title">Temel Tanımlar</h3><span class="pill">Endüstri / İmplementasyon / Sistem</span></div>
+                <div class="question-option-grid">
+                  <section>
+                    <div class="option-definition-head"><h4>Endüstri</h4><button class="button primary" data-admin-add-list="adminIndustryList" type="button">+ Endüstri</button></div>
+                    <div class="definition-list" id="adminIndustryList"></div>
+                  </section>
+                  <section>
+                    <div class="option-definition-head"><h4>İmplementasyon Türü</h4><button class="button primary" data-admin-add-list="adminImplementationList" type="button">+ İmplementasyon</button></div>
+                    <div class="definition-list" id="adminImplementationList"></div>
+                  </section>
+                  <section>
+                    <div class="option-definition-head"><h4>Sistem Türü</h4><button class="button primary" data-admin-add-list="adminSystemList" type="button">+ Sistem</button></div>
+                    <div class="definition-list" id="adminSystemList"></div>
+                  </section>
+                </div>
               </section>
               <section class="panel admin-section" data-admin-panel="modules">
                 <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleGroupButton" type="button">+ Grup</button></div>
@@ -2626,7 +2684,11 @@
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>Size Etki</th><th>Puan</th><th>Size Etki Tipi</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="scope-impact">
+                <div class="panel-head"><h3 class="panel-title">Kapsam Size Etkisi</h3><button class="button primary" data-admin-add-matrix="adminScopeImpactRows" type="button">+ Satır</button></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminScopeImpactHead"></thead><tbody id="adminScopeImpactRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
@@ -3649,11 +3711,13 @@
         countPlaceholder: "Adet",
         adminUsers: "Kullanıcı Listesi",
         adminApprovals: "Onay Ayarları",
+        adminDefinitions: "Temel Tanımlar",
         adminIndustries: "Endüstri",
         adminImplementations: "İmplementasyon Türü",
         adminSystems: "Sistem Türü",
         adminModules: "Modüller",
         adminScope: "Kapsam Soruları",
+        adminScopeImpact: "Kapsam Size Etkisi",
         adminDevelopment: "Geliştirme Soruları",
         adminRestrictions: "Question Restrictions",
         adminFixed: "Fixed Days",
@@ -3806,11 +3870,13 @@
         countPlaceholder: "Qty",
         adminUsers: "User List",
         adminApprovals: "Approval Settings",
+        adminDefinitions: "Base Definitions",
         adminIndustries: "Industries",
         adminImplementations: "Implementation Types",
         adminSystems: "System Types",
         adminModules: "Modules",
         adminScope: "Scope Questions",
+        adminScopeImpact: "Scope Size Impact",
         adminDevelopment: "Development Questions",
         adminRestrictions: "Question Restrictions",
         adminFixed: "Fixed Days",
@@ -4110,11 +4176,13 @@
       const labels = {
         users: "adminUsers",
         approvals: "adminApprovals",
+        definitions: "adminDefinitions",
         industries: "adminIndustries",
         implementations: "adminImplementations",
         systems: "adminSystems",
         modules: "adminModules",
         scope: "adminScope",
+        "scope-impact": "adminScopeImpact",
         development: "adminDevelopment",
         restrictions: "adminRestrictions",
         fixed: "adminFixed",
@@ -4952,6 +5020,54 @@
       return String(value || "").toLocaleLowerCase("tr-TR").includes("sayı");
     }
 
+    const scopeImpactHeaders = ["Endüstri", "No", "Kapsam Sorusu", "Size Etki", "Puan", "Size Etki Tipi"];
+
+    function defaultScopeImpactRows() {
+      return [
+        scopeImpactHeaders,
+        ...(window.scopeQuestions || []).map(item => [
+          "All",
+          item.no,
+          item.name,
+          (item.sizeImpact === false || item.sizeImpact === "Hayır") ? "Hayır" : (Number(item.score) > 0 ? "Evet" : "Hayır"),
+          Number(item.score) || "",
+          item.effortImpactType || (item.answerType === "number" ? "Katsayı" : "Sabit")
+        ])
+      ];
+    }
+
+    function normalizeScopeImpactRows(rows = window.adminSeedData?.scopeSizeImpacts) {
+      const source = Array.isArray(rows) && rows.length ? rows : defaultScopeImpactRows();
+      const headerIndex = source.findIndex(row => row.some(cell => String(cell || "").trim() === "Kapsam Sorusu"));
+      if (headerIndex < 0) return defaultScopeImpactRows();
+      const headers = source[headerIndex].map(cell => String(cell || "").trim());
+      const idx = label => headers.indexOf(label);
+      const normalized = source.slice(headerIndex + 1).map(row => [
+        row[idx("Endüstri")] || row[idx("Industry")] || "All",
+        row[idx("No")] || "",
+        row[idx("Kapsam Sorusu")] || row[idx("Scope Question")] || "",
+        row[idx("Size Etki")] || row[idx("Size Impact")] || "Hayır",
+        row[idx("Puan")] || row[idx("Score")] || "",
+        row[idx("Size Etki Tipi")] || row[idx("Size Impact Type")] || ""
+      ]).filter(row => row[2]);
+      return [scopeImpactHeaders, ...normalized];
+    }
+
+    function scopeImpactForQuestion(item, industryOverride = "") {
+      const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
+      const industry = industryOverride || document.getElementById("projectIndustry")?.value || "All";
+      const matches = rows.slice(1).filter(row => String(row[2] || "").trim() === item.name);
+      const row = matches.find(candidate => String(candidate[0] || "").trim() === industry)
+        || matches.find(candidate => String(candidate[0] || "").trim() === "All");
+      if (!row) return { sizeImpact: false, score: 0, effortImpactType: "" };
+      const sizeImpact = ["evet", "yes", "true"].includes(String(row[3] || "").trim().toLocaleLowerCase("tr-TR"));
+      return {
+        sizeImpact,
+        score: Number(String(row[4] || "").replace(",", ".")) || 0,
+        effortImpactType: row[5] || (item.answerType === "number" ? "Katsayı" : "Sabit")
+      };
+    }
+
     function questionImpactTypeCell(targetId, hasSizeImpact, variableTypeValue, effortImpactType, fieldOptions) {
       if (targetId !== "adminScopeRows") {
         return adminSelectCell(effortImpactType || "Sabit", optionValuesWithCurrent(fieldOptions.effortImpactTypes, effortImpactType || "Sabit"));
@@ -4968,6 +5084,7 @@
     function adminMatrixOptions(header) {
       const normalized = String(header || "").trim();
       if (normalized === "Variable Type") return { options: ["Kapsam", "Geliştirme"], multiple: false };
+      if (normalized === "Endüstri") return { options: ["All", ...adminDefinitionValues(0)], multiple: false };
       if (normalized === "Allowed Industries") return { options: ["All", ...adminDefinitionValues(0)], multiple: true };
       if (normalized === "Allowed Implementation Types") return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
       if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: false };
@@ -4978,6 +5095,8 @@
       if (normalized === "Kaynak Tipi") return { options: ["Değişken", "Modül"], multiple: false };
       if (normalized === "Kaynak") return { options: adminQuestionNames(), multiple: false };
       if (normalized === "Kapsam Sorusu") return { options: ["", ...(window.scopeQuestions || []).map(item => item.name)], multiple: false };
+      if (normalized === "Size Etki") return { options: ["Evet", "Hayır"], multiple: false };
+      if (normalized === "Size Etki Tipi") return { options: currentQuestionFieldOptions().effortImpactTypes, multiple: false };
       if (normalized === "Geliştirme Sorusu") return { options: ["", ...(window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name))], multiple: false };
       if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...sortedModuleNames()], multiple: false };
       if (["Modül", "Modul", "Module"].includes(normalized)) return { options: sortedModuleNames(), multiple: false };
@@ -5095,6 +5214,15 @@
       const defaultRow = bodyId === "adminRestrictionsRows" ? restrictionDefaultRow(headers) : headers.map(() => "");
       if (bodyId === "adminLibraryRows") defaultRow[headers.indexOf("ID")] = newLibraryId();
       if (bodyId === "adminVmpRows" && headers.some(isDateHeader)) defaultRow[headers.findIndex(isDateHeader)] = todayInputDate();
+      if (bodyId === "adminScopeImpactRows") {
+        const firstQuestion = (window.scopeQuestions || [])[0] || {};
+        defaultRow[headers.indexOf("Endüstri")] = "All";
+        defaultRow[headers.indexOf("No")] = firstQuestion.no || "";
+        defaultRow[headers.indexOf("Kapsam Sorusu")] = firstQuestion.name || "";
+        defaultRow[headers.indexOf("Size Etki")] = "Evet";
+        defaultRow[headers.indexOf("Puan")] = "";
+        defaultRow[headers.indexOf("Size Etki Tipi")] = "Sabit";
+      }
       const actionButtons = bodyId === "adminVmpRows"
         ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
         : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
@@ -5382,7 +5510,7 @@
         const groupValue = item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme");
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
         const effortImpactType = item.effortImpactType || "Sabit";
-        const actionButtons = `<button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`;
+        const actionButtons = `<div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div>`;
         if (targetId === "adminDevelopmentRows") {
           return `
         <tr>
@@ -5402,15 +5530,11 @@
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${editableCell(item.name)}
           ${editableCell(item.description)}
-          <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
-          <td><input class="admin-score-input" type="number" step="any" value="${Number(item.score) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
-          ${questionImpactTypeCell(targetId, hasSizeImpact, variableTypeValue, effortImpactType, fieldOptions)}
           <td>${actionButtons}</td>
         </tr>
       `;
       }).join("");
       bindAdminEditable(target);
-      if (targetId === "adminScopeRows") syncScopeImpactTypeCells(target);
     }
 
     function addAdminQuestion(targetId) {
@@ -5425,7 +5549,7 @@
           ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
           ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
           ${["Yeni geliştirme", "Açıklama"].map(editableCell).join("")}
-          <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+          <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
         </tr>`);
         bindAdminEditable(target);
         markAdminDirty();
@@ -5436,13 +5560,9 @@
         ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
         ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
-        <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox /></td>
-        <td><input class="admin-score-input" type="number" step="any" disabled /></td>
-        ${questionImpactTypeCell(targetId, false, "Evet/Hayır", "", fieldOptions)}
-        <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+        <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
-      syncScopeImpactTypeCells(target);
       markAdminDirty();
     }
 
@@ -5526,31 +5646,25 @@
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${editableCell(`${cells[3] || "Yeni geliştirme"} - Kopya`)}
           ${editableCell(cells[4] || "")}
-          <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+          <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
         </tr>`);
         bindAdminEditable(target);
         markAdminDirty();
         return;
       }
-      const cells = [...sourceRow.children].slice(0, 8).map(adminCellValue);
+      const cells = [...sourceRow.children].slice(0, 5).map(adminCellValue);
       const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const groupValue = cells[1] || "Kapsam";
       const variableTypeValue = cells[2] || "Evet/Hayır";
-      const hasSizeImpact = Boolean(cells[5]);
-      const effortImpactType = hasSizeImpact && isNumberVariableType(variableTypeValue) ? (cells[7] || "Katsayı") : (hasSizeImpact ? "Sabit" : "");
       target.insertAdjacentHTML("beforeend", `<tr>
         ${editableCell(nextNo)}
         ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
         ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
         ${editableCell(`${cells[3] || "Yeni soru"} - Kopya`)}
         ${editableCell(cells[4] || "")}
-        <td class="admin-check-cell"><input type="checkbox" data-admin-checkbox ${hasSizeImpact ? "checked" : ""} /></td>
-        <td><input class="admin-score-input" type="number" step="any" value="${Number(String(cells[6]).replace(",", ".")) || ""}" ${hasSizeImpact ? "" : "disabled"} /></td>
-        ${questionImpactTypeCell("adminScopeRows", hasSizeImpact, variableTypeValue, effortImpactType, fieldOptions)}
-        <td><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td>
+        <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
-      syncScopeImpactTypeCells(target);
       markAdminDirty();
     }
 
@@ -5604,22 +5718,17 @@
             active: true
           };
         }
-        const cells = [...row.children].slice(0, 8).map(adminCellValue);
+        const cells = [...row.children].slice(0, 5).map(adminCellValue);
         const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
-        const sizeImpact = Boolean(cells[5]);
-        let effortImpactType = cells[7];
-        if (targetId === "adminScopeRows") {
-          effortImpactType = !sizeImpact ? "" : (answerType === "yesno" ? "Sabit" : (effortImpactType || "Katsayı"));
-        }
         return {
           no: Number(cells[0]) || cells[0],
           group: cells[1],
           variableType: cells[2],
           name: cells[3],
           description: cells[4],
-          sizeImpact,
-          score: Number(String(cells[6]).replace(",", ".")) || 0,
-          effortImpactType,
+          sizeImpact: false,
+          score: 0,
+          effortImpactType: "",
           answerType,
           active: true
         };
@@ -5657,6 +5766,7 @@
           effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions")
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
+        scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
         fixedDays: window.adminSeedData.fixedDays,
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
         variableModulePhase: collectMatrixRows("adminVmpHead", "adminVmpRows"),
@@ -5732,6 +5842,7 @@
       if (config.libraryItems) window.adminSeedData.libraryItems = normalizeLibraryItems(config.libraryItems);
       if (config.scopeQuestions) window.scopeQuestions = config.scopeQuestions;
       if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
+      window.adminSeedData.scopeSizeImpacts = normalizeScopeImpactRows(config.scopeSizeImpacts || window.adminSeedData.scopeSizeImpacts);
       if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
       if (config.approvalSettings) {
         const userInput = document.getElementById("userApproverEmail");
@@ -5830,6 +5941,42 @@
       });
     }
 
+    function bindUserMenu() {
+      const menuButton = document.getElementById("userMenuButton");
+      const menu = document.getElementById("userMenu");
+      const passwordButton = document.getElementById("changeAdminPasswordButton");
+      if (menuButton && menu && !menuButton.dataset.bound) {
+        menuButton.dataset.bound = "true";
+        menuButton.addEventListener("click", event => {
+          event.stopPropagation();
+          menu.classList.toggle("open");
+        });
+        document.addEventListener("click", event => {
+          if (!menu.contains(event.target) && event.target !== menuButton) menu.classList.remove("open");
+        });
+      }
+      if (passwordButton && !passwordButton.dataset.bound) {
+        passwordButton.dataset.bound = "true";
+        passwordButton.addEventListener("click", async () => {
+          const currentPassword = document.getElementById("currentAdminPassword")?.value || "";
+          const newPassword = document.getElementById("newAdminPassword")?.value || "";
+          if (newPassword.length < 12) return alert("Yeni şifre en az 12 karakter olmalı.");
+          passwordButton.disabled = true;
+          try {
+            await window.EffortApi.changePassword(currentPassword, newPassword);
+            document.getElementById("currentAdminPassword").value = "";
+            document.getElementById("newAdminPassword").value = "";
+            menu?.classList.remove("open");
+            alert("Şifreniz değiştirildi.");
+          } catch (error) {
+            alert(`Şifre değiştirilemedi: ${error.message}`);
+          } finally {
+            passwordButton.disabled = false;
+          }
+        });
+      }
+    }
+
     function renderAdminPageIfNeeded(force = false) {
       const isAdminOpen = document.getElementById("admin")?.classList.contains("active");
       if (!isAdminOpen && !force) return;
@@ -5851,6 +5998,7 @@
       renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
+      renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
       renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", data.restrictions || []);
@@ -5876,26 +6024,6 @@
       if (addGroupButton && !addGroupButton.dataset.bound) {
         addGroupButton.dataset.bound = "true";
         addGroupButton.addEventListener("click", addAdminModuleGroup);
-      }
-      const passwordButton = document.getElementById("changeAdminPasswordButton");
-      if (passwordButton && !passwordButton.dataset.bound) {
-        passwordButton.dataset.bound = "true";
-        passwordButton.addEventListener("click", async () => {
-          const currentPassword = document.getElementById("currentAdminPassword")?.value || "";
-          const newPassword = document.getElementById("newAdminPassword")?.value || "";
-          if (newPassword.length < 12) return alert("Yeni şifre en az 12 karakter olmalı.");
-          passwordButton.disabled = true;
-          try {
-            await window.EffortApi.changePassword(currentPassword, newPassword);
-            document.getElementById("currentAdminPassword").value = "";
-            document.getElementById("newAdminPassword").value = "";
-            alert("Şifreniz değiştirildi.");
-          } catch (error) {
-            alert(`Şifre değiştirilemedi: ${error.message}`);
-          } finally {
-            passwordButton.disabled = false;
-          }
-        });
       }
       ["userApproverEmail", "offerApproverEmail"].forEach(id => {
         const input = document.getElementById(id);
@@ -5957,7 +6085,7 @@
     function offerScopeScore(offer) {
       const answers = offerJson(offer.scope_answers);
       return (window.scopeQuestions || []).reduce((total, item) => {
-        return total + answerImpact(item, answers[String(item.no)]);
+        return total + answerImpact(item, answers[String(item.no)], true, offer?.industry || "");
       }, 0);
     }
 
@@ -6687,17 +6815,18 @@
         && matchesAllowed(restriction?.systemTypes || item.systemTypes, filters.system);
     }
 
-    function answerImpact(item, value) {
+    function answerImpact(item, value, useScopeImpactMaintenance = false, industry = "") {
       if (!value || value === "Seçiniz" || value === "Hayır") return 0;
-      if (item.sizeImpact === false || item.sizeImpact === "Hayır") return 0;
-      const score = Number(item.score) || 0;
+      const impact = useScopeImpactMaintenance ? scopeImpactForQuestion(item, industry) : item;
+      if (impact.sizeImpact === false || impact.sizeImpact === "Hayır") return 0;
+      const score = Number(impact.score) || 0;
       if (item.answerType === "number") return Math.max(Number(value) || 0, 0) * score;
       return value === "Evet" ? score : 0;
     }
 
     function currentScopeScore() {
       return (window.scopeQuestions || []).reduce((total, item) => {
-        return total + answerImpact(item, questionAnswers.scopeQuestions[String(item.no)]);
+        return total + answerImpact(item, questionAnswers.scopeQuestions[String(item.no)], true);
       }, 0);
     }
 
@@ -7351,6 +7480,11 @@
       applyUserPermissions();
       document.getElementById("loginShell")?.classList.add("is-hidden");
       document.getElementById("appShell")?.classList.remove("is-locked");
+      const name = currentUser?.display_name || currentUser?.email || "Kullanıcı";
+      const menuName = document.getElementById("userMenuName");
+      if (menuName) menuName.textContent = name;
+      const menuButton = document.getElementById("userMenuButton");
+      if (menuButton) menuButton.textContent = String(name).trim().slice(0, 1).toLocaleUpperCase("tr-TR") || "U";
     }
 
     function showLoginApp() {
@@ -7589,6 +7723,7 @@
       const hasStoredSession = Boolean(sessionStorage.getItem("effortAccessToken"));
       primeStoredScreenBeforeRestore();
       bindAdminNavigation();
+      bindUserMenu();
       renderRows("moduleRows", modules.slice(0, 12));
       renderPhases();
       refreshProjectDefinitionSelects();
