@@ -7322,6 +7322,28 @@
       document.getElementById("appShell")?.classList.remove("is-locked");
     }
 
+    function showLoginApp() {
+      document.getElementById("loginShell")?.classList.remove("is-hidden");
+      const app = document.getElementById("appShell");
+      app?.classList.add("is-locked");
+      app?.classList.remove("admin-mode", "work-open");
+      document.querySelectorAll(".screen").forEach(screen => screen.classList.remove("active"));
+      document.getElementById("overview")?.classList.add("active");
+    }
+
+    function primeStoredScreenBeforeRestore() {
+      if (!sessionStorage.getItem("effortAccessToken")) return;
+      const screenId = storedScreenId();
+      const app = document.getElementById("appShell");
+      document.getElementById("loginShell")?.classList.add("is-hidden");
+      app?.classList.remove("is-locked");
+      app?.classList.toggle("admin-mode", screenId === "admin");
+      app?.classList.toggle("work-open", offerScreens.has(screenId));
+      document.querySelectorAll(".screen").forEach(screen => screen.classList.remove("active"));
+      document.getElementById(screenId)?.classList.add("active");
+      updateWorkSubtitle();
+    }
+
     function storedScreenId() {
       const stored = sessionStorage.getItem(lastScreenKey) || "overview";
       return document.getElementById(stored) ? stored : "overview";
@@ -7363,6 +7385,7 @@
         currentUser = null;
         window.EffortApi.logout?.();
         sessionStorage.removeItem(lastOfferKey);
+        showLoginApp();
         return false;
       }
     }
@@ -7540,6 +7563,7 @@
     });
 
     async function initializeApp() {
+      primeStoredScreenBeforeRestore();
       bindAdminNavigation();
       renderRows("moduleRows", modules.slice(0, 12));
       renderPhases();
