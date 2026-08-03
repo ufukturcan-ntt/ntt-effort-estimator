@@ -2201,6 +2201,7 @@
             <button class="admin-tree-item" data-admin-section="definitions" type="button" onclick="openAdminSection('definitions')"><span class="nav-icon">T</span><span>Temel Tanımlar</span><span class="nav-count">D</span></button>
             <button class="admin-tree-item" data-admin-section="modules" type="button" onclick="openAdminSection('modules')"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
             <button class="admin-tree-item" data-admin-section="scope" type="button" onclick="openAdminSection('scope')"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
+            <button class="admin-tree-item" data-admin-section="size-ranges" type="button" onclick="openAdminSection('size-ranges')"><span class="nav-icon">Z</span><span>Size Aralıkları</span><span class="nav-count">SZ</span></button>
             <button class="admin-tree-item" data-admin-section="scope-impact" type="button" onclick="openAdminSection('scope-impact')"><span class="nav-icon">S</span><span>Kapsam Size Etkisi</span><span class="nav-count">SI</span></button>
             <button class="admin-tree-item" data-admin-section="development" type="button" onclick="openAdminSection('development')"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="library" type="button" onclick="openAdminSection('library')"><span class="nav-icon">K</span><span>Kütüphane Tanımları</span><span class="nav-count">KT</span></button>
@@ -2684,6 +2685,10 @@
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
                 <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="size-ranges">
+                <div class="panel-head"><h3 class="panel-title">Size Aralıkları</h3><button class="button primary" data-admin-add-matrix="adminSizeRangeRows" type="button">+ Satır</button></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminSizeRangeHead"></thead><tbody id="adminSizeRangeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope-impact">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Size Etkisi</h3><button class="button primary" data-admin-add-matrix="adminScopeImpactRows" type="button">+ Satır</button></div>
@@ -3716,6 +3721,7 @@
         adminSystems: "Sistem Türü",
         adminModules: "Modüller",
         adminScope: "Kapsam Soruları",
+        adminSizeRanges: "Size Aralıkları",
         adminScopeImpact: "Kapsam Size Etkisi",
         adminDevelopment: "Geliştirme Soruları",
         adminRestrictions: "Question Restrictions",
@@ -3875,6 +3881,7 @@
         adminSystems: "System Types",
         adminModules: "Modules",
         adminScope: "Scope Questions",
+        adminSizeRanges: "Size Ranges",
         adminScopeImpact: "Scope Size Impact",
         adminDevelopment: "Development Questions",
         adminRestrictions: "Question Restrictions",
@@ -4180,6 +4187,7 @@
         systems: "adminSystems",
         modules: "adminModules",
         scope: "adminScope",
+        "size-ranges": "adminSizeRanges",
         "scope-impact": "adminScopeImpact",
         development: "adminDevelopment",
         restrictions: "adminRestrictions",
@@ -5018,16 +5026,48 @@
       return String(value || "").toLocaleLowerCase("tr-TR").includes("sayı");
     }
 
-    const scopeImpactHeaders = ["Implementation Type", "No", "Kapsam Sorusu", "Puan", "Size Etki Tipi"];
+    const sizeRangeHeaders = ["Endüstri", "Implementation Type", "System Type", "Size", "Min", "Max", "Multiplier"];
+
+    function defaultSizeRangeRows() {
+      return [
+        sizeRangeHeaders,
+        ["All", "All", "All", "SMALL", 0, 40, 1],
+        ["All", "All", "All", "MEDIUM", 41, 70, 1.25],
+        ["All", "All", "All", "LARGE", 71, 100, 1.5],
+        ["All", "All", "All", "X-LARGE", 101, "", 1.75]
+      ];
+    }
+
+    function normalizeSizeRangeRows(rows = window.adminSeedData?.sizeRanges) {
+      const source = Array.isArray(rows) && rows.length ? rows : defaultSizeRangeRows();
+      const headerIndex = source.findIndex(row => row.some(cell => String(cell || "").trim() === "Size"));
+      if (headerIndex < 0) return defaultSizeRangeRows();
+      const headers = source[headerIndex].map(cell => String(cell || "").trim());
+      const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
+      const normalized = source.slice(headerIndex + 1).map(row => [
+        row[idx("Endüstri", "Industry")] || "All",
+        row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
+        row[idx("System Type", "Sistem Türü")] || "All",
+        row[idx("Size")] || "",
+        row[idx("Min")] ?? "",
+        row[idx("Max")] ?? "",
+        row[idx("Multiplier", "Çarpan")] || ""
+      ]).filter(row => row[3]);
+      return [sizeRangeHeaders, ...normalized];
+    }
+
+    const scopeImpactHeaders = ["Endüstri", "Implementation Type", "No", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
 
     function defaultScopeImpactRows() {
       return [
         scopeImpactHeaders,
         ...(window.scopeQuestions || []).filter(item => Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır").map(item => [
           "All",
+          "All",
           item.no,
           item.name,
           Number(item.score) || "",
+          1,
           item.effortImpactType || (item.answerType === "number" ? "Katsayı" : "Sabit")
         ])
       ];
@@ -5038,32 +5078,39 @@
       const headerIndex = source.findIndex(row => row.some(cell => String(cell || "").trim() === "Kapsam Sorusu"));
       if (headerIndex < 0) return defaultScopeImpactRows();
       const headers = source[headerIndex].map(cell => String(cell || "").trim());
-      const idx = label => headers.indexOf(label);
+      const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
       const normalized = source.slice(headerIndex + 1).map(row => {
-        const oldSizeImpact = row[idx("Size Etki")] || row[idx("Size Impact")] || "";
+        const oldSizeImpact = row[idx("Size Etki", "Size Impact")] || "";
         if (["hayır", "no", "false"].includes(String(oldSizeImpact).trim().toLocaleLowerCase("tr-TR"))) return null;
         return [
-          row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || row[idx("Endüstri")] || row[idx("Industry")] || "All",
+          row[idx("Endüstri", "Industry")] || "All",
+          row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
           row[idx("No")] || "",
-          row[idx("Kapsam Sorusu")] || row[idx("Scope Question")] || "",
-          row[idx("Puan")] || row[idx("Score")] || "",
-          row[idx("Size Etki Tipi")] || row[idx("Size Impact Type")] || ""
+          row[idx("Kapsam Sorusu", "Scope Question")] || "",
+          row[idx("Puan", "Score")] || "",
+          row[idx("Katsayı", "Coefficient")] || 1,
+          row[idx("Size Etki Tipi", "Size Impact Type")] || ""
         ];
-      }).filter(row => row && row[2] && Number(String(row[3] || "").replace(",", ".")) > 0);
+      }).filter(row => row && row[3] && Number(String(row[4] || "").replace(",", ".")) > 0);
       return [scopeImpactHeaders, ...normalized];
     }
 
-    function scopeImpactForQuestion(item, implementationOverride = "") {
+    function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "") {
       const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
       const implementation = implementationOverride || document.getElementById("projectImplementation")?.value || "All";
-      const matches = rows.slice(1).filter(row => String(row[2] || "").trim() === item.name);
-      const row = matches.find(candidate => String(candidate[0] || "").trim() === implementation)
-        || matches.find(candidate => String(candidate[0] || "").trim() === "All");
+      const industry = industryOverride || document.getElementById("projectIndustry")?.value || "All";
+      const matches = rows.slice(1).filter(row => String(row[3] || "").trim() === item.name)
+        .filter(row => ["All", industry].includes(String(row[0] || "").trim()))
+        .filter(row => ["All", implementation].includes(String(row[1] || "").trim()));
+      const row = matches
+        .sort((a, b) => ((b[0] !== "All") + (b[1] !== "All")) - ((a[0] !== "All") + (a[1] !== "All")))[0];
       if (!row) return { sizeImpact: false, score: 0, effortImpactType: "" };
+      const score = Number(String(row[4] || "").replace(",", ".")) || 0;
+      const coefficient = Number(String(row[5] || 1).replace(",", ".")) || 1;
       return {
         sizeImpact: true,
-        score: Number(String(row[3] || "").replace(",", ".")) || 0,
-        effortImpactType: row[4] || (item.answerType === "number" ? "Katsayı" : "Sabit")
+        score: score * coefficient,
+        effortImpactType: row[6] || (item.answerType === "number" ? "Katsayı" : "Sabit")
       };
     }
 
@@ -5212,12 +5259,23 @@
       const defaultRow = bodyId === "adminRestrictionsRows" ? restrictionDefaultRow(headers) : headers.map(() => "");
       if (bodyId === "adminLibraryRows") defaultRow[headers.indexOf("ID")] = newLibraryId();
       if (bodyId === "adminVmpRows" && headers.some(isDateHeader)) defaultRow[headers.findIndex(isDateHeader)] = todayInputDate();
+      if (bodyId === "adminSizeRangeRows") {
+        defaultRow[headers.indexOf("Endüstri")] = "All";
+        defaultRow[headers.indexOf("Implementation Type")] = "All";
+        defaultRow[headers.indexOf("System Type")] = "All";
+        defaultRow[headers.indexOf("Size")] = "SMALL";
+        defaultRow[headers.indexOf("Min")] = 0;
+        defaultRow[headers.indexOf("Max")] = 40;
+        defaultRow[headers.indexOf("Multiplier")] = 1;
+      }
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
+        defaultRow[headers.indexOf("Endüstri")] = "All";
         defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("No")] = firstQuestion.no || "";
         defaultRow[headers.indexOf("Kapsam Sorusu")] = firstQuestion.name || "";
         defaultRow[headers.indexOf("Puan")] = "";
+        defaultRow[headers.indexOf("Katsayı")] = 1;
         defaultRow[headers.indexOf("Size Etki Tipi")] = "Sabit";
       }
       const actionButtons = bodyId === "adminVmpRows"
@@ -5763,6 +5821,7 @@
           effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions")
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
+        sizeRanges: collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"),
         scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
         fixedDays: window.adminSeedData.fixedDays,
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
@@ -5839,6 +5898,7 @@
       if (config.libraryItems) window.adminSeedData.libraryItems = normalizeLibraryItems(config.libraryItems);
       if (config.scopeQuestions) window.scopeQuestions = config.scopeQuestions;
       if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
+      window.adminSeedData.sizeRanges = normalizeSizeRangeRows(config.sizeRanges || window.adminSeedData.sizeRanges);
       window.adminSeedData.scopeSizeImpacts = normalizeScopeImpactRows(config.scopeSizeImpacts || window.adminSeedData.scopeSizeImpacts);
       if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
       if (config.approvalSettings) {
@@ -6017,6 +6077,7 @@
       renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
+      renderEditableMatrix("adminSizeRangeHead", "adminSizeRangeRows", normalizeSizeRangeRows(data.sizeRanges));
       renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
@@ -6103,8 +6164,11 @@
 
     function offerScopeScore(offer) {
       const answers = offerJson(offer.scope_answers);
+      const definition = offerJson(offer.project_definition);
+      const implementation = offer.implementation_type || definition.implementation || "";
+      const industry = offer.industry || definition.industry || "";
       return (window.scopeQuestions || []).reduce((total, item) => {
-        return total + answerImpact(item, answers[String(item.no)], true, offer?.implementation_type || "");
+        return total + answerImpact(item, answers[String(item.no)], true, implementation, industry);
       }, 0);
     }
 
@@ -6120,7 +6184,8 @@
     function projectEffortRowsForOffer(offer) {
       const implementation = offer.implementation_type || offerJson(offer.project_definition).implementation || "Conversion";
       const systemType = offer.system_type || offerJson(offer.project_definition).system || "All";
-      const sizeKey = projectSizeFromScore(offerScopeScore(offer)).fixedKey;
+      const industry = offer.industry || offerJson(offer.project_definition).industry || "All";
+      const sizeKey = projectSizeFromScore(offerScopeScore(offer), { industry, implementation, system: systemType }).fixedKey;
       const fixedRows = fixedRowsForSelection(implementation, systemType, sizeKey);
       const sizeRow = {};
       const support = offerJson(offer.hypercare_inputs);
@@ -6253,7 +6318,11 @@
       const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
       const localizationRows = offerLocalizationRows(offer, moduleNames);
       const scopeScore = offerScopeScore(offer);
-      const size = projectSizeFromScore(scopeScore);
+      const size = projectSizeFromScore(scopeScore, {
+        industry: offer.industry || definition.industry || "All",
+        implementation: offer.implementation_type || definition.implementation || "All",
+        system: offer.system_type || definition.system || "All"
+      });
       const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values) + (Number(row.fixedEffort) || 0), 0);
       const hypercareTotal = projectRows.reduce((sum, row) => sum + (Number(row.hypercare) || 0), 0);
       const goliveTotal = projectRows.reduce((sum, row) => sum + (Number(row.golive) || 0), 0);
@@ -6834,9 +6903,9 @@
         && matchesAllowed(restriction?.systemTypes || item.systemTypes, filters.system);
     }
 
-    function answerImpact(item, value, useScopeImpactMaintenance = false, industry = "") {
+    function answerImpact(item, value, useScopeImpactMaintenance = false, implementation = "", industry = "") {
       if (!value || value === "Seçiniz" || value === "Hayır") return 0;
-      const impact = useScopeImpactMaintenance ? scopeImpactForQuestion(item, industry) : item;
+      const impact = useScopeImpactMaintenance ? scopeImpactForQuestion(item, implementation, industry) : item;
       if (impact.sizeImpact === false || impact.sizeImpact === "Hayır") return 0;
       const score = Number(impact.score) || 0;
       if (item.answerType === "number") return Math.max(Number(value) || 0, 0) * score;
@@ -6849,7 +6918,83 @@
       }, 0);
     }
 
-    function projectSizeFromScore(score) {
+    function currentSizeRangeFilters() {
+      return {
+        industry: document.getElementById("projectIndustry")?.value || "All",
+        implementation: document.getElementById("projectImplementation")?.value || "All",
+        system: document.getElementById("projectSystem")?.value || "All"
+      };
+    }
+
+    function normalizeSizeKey(value) {
+      const raw = String(value || "").trim().toUpperCase();
+      if (["S", "SMALL"].includes(raw)) return "SMALL";
+      if (["M", "MEDIUM"].includes(raw)) return "MEDIUM";
+      if (["L", "LARGE"].includes(raw)) return "LARGE";
+      if (["XL", "X-LARGE", "XLARGE", "X LARGE"].includes(raw)) return "X-LARGE";
+      return raw || "SMALL";
+    }
+
+    function sizeLabelForKey(fixedKey) {
+      const labels = {
+        SMALL: { code: "S", label: "Small (S)" },
+        MEDIUM: { code: "M", label: "Medium (M)" },
+        LARGE: { code: "L", label: "Large (L)" },
+        "X-LARGE": { code: "XL", label: "X-Large (XL)" }
+      };
+      return labels[fixedKey] || { code: fixedKey, label: fixedKey };
+    }
+
+    function matchesSizeRangeDimension(rowValue, selectedValue) {
+      const value = String(rowValue || "All").trim();
+      return value === "All" || value === String(selectedValue || "All").trim();
+    }
+
+    function sizeRangeSpecificity(row) {
+      return [row[0], row[1], row[2]].filter(value => String(value || "All").trim() !== "All").length;
+    }
+
+    function sizeRangeDefinitions(filters = currentSizeRangeFilters()) {
+      const selected = {
+        industry: filters.industry || "All",
+        implementation: filters.implementation || "All",
+        system: filters.system || "All"
+      };
+      const rows = normalizeSizeRangeRows(window.adminSeedData?.sizeRanges).slice(1)
+        .filter(row => matchesSizeRangeDimension(row[0], selected.industry))
+        .filter(row => matchesSizeRangeDimension(row[1], selected.implementation))
+        .filter(row => matchesSizeRangeDimension(row[2], selected.system))
+        .sort((a, b) => sizeRangeSpecificity(b) - sizeRangeSpecificity(a));
+      const bySize = new Map();
+      rows.forEach(row => {
+        const fixedKey = normalizeSizeKey(row[3]);
+        if (!bySize.has(fixedKey)) bySize.set(fixedKey, row);
+      });
+      return [...bySize.values()];
+    }
+
+    function projectSizeFromScore(score, filters = currentSizeRangeFilters()) {
+      const ranges = sizeRangeDefinitions(filters);
+      const matched = ranges.find(row => {
+        const min = Number(String(row[4] || 0).replace(",", ".")) || 0;
+        const maxText = String(row[5] ?? "").trim();
+        const max = maxText === "" ? Infinity : Number(maxText.replace(",", "."));
+        return score >= min && score <= max;
+      });
+      if (matched) {
+        const fixedKey = normalizeSizeKey(matched[3]);
+        const label = sizeLabelForKey(fixedKey);
+        const min = Number(String(matched[4] || 0).replace(",", ".")) || 0;
+        const maxText = String(matched[5] ?? "").trim();
+        const multiplier = Number(String(matched[6] || 1).replace(",", ".")) || 1;
+        return {
+          code: label.code,
+          fixedKey,
+          label: label.label,
+          hint: `${label.label} eşiği: ${min}-${maxText || "+"}`,
+          multiplier
+        };
+      }
       if (score <= 40) return { code: "S", fixedKey: "SMALL", label: "Small (S)", hint: "Small eşiği: 0-40", multiplier: 1 };
       if (score <= 70) return { code: "M", fixedKey: "MEDIUM", label: "Medium (M)", hint: "Medium eşiği: 41-70", multiplier: 1.25 };
       if (score <= 100) return { code: "L", fixedKey: "LARGE", label: "Large (L)", hint: "Large eşiği: 71-100", multiplier: 1.5 };
