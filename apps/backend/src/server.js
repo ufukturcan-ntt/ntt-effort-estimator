@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import express from "express";
@@ -16,6 +16,7 @@ const sessionSecret = process.env.SESSION_SECRET || process.env.ADMIN_APPROVAL_T
 const deeplApiKey = process.env.DEEPL_API_KEY || "";
 const deeplApiUrl = (process.env.DEEPL_API_URL || "https://api-free.deepl.com").replace(/\/$/, "");
 const translationCache = new Map();
+const protectedAdminEmail = "ufuk.turcan@nttdata.com";
 
 app.use(cors({ origin: frontendOrigin === "*" ? true : frontendOrigin }));
 app.use(express.json({ limit: "5mb" }));
@@ -370,8 +371,10 @@ app.put("/api/admin/users/:id/role", requireAuth, requireAdmin, async (req, res,
   try {
     const role = String(req.body?.role || "").toUpperCase();
     if (!["USER", "ADMIN"].includes(role)) return res.status(400).json({ error: "Role must be USER or ADMIN" });
-    if (req.params.id === req.user.id && role !== "ADMIN") {
-      return res.status(409).json({ error: "Kendi Admin rolünüzü kaldıramazsınız" });
+    const target = await query(`select email from app_user where id = $1`, [req.params.id]);
+    if (!target.rowCount) return res.status(404).json({ error: "User not found" });
+    if (normalizeEmail(target.rows[0].email) === protectedAdminEmail) {
+      return res.status(409).json({ error: "Bu kullanıcı üzerinde işlem yapılamaz" });
     }
     const result = await query(
       `update app_user
@@ -381,13 +384,11 @@ app.put("/api/admin/users/:id/role", requireAuth, requireAdmin, async (req, res,
        returning id, email, display_name, role, is_admin, status, created_at, approved_at`,
       [req.params.id, role]
     );
-    if (!result.rowCount) return res.status(404).json({ error: "User not found" });
     res.json(result.rows[0]);
   } catch (error) {
     next(error);
   }
 });
-
 app.get("/api/admin/users/pending", requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const result = await query(
@@ -404,6 +405,11 @@ app.get("/api/admin/users/pending", requireAuth, requireAdmin, async (req, res, 
 
 app.post("/api/admin/users/:id/approve", requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const target = await query(`select email from app_user where id = $1`, [req.params.id]);
+    if (!target.rowCount) return res.status(404).json({ error: "User not found" });
+    if (normalizeEmail(target.rows[0].email) === protectedAdminEmail) {
+      return res.status(409).json({ error: "Bu kullanıcı üzerinde işlem yapılamaz" });
+    }
     const result = await query(
       `update app_user
        set status = 'APPROVED', approved_by = $2, approved_at = now()
@@ -411,15 +417,18 @@ app.post("/api/admin/users/:id/approve", requireAuth, requireAdmin, async (req, 
        returning id, email, display_name, role, is_admin, status`,
       [req.params.id, req.user.id]
     );
-    if (!result.rowCount) return res.status(404).json({ error: "User not found" });
     res.json(result.rows[0]);
   } catch (error) {
     next(error);
   }
 });
-
 app.get("/api/admin/users/:id/approve", requireApprovalToken, async (req, res, next) => {
   try {
+    const target = await query(`select email from app_user where id = $1`, [req.params.id]);
+    if (!target.rowCount) return res.status(404).send("User not found");
+    if (normalizeEmail(target.rows[0].email) === protectedAdminEmail) {
+      return res.status(409).send("Bu kullanıcı üzerinde işlem yapılamaz");
+    }
     const result = await query(
       `update app_user
        set status = 'APPROVED', approved_at = now()
@@ -427,7 +436,6 @@ app.get("/api/admin/users/:id/approve", requireApprovalToken, async (req, res, n
        returning email, display_name, status`,
       [req.params.id]
     );
-    if (!result.rowCount) return res.status(404).send("User not found");
     res.send(`Approved: ${result.rows[0].email}`);
   } catch (error) {
     next(error);
@@ -877,3 +885,4 @@ ensureDatabase()
     console.error("Database initialization failed", error);
     process.exit(1);
   });
+

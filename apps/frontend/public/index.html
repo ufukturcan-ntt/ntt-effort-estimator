@@ -996,16 +996,16 @@
     #adminSystemList .definition-row,
     .admin-module-card {
       gap: 6px;
-      padding: 6px;
+      padding: 4px;
     }
 
     #adminIndustryList .admin-edit,
     #adminImplementationList .admin-edit,
     #adminSystemList .admin-edit,
     .admin-module-card .admin-edit {
-      min-height: 30px;
-      padding: 4px 7px;
-      font-size: 12px;
+      min-height: 24px;
+      padding: 3px 6px;
+      font-size: 11px;
     }
 
     .admin-edit {
@@ -1026,10 +1026,10 @@
     }
 
     .admin-module-board {
-      padding: 18px;
+      padding: 10px;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
+      gap: 10px;
     }
 
     .admin-module-group {
@@ -2137,15 +2137,21 @@
           <button class="user-menu-button" id="userMenuButton" type="button" title="Kullanıcı">U</button>
           <div class="user-menu" id="userMenu">
             <strong id="userMenuName">Kullanıcı</strong>
-            <div class="input-field">
-              <label for="currentAdminPassword">Mevcut şifre</label>
-              <input id="currentAdminPassword" type="password" autocomplete="current-password" />
+            <div class="quick-actions">
+              <button class="button" id="togglePasswordPanelButton" type="button">Şifre Değiştir</button>
+              <button class="button danger" id="logoutButton" type="button">Çıkış Yap</button>
             </div>
-            <div class="input-field">
-              <label for="newAdminPassword">Yeni şifre (en az 12 karakter)</label>
-              <input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" />
+            <div class="password-panel" id="passwordPanel" hidden>
+              <div class="input-field">
+                <label for="currentAdminPassword">Mevcut şifre</label>
+                <input id="currentAdminPassword" type="password" autocomplete="current-password" />
+              </div>
+              <div class="input-field">
+                <label for="newAdminPassword">Yeni şifre (en az 12 karakter)</label>
+                <input id="newAdminPassword" type="password" minlength="12" autocomplete="new-password" />
+              </div>
+              <button class="button" id="changeAdminPasswordButton" type="button">Kaydet</button>
             </div>
-            <button class="button" id="changeAdminPasswordButton" type="button">Şifremi Değiştir</button>
           </div>
         </div>
       </header>
@@ -2191,11 +2197,9 @@
           </nav>
 
           <nav class="admin-tree" aria-label="Admin menüsü">
-            <button class="admin-tree-item active" data-admin-section="users" type="button" onclick="openAdminSection('users')"><span class="nav-icon">K</span><span>Kullanıcı Listesi</span><span class="nav-count">U</span></button>
-            <button class="admin-tree-item" data-admin-section="approvals" type="button" onclick="openAdminSection('approvals')"><span class="nav-icon">O</span><span>Onay Ayarları</span><span class="nav-count">@</span></button>
+            <button class="admin-tree-item active" data-admin-section="users" type="button" onclick="openAdminSection('users')"><span class="nav-icon">K</span><span>Kullanıcı ve Onay</span><span class="nav-count">U</span></button>
             <button class="admin-tree-item" data-admin-section="definitions" type="button" onclick="openAdminSection('definitions')"><span class="nav-icon">T</span><span>Temel Tanımlar</span><span class="nav-count">D</span></button>
             <button class="admin-tree-item" data-admin-section="modules" type="button" onclick="openAdminSection('modules')"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
-            <button class="admin-tree-item" data-admin-section="question-options" type="button" onclick="openAdminSection('question-options')"><span class="nav-icon">S</span><span>Soru Alan Seçenekleri</span><span class="nav-count">SO</span></button>
             <button class="admin-tree-item" data-admin-section="scope" type="button" onclick="openAdminSection('scope')"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="scope-impact" type="button" onclick="openAdminSection('scope-impact')"><span class="nav-icon">S</span><span>Kapsam Size Etkisi</span><span class="nav-count">SI</span></button>
             <button class="admin-tree-item" data-admin-section="development" type="button" onclick="openAdminSection('development')"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
@@ -2629,11 +2633,7 @@
             <div class="admin-content">
               <section class="panel admin-section active" data-admin-panel="users">
                 <div class="panel-head"><h3 class="panel-title">Kullanıcı Listesi</h3><span class="pill"><span id="adminUserCount">0</span> kullanıcı</span></div>
-                <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Durum</th><th>Rol</th><th>Talep Tarihi</th><th>Onay Tarihi</th><th>İşlem</th></tr></thead><tbody id="adminUsersRows"></tbody></table></div>
-              </section>
-              <section class="panel admin-section" data-admin-panel="approvals">
-                <div class="panel-head"><h3 class="panel-title">Onay Ayarları</h3><span class="pill">E-posta</span></div>
-                <div class="form-grid">
+                <div class="form-grid" style="margin-bottom:12px">
                   <div class="input-field">
                     <label for="userApproverEmail">Kullanıcı erişim onay adresi</label>
                     <input id="userApproverEmail" type="email" autocomplete="off" />
@@ -2643,6 +2643,7 @@
                     <input id="offerApproverEmail" type="email" autocomplete="off" />
                   </div>
                 </div>
+                <div class="list-table"><table><thead><tr><th>Email</th><th>Ad Soyad</th><th>Durum</th><th>Rol</th><th>Talep Tarihi</th><th>Onay Tarihi</th><th>İşlem</th></tr></thead><tbody id="adminUsersRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="definitions">
                 <div class="panel-head"><h3 class="panel-title">Temel Tanımlar</h3><span class="pill">Endüstri / İmplementasyon / Sistem</span></div>
@@ -2660,13 +2661,7 @@
                     <div class="definition-list" id="adminSystemList"></div>
                   </section>
                 </div>
-              </section>
-              <section class="panel admin-section" data-admin-panel="modules">
-                <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleGroupButton" type="button">+ Grup</button></div>
-                <div class="admin-module-board" id="adminModuleBoard"></div>
-              </section>
-              <section class="panel admin-section" data-admin-panel="question-options">
-                <div class="panel-head"><h3 class="panel-title">Soru Alan Seçenekleri</h3><span class="pill">Select tanımları</span></div>
+                <div class="panel-head" style="margin-top:14px"><h3 class="panel-title">Soru Alan Seçenekleri</h3><span class="pill">Select tanımları</span></div>
                 <div class="question-option-grid">
                   <section>
                     <div class="option-definition-head"><h4>Değişken Grup</h4><button class="button primary" data-admin-add-list="adminVariableGroupOptions" type="button">+ Seçenek</button></div>
@@ -2681,6 +2676,10 @@
                     <div class="definition-list" id="adminEffortImpactTypeOptions"></div>
                   </section>
                 </div>
+              </section>
+              <section class="panel admin-section" data-admin-panel="modules">
+                <div class="panel-head"><h3 class="panel-title">Modül Tanımları</h3><button class="button primary" id="addAdminModuleGroupButton" type="button">+ Grup</button></div>
+                <div class="admin-module-board" id="adminModuleBoard"></div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
@@ -3709,7 +3708,7 @@
         exists: "Var",
         none: "Yok",
         countPlaceholder: "Adet",
-        adminUsers: "Kullanıcı Listesi",
+        adminUsers: "Kullanıcı ve Onay",
         adminApprovals: "Onay Ayarları",
         adminDefinitions: "Temel Tanımlar",
         adminIndustries: "Endüstri",
@@ -3868,7 +3867,7 @@
         exists: "Yes",
         none: "No",
         countPlaceholder: "Qty",
-        adminUsers: "User List",
+        adminUsers: "Users and Approval",
         adminApprovals: "Approval Settings",
         adminDefinitions: "Base Definitions",
         adminIndustries: "Industries",
@@ -4175,7 +4174,6 @@
     function setAdminMenuLabels() {
       const labels = {
         users: "adminUsers",
-        approvals: "adminApprovals",
         definitions: "adminDefinitions",
         industries: "adminIndustries",
         implementations: "adminImplementations",
@@ -5020,16 +5018,15 @@
       return String(value || "").toLocaleLowerCase("tr-TR").includes("sayı");
     }
 
-    const scopeImpactHeaders = ["Endüstri", "No", "Kapsam Sorusu", "Size Etki", "Puan", "Size Etki Tipi"];
+    const scopeImpactHeaders = ["Implementation Type", "No", "Kapsam Sorusu", "Puan", "Size Etki Tipi"];
 
     function defaultScopeImpactRows() {
       return [
         scopeImpactHeaders,
-        ...(window.scopeQuestions || []).map(item => [
+        ...(window.scopeQuestions || []).filter(item => Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır").map(item => [
           "All",
           item.no,
           item.name,
-          (item.sizeImpact === false || item.sizeImpact === "Hayır") ? "Hayır" : (Number(item.score) > 0 ? "Evet" : "Hayır"),
           Number(item.score) || "",
           item.effortImpactType || (item.answerType === "number" ? "Katsayı" : "Sabit")
         ])
@@ -5042,29 +5039,31 @@
       if (headerIndex < 0) return defaultScopeImpactRows();
       const headers = source[headerIndex].map(cell => String(cell || "").trim());
       const idx = label => headers.indexOf(label);
-      const normalized = source.slice(headerIndex + 1).map(row => [
-        row[idx("Endüstri")] || row[idx("Industry")] || "All",
-        row[idx("No")] || "",
-        row[idx("Kapsam Sorusu")] || row[idx("Scope Question")] || "",
-        row[idx("Size Etki")] || row[idx("Size Impact")] || "Hayır",
-        row[idx("Puan")] || row[idx("Score")] || "",
-        row[idx("Size Etki Tipi")] || row[idx("Size Impact Type")] || ""
-      ]).filter(row => row[2]);
+      const normalized = source.slice(headerIndex + 1).map(row => {
+        const oldSizeImpact = row[idx("Size Etki")] || row[idx("Size Impact")] || "";
+        if (["hayır", "no", "false"].includes(String(oldSizeImpact).trim().toLocaleLowerCase("tr-TR"))) return null;
+        return [
+          row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || row[idx("Endüstri")] || row[idx("Industry")] || "All",
+          row[idx("No")] || "",
+          row[idx("Kapsam Sorusu")] || row[idx("Scope Question")] || "",
+          row[idx("Puan")] || row[idx("Score")] || "",
+          row[idx("Size Etki Tipi")] || row[idx("Size Impact Type")] || ""
+        ];
+      }).filter(row => row && row[2] && Number(String(row[3] || "").replace(",", ".")) > 0);
       return [scopeImpactHeaders, ...normalized];
     }
 
-    function scopeImpactForQuestion(item, industryOverride = "") {
+    function scopeImpactForQuestion(item, implementationOverride = "") {
       const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
-      const industry = industryOverride || document.getElementById("projectIndustry")?.value || "All";
+      const implementation = implementationOverride || document.getElementById("projectImplementation")?.value || "All";
       const matches = rows.slice(1).filter(row => String(row[2] || "").trim() === item.name);
-      const row = matches.find(candidate => String(candidate[0] || "").trim() === industry)
+      const row = matches.find(candidate => String(candidate[0] || "").trim() === implementation)
         || matches.find(candidate => String(candidate[0] || "").trim() === "All");
       if (!row) return { sizeImpact: false, score: 0, effortImpactType: "" };
-      const sizeImpact = ["evet", "yes", "true"].includes(String(row[3] || "").trim().toLocaleLowerCase("tr-TR"));
       return {
-        sizeImpact,
-        score: Number(String(row[4] || "").replace(",", ".")) || 0,
-        effortImpactType: row[5] || (item.answerType === "number" ? "Katsayı" : "Sabit")
+        sizeImpact: true,
+        score: Number(String(row[3] || "").replace(",", ".")) || 0,
+        effortImpactType: row[4] || (item.answerType === "number" ? "Katsayı" : "Sabit")
       };
     }
 
@@ -5095,7 +5094,6 @@
       if (normalized === "Kaynak Tipi") return { options: ["Değişken", "Modül"], multiple: false };
       if (normalized === "Kaynak") return { options: adminQuestionNames(), multiple: false };
       if (normalized === "Kapsam Sorusu") return { options: ["", ...(window.scopeQuestions || []).map(item => item.name)], multiple: false };
-      if (normalized === "Size Etki") return { options: ["Evet", "Hayır"], multiple: false };
       if (normalized === "Size Etki Tipi") return { options: currentQuestionFieldOptions().effortImpactTypes, multiple: false };
       if (normalized === "Geliştirme Sorusu") return { options: ["", ...(window.developmentQuestions || []).map(item => canonicalDevelopmentName(item.name))], multiple: false };
       if (["Hedef Modül", "Hedef ModÃ¼l"].includes(normalized)) return { options: ["Hepsi", ...sortedModuleNames()], multiple: false };
@@ -5216,10 +5214,9 @@
       if (bodyId === "adminVmpRows" && headers.some(isDateHeader)) defaultRow[headers.findIndex(isDateHeader)] = todayInputDate();
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
-        defaultRow[headers.indexOf("Endüstri")] = "All";
+        defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("No")] = firstQuestion.no || "";
         defaultRow[headers.indexOf("Kapsam Sorusu")] = firstQuestion.name || "";
-        defaultRow[headers.indexOf("Size Etki")] = "Evet";
         defaultRow[headers.indexOf("Puan")] = "";
         defaultRow[headers.indexOf("Size Etki Tipi")] = "Sabit";
       }
@@ -5944,7 +5941,10 @@
     function bindUserMenu() {
       const menuButton = document.getElementById("userMenuButton");
       const menu = document.getElementById("userMenu");
+      const togglePasswordButton = document.getElementById("togglePasswordPanelButton");
       const passwordButton = document.getElementById("changeAdminPasswordButton");
+      const logoutButton = document.getElementById("logoutButton");
+      const passwordPanel = document.getElementById("passwordPanel");
       if (menuButton && menu && !menuButton.dataset.bound) {
         menuButton.dataset.bound = "true";
         menuButton.addEventListener("click", event => {
@@ -5953,6 +5953,25 @@
         });
         document.addEventListener("click", event => {
           if (!menu.contains(event.target) && event.target !== menuButton) menu.classList.remove("open");
+        });
+      }
+      if (togglePasswordButton && passwordPanel && !togglePasswordButton.dataset.bound) {
+        togglePasswordButton.dataset.bound = "true";
+        togglePasswordButton.addEventListener("click", event => {
+          event.stopPropagation();
+          passwordPanel.hidden = !passwordPanel.hidden;
+        });
+      }
+      if (logoutButton && !logoutButton.dataset.bound) {
+        logoutButton.dataset.bound = "true";
+        logoutButton.addEventListener("click", () => {
+          window.EffortApi.logout?.();
+          currentUser = null;
+          currentOfferId = null;
+          sessionStorage.removeItem(lastOfferKey);
+          sessionStorage.removeItem(lastScreenKey);
+          menu?.classList.remove("open");
+          showLoginApp();
         });
       }
       if (passwordButton && !passwordButton.dataset.bound) {
@@ -6085,7 +6104,7 @@
     function offerScopeScore(offer) {
       const answers = offerJson(offer.scope_answers);
       return (window.scopeQuestions || []).reduce((total, item) => {
-        return total + answerImpact(item, answers[String(item.no)], true, offer?.industry || "");
+        return total + answerImpact(item, answers[String(item.no)], true, offer?.implementation_type || "");
       }, 0);
     }
 
@@ -7143,13 +7162,15 @@
         adminUsersLoading = false;
       }
       setText("adminUserCount", rows.length);
-      body.innerHTML = rows.map(row => `
+      body.innerHTML = rows.map(row => {
+        const protectedUser = String(row.email || "").trim().toLowerCase() === "ufuk.turcan@nttdata.com";
+        return `
         <tr>
           <td>${escapeHtml(row.email || "")}</td>
           <td>${escapeHtml(row.display_name || "")}</td>
           <td><span class="status">${row.status === "APPROVED" ? "Aktif" : "Onay Bekliyor"}</span></td>
           <td>
-            <select class="admin-select" data-user-role="${row.id}" ${row.id === currentUser.id ? "disabled" : ""}>
+            <select class="admin-select" data-user-role="${row.id}" ${protectedUser ? "disabled" : ""}>
               <option value="USER" ${row.role !== "ADMIN" ? "selected" : ""}>User</option>
               <option value="ADMIN" ${row.role === "ADMIN" ? "selected" : ""}>Admin</option>
             </select>
@@ -7158,12 +7179,13 @@
           <td>${row.approved_at ? new Date(row.approved_at).toLocaleString("tr-TR") : ""}</td>
           <td>
             <div class="quick-actions">
-              <button class="button primary" data-save-user-role="${row.id}" type="button" ${row.id === currentUser.id ? "disabled" : ""}>Kaydet</button>
-              ${row.status === "PENDING" ? `<button class="button" data-approve-user="${row.id}" type="button">Onayla</button>` : ""}
+              <button class="button primary" data-save-user-role="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>Kaydet</button>
+              ${row.status === "PENDING" ? `<button class="button" data-approve-user="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>Onayla</button>` : ""}
             </div>
           </td>
         </tr>
-      `).join("") || `<tr><td colspan="7">Kayıtlı kullanıcı bulunmuyor.</td></tr>`;
+      `;
+      }).join("") || `<tr><td colspan="7">Kayıtlı kullanıcı bulunmuyor.</td></tr>`;
       body.querySelectorAll("[data-save-user-role]").forEach(button => {
         button.addEventListener("click", async () => {
           const select = body.querySelector(`[data-user-role="${button.dataset.saveUserRole}"]`);
