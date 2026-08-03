@@ -3524,6 +3524,10 @@
     const lastScreenKey = "effortLastScreen";
     const lastOfferKey = "effortLastOffer";
     let navigationHistoryReady = false;
+    let adminPageRendered = false;
+    let adminPageDirty = true;
+    let adminUsersLoading = false;
+    let adminUsersLoaded = false;
 
     const i18n = {
       tr: {
@@ -5747,7 +5751,8 @@
       refreshQuestionLists();
       renderLocalizationControls();
       renderWorkbookDrivenScreens();
-      renderAdminPage();
+      adminPageDirty = true;
+      renderAdminPageIfNeeded();
       markAdminClean();
     }
 
@@ -5772,7 +5777,8 @@
         applyAdminConfig(savedConfig || config);
         renderLocalizationControls();
         renderWorkbookDrivenScreens();
-        renderAdminPage();
+        adminPageDirty = true;
+        renderAdminPageIfNeeded(true);
         markAdminClean();
         alert("Admin ayarları kaydedildi.");
       } catch (error) {
@@ -5822,6 +5828,15 @@
         if (!button || !tree.contains(button)) return;
         openAdminSection(button.dataset.adminSection);
       });
+    }
+
+    function renderAdminPageIfNeeded(force = false) {
+      const isAdminOpen = document.getElementById("admin")?.classList.contains("active");
+      if (!isAdminOpen && !force) return;
+      if (!force && adminPageRendered && !adminPageDirty) return;
+      renderAdminPage();
+      adminPageRendered = true;
+      adminPageDirty = false;
     }
 
     function renderAdminPage() {
@@ -6986,10 +7001,18 @@
       });
     }
 
-    async function loadAdminUsers() {
+    async function loadAdminUsers(force = false) {
       const body = document.getElementById("adminUsersRows");
       if (!body || !currentUser?.is_admin) return;
-      const rows = await window.EffortApi.adminUsers(currentUser.id);
+      if (!force && (adminUsersLoading || adminUsersLoaded)) return;
+      adminUsersLoading = true;
+      let rows = [];
+      try {
+        rows = await window.EffortApi.adminUsers(currentUser.id);
+        adminUsersLoaded = true;
+      } finally {
+        adminUsersLoading = false;
+      }
       setText("adminUserCount", rows.length);
       body.innerHTML = rows.map(row => `
         <tr>
@@ -7019,7 +7042,8 @@
           button.disabled = true;
           try {
             await window.EffortApi.updateUserRole(button.dataset.saveUserRole, select.value, currentUser.id);
-            await loadAdminUsers();
+            adminUsersLoaded = false;
+            await loadAdminUsers(true);
           } catch (error) {
             button.disabled = false;
             alert(`Kullanıcı rolü güncellenemedi: ${error.message}`);
@@ -7029,7 +7053,8 @@
       body.querySelectorAll("[data-approve-user]").forEach(button => {
         button.addEventListener("click", async () => {
           await window.EffortApi.approveUser(button.dataset.approveUser, currentUser.id);
-          await loadAdminUsers();
+          adminUsersLoaded = false;
+          await loadAdminUsers(true);
         });
       });
     }
@@ -7135,6 +7160,12 @@
         history.pushState(state, "", `#${screenId}`);
       }
       if (screenId === "admin") {
+        renderAdminPageIfNeeded();
+        loadAdminUsers().catch(error => {
+          console.error(error);
+          const body = document.getElementById("adminUsersRows");
+          if (body) body.innerHTML = `<tr><td colspan="7">Kullanıcı listesi şu an yüklenemedi.</td></tr>`;
+        });
         const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
         openAdminSection(activeSection);
       }
@@ -7501,16 +7532,8 @@
       confirmNavigation(openNewOffer);
     });
 
-    document.getElementById("topAdminButton").addEventListener("click", async () => {
+    document.getElementById("topAdminButton").addEventListener("click", () => {
       guardedOpenScreen("admin");
-      try {
-        await loadAdminConfig();
-        await loadAdminUsers();
-      } catch (error) {
-        console.error(error);
-        const body = document.getElementById("adminUsersRows");
-        if (body) body.innerHTML = `<tr><td colspan="6">Kullanıcı listesi şu an yüklenemedi.</td></tr>`;
-      }
     });
 
     document.getElementById("backHomeButton")?.addEventListener("click", () => {
@@ -7563,6 +7586,7 @@
     });
 
     async function initializeApp() {
+      const hasStoredSession = Boolean(sessionStorage.getItem("effortAccessToken"));
       primeStoredScreenBeforeRestore();
       bindAdminNavigation();
       renderRows("moduleRows", modules.slice(0, 12));
@@ -7570,9 +7594,8 @@
       refreshProjectDefinitionSelects();
       renderModuleGroups();
       renderLocalizationControls();
-      renderWorkbookDrivenScreens();
+      if (!hasStoredSession) renderWorkbookDrivenScreens();
       renderScreenNavigation();
-      renderAdminPage();
       renderAllWorks();
       refreshQuestionLists();
       applyLanguage();
