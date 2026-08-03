@@ -3509,6 +3509,7 @@
     let currentLanguage = localStorage.getItem("effortLanguage") || document.getElementById("languageSelect")?.value || "tr";
     const lastScreenKey = "effortLastScreen";
     const lastOfferKey = "effortLastOffer";
+    let navigationHistoryReady = false;
 
     const i18n = {
       tr: {
@@ -6810,7 +6811,12 @@
     function updateWorkSubtitle() {
       const app = document.getElementById("appShell");
       const subtitle = document.getElementById("headerSubtitle") || document.querySelector("header .subtitle");
-      if (subtitle) subtitle.textContent = app?.classList.contains("work-open") ? currentWorkSubtitle() : t("welcome");
+      if (!subtitle) return;
+      if (app?.classList.contains("admin-mode")) {
+        subtitle.textContent = t("admin");
+        return;
+      }
+      subtitle.textContent = app?.classList.contains("work-open") ? currentWorkSubtitle() : t("welcome");
     }
 
     function setWorkMode(isOpen) {
@@ -7103,13 +7109,17 @@
       }
       const app = document.getElementById("appShell");
       app.classList.toggle("admin-mode", screenId === "admin");
-      const homeScreens = new Set(["overview", "allworks", "pendingapprovals"]);
+      const homeScreens = new Set(["overview", "allworks", "pendingapprovals", "admin"]);
       if (homeScreens.has(screenId) && !options.workMode) setWorkMode(false);
       if (!homeScreens.has(screenId) || options.workMode) setWorkMode(true);
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
       document.querySelectorAll(".screen").forEach(x => x.classList.remove("active"));
       document.getElementById(screenId)?.classList.add("active");
       if (currentUser) sessionStorage.setItem(lastScreenKey, screenId);
+      if (navigationHistoryReady && !options.skipHistory && history.state?.screenId !== screenId) {
+        const state = { screenId, workMode: Boolean(options.workMode) };
+        history.pushState(state, "", `#${screenId}`);
+      }
       if (screenId === "admin") {
         const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
         openAdminSection(activeSection);
@@ -7117,9 +7127,9 @@
       window.scrollTo({ top: 0, behavior: "auto" });
     }
 
-    function openWork(screenId = "project") {
+    function openWork(screenId = "project", options = {}) {
       setWorkMode(true);
-      openScreen(screenId, { workMode: true });
+      openScreen(screenId, { ...options, workMode: true });
     }
 
     const offerScreens = new Set(["project", "modules", "scope", "developments", "library", "fixedefforts", "localization", "hypercare", "effort"]);
@@ -7135,6 +7145,18 @@
     function guardedOpenScreen(screenId) {
       confirmNavigation(() => openScreen(screenId));
     }
+
+    function ensureNavigationHistory(screenId = storedScreenId()) {
+      if (!history.state?.screenId) history.replaceState({ screenId }, "", `#${screenId}`);
+      navigationHistoryReady = true;
+    }
+
+    window.addEventListener("popstate", event => {
+      const screenId = event.state?.screenId || storedScreenId();
+      if (!document.getElementById(screenId)) return;
+      if (offerScreens.has(screenId)) openWork(screenId, { skipHistory: true });
+      else openScreen(screenId, { skipHistory: true });
+    });
 
     const detailFlow = [
       ["project", "projectDefinition"],
@@ -7318,6 +7340,7 @@
         } else {
           openScreen(screenId);
         }
+        ensureNavigationHistory(screenId);
         applyLanguage();
         wakeTranslationQueue();
         return true;
@@ -7382,6 +7405,7 @@
         showAuthenticatedApp();
         setWorkMode(false);
         openScreen("overview");
+        ensureNavigationHistory("overview");
         applyLanguage();
         wakeTranslationQueue();
       } catch (error) {
