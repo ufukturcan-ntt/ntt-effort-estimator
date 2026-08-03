@@ -602,6 +602,20 @@
       margin: 0 auto;
     }
 
+    .app.admin-mode:not(.work-open) .workspace {
+      display: grid;
+      grid-template-columns: 268px minmax(0, 1fr);
+    }
+
+    .app.admin-mode:not(.work-open) aside {
+      display: grid;
+    }
+
+    .app.admin-mode:not(.work-open) .content {
+      max-width: none;
+      margin: 0;
+    }
+
     .app:not(.work-open) .content:has(#allworks.active) {
       max-width: none;
       margin-inline: 0;
