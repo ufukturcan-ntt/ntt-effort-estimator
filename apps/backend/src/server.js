@@ -709,7 +709,7 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
   const allowedEntities = new Set([
     "projectDefinitions", "moduleCatalog", "scopeQuestions", "developmentQuestions",
     "libraryItems", "questionFieldOptions", "restrictions", "fixedDays",
-    "localizationEfforts", "variableModulePhase", "approvalSettings"
+    "sizeRanges", "localizationEfforts", "variableModulePhase", "approvalSettings"
   ]);
   const entries = Object.entries(config).filter(([entity]) => entity !== "__meta");
   if (!entries.length || entries.some(([entity]) => !allowedEntities.has(entity))) {

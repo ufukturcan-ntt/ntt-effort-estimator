@@ -2673,6 +2673,10 @@
                     <div class="definition-list" id="adminVariableTypeOptions"></div>
                   </section>
                   <section>
+                    <div class="option-definition-head"><h4>Kategori</h4><button class="button primary" data-admin-add-list="adminScopeCategoryOptions" type="button">+ Kategori</button></div>
+                    <div class="definition-list" id="adminScopeCategoryOptions"></div>
+                  </section>
+                  <section>
                     <div class="option-definition-head"><h4>Size Etki Tipi</h4><button class="button primary" data-admin-add-list="adminEffortImpactTypeOptions" type="button">+ Seçenek</button></div>
                     <div class="definition-list" id="adminEffortImpactTypeOptions"></div>
                   </section>
@@ -2684,7 +2688,7 @@
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kategori</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="size-ranges">
                 <div class="panel-head"><h3 class="panel-title">Size Aralıkları</h3><button class="button primary" data-admin-add-matrix="adminSizeRangeRows" type="button">+ Satır</button></div>
@@ -3435,6 +3439,7 @@
 
     window.scopeQuestions = enrichQuestionsFromExcel("scope", window.scopeQuestions, "Kapsam");
     window.developmentQuestions = enrichQuestionsFromExcel("development", window.developmentQuestions, "Geliştirme");
+    const bundledScopeQuestions = (window.scopeQuestions || []).map(item => ({ ...item }));
 
     const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP", "MES Development"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
@@ -4984,6 +4989,10 @@
           "Evet/Hayır",
           "Sayı"
         ].map(displayVariableType)),
+        scopeCategories: uniqueOptionValues([
+          ...(configured.scopeCategories || []),
+          ...(window.scopeQuestions || []).map(item => item.category)
+        ]),
         effortImpactTypes: uniqueOptionValues([
           ...(configured.effortImpactTypes || []),
           ...questions.map(item => item.effortImpactType),
@@ -5578,11 +5587,13 @@
         </tr>
       `;
         }
+        const categoryValue = item.category || "";
         return `
         <tr>
           ${editableCell(item.no)}
           ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
+          ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
           ${editableCell(item.name)}
           ${editableCell(item.description)}
           <td>${actionButtons}</td>
@@ -5614,6 +5625,7 @@
         ${editableCell(no)}
         ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
         ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
+        ${adminSelectCell("", fieldOptions.scopeCategories)}
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
@@ -5707,16 +5719,18 @@
         markAdminDirty();
         return;
       }
-      const cells = [...sourceRow.children].slice(0, 5).map(adminCellValue);
+      const cells = [...sourceRow.children].slice(0, 6).map(adminCellValue);
       const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const groupValue = cells[1] || "Kapsam";
       const variableTypeValue = cells[2] || "Evet/Hayır";
+      const categoryValue = cells[3] || "";
       target.insertAdjacentHTML("beforeend", `<tr>
         ${editableCell(nextNo)}
         ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
         ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
-        ${editableCell(`${cells[3] || "Yeni soru"} - Kopya`)}
-        ${editableCell(cells[4] || "")}
+        ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
+        ${editableCell(`${cells[4] || "Yeni soru"} - Kopya`)}
+        ${editableCell(cells[5] || "")}
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
@@ -5773,14 +5787,15 @@
             active: true
           };
         }
-        const cells = [...row.children].slice(0, 5).map(adminCellValue);
+        const cells = [...row.children].slice(0, 6).map(adminCellValue);
         const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
         return {
           no: Number(cells[0]) || cells[0],
           group: cells[1],
           variableType: cells[2],
-          name: cells[3],
-          description: cells[4],
+          category: cells[3],
+          name: cells[4],
+          description: cells[5],
           sizeImpact: false,
           score: 0,
           effortImpactType: "",
@@ -5818,7 +5833,9 @@
         questionFieldOptions: {
           variableGroups: collectDefinitionValues("adminVariableGroupOptions"),
           variableTypes: collectDefinitionValues("adminVariableTypeOptions"),
-          effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions")
+          scopeCategories: collectDefinitionValues("adminScopeCategoryOptions"),
+          effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions"),
+          conversionScopeQuestionsImported: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeQuestionsImported)
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         sizeRanges: collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"),
@@ -5835,6 +5852,49 @@
 
     function replaceArray(target, values) {
       target.splice(0, target.length, ...values);
+    }
+
+    function normalizeQuestionName(value = "") {
+      return String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
+    }
+
+    function ensureBundledScopeMaintenanceRows(config = {}) {
+      config.questionFieldOptions = config.questionFieldOptions || {};
+      if (config.questionFieldOptions.conversionScopeQuestionsImported) return config;
+      const bundledConversionQuestions = bundledScopeQuestions.filter(item => item.category);
+      if (!bundledConversionQuestions.length) return config;
+      const existingQuestions = new Set((config.scopeQuestions || []).map(item => normalizeQuestionName(item.name)));
+      const additions = bundledConversionQuestions.filter(item => !existingQuestions.has(normalizeQuestionName(item.name)));
+      if (additions.length) config.scopeQuestions = [...(config.scopeQuestions || []), ...additions.map(item => ({ ...item }))];
+      config.questionFieldOptions.scopeCategories = uniqueOptionValues([
+        ...(config.questionFieldOptions.scopeCategories || []),
+        ...bundledConversionQuestions.map(item => item.category)
+      ]);
+
+      const impactRows = Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders];
+      if (!impactRows[0]?.includes("Kapsam Sorusu")) impactRows.unshift(scopeImpactHeaders);
+      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[3])));
+      bundledConversionQuestions.forEach(item => {
+        if (impactNames.has(normalizeQuestionName(item.name))) return;
+        impactRows.push(["All", "All", item.no, item.name, "", 1, ""]);
+        impactNames.add(normalizeQuestionName(item.name));
+      });
+      config.scopeSizeImpacts = impactRows;
+
+      const restrictionHeaders = ["No", "Variable Type", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?", "Notes", "Usage"];
+      const restrictionRows = Array.isArray(config.restrictions) && config.restrictions.length ? config.restrictions : [restrictionHeaders];
+      if (!restrictionRows[0]?.includes("Question")) restrictionRows.unshift(restrictionHeaders);
+      const restrictionNames = new Set(restrictionRows.slice(1).map(row => normalizeQuestionName(row[2])));
+      let nextNo = Math.max(0, ...restrictionRows.slice(1).map(row => Number(row[0]) || 0));
+      bundledConversionQuestions.forEach(item => {
+        if (restrictionNames.has(normalizeQuestionName(item.name))) return;
+        nextNo += 1;
+        restrictionRows.push([nextNo, "Kapsam", item.name, "All", "All", "All", "Yes", "", ""]);
+        restrictionNames.add(normalizeQuestionName(item.name));
+      });
+      config.restrictions = restrictionRows;
+      config.questionFieldOptions.conversionScopeQuestionsImported = true;
+      return config;
     }
 
     function syncModuleStateWithCatalog() {
@@ -5866,6 +5926,7 @@
     }
 
     function applyAdminConfig(config = {}) {
+      ensureBundledScopeMaintenanceRows(config);
       if (config.__meta?.versions) adminConfigVersions = { ...config.__meta.versions };
       ["scopeQuestions", "developmentQuestions"].forEach(key => {
         if (!config[key]) return;
@@ -6074,6 +6135,7 @@
       const fieldOptions = currentQuestionFieldOptions();
       renderDefinitionList("adminVariableGroupOptions", fieldOptions.variableGroups, "Değişken grup seçeneği yok.");
       renderDefinitionList("adminVariableTypeOptions", fieldOptions.variableTypes, "Değişken tip seçeneği yok.");
+      renderDefinitionList("adminScopeCategoryOptions", fieldOptions.scopeCategories, "Kategori seçeneği yok.");
       renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
@@ -7067,6 +7129,7 @@
         return `
           <div class="question-card" data-question-key="${key}">
             <div>
+              ${item.category ? `<small>${escapeHtml(displayRecord(item.category))}</small>` : ""}
               <strong>${index + 1}. ${escapeHtml(displayRecord(item.name))}</strong>
               <small>${escapeHtml(displayRecord(item.description))}</small>
             </div>
