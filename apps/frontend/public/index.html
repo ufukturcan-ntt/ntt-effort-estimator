@@ -2703,7 +2703,7 @@
                 <div class="list-table admin-dense-table"><table><thead id="adminSizeRangeHead"></thead><tbody id="adminSizeRangeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope-impact">
-                <div class="panel-head"><h3 class="panel-title">Kapsam Size Etkisi</h3><button class="button primary" data-admin-add-matrix="adminScopeImpactRows" type="button">+ Satır</button></div>
+                <div class="panel-head"><h3 class="panel-title">Kapsam Size Etkisi</h3><div class="quick-actions"><button class="button" id="copySelectedScopeImpactRowsButton" type="button">Seçilenleri Kopyala</button><button class="button primary" data-admin-add-matrix="adminScopeImpactRows" type="button">+ Satır</button></div></div>
                 <div class="list-table admin-dense-table"><table><thead id="adminScopeImpactHead"></thead><tbody id="adminScopeImpactRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="development">
@@ -5251,6 +5251,31 @@
       window.addEventListener("resize", syncFixedDaysScrollbars);
     }
 
+    function adminMatrixActionButtons(bodyId) {
+      if (bodyId === "adminScopeImpactRows") {
+        return `<div class="quick-actions"><label class="admin-row-selector"><input type="checkbox" data-admin-select-matrix-row aria-label="Satırı seç"></label><button class="button danger" data-admin-remove type="button">Sil</button></div>`;
+      }
+      return ["adminVmpRows", "adminSizeRangeRows"].includes(bodyId)
+        ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
+        : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
+    }
+
+    function adminMatrixCells(bodyId, headers = [], values = []) {
+      const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
+      return headers.map((header, index) => {
+        const normalizedHeader = String(header || "").trim();
+        if (bodyId === "adminLibraryRows" && normalizedHeader === "ID") return `<td hidden>${escapeHtml(values[index] || newLibraryId())}</td>`;
+        if (isDateHeader(normalizedHeader)) return adminDateCell(values[index] || todayInputDate());
+        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
+        const isVariableModuleCell = bodyId === "adminVmpRows"
+          && ["Modül", "Modul", "Module"].includes(normalizedHeader)
+          && values[sourceTypeIndex] === "Değişken";
+        if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
+        const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, values, headers);
+        return selectConfig ? adminSelectCell(values[index], selectConfig.options, selectConfig.multiple) : editableCell(values[index] || "");
+      }).join("");
+    }
+
     function renderEditableMatrix(headId, bodyId, rows) {
       const head = document.getElementById(headId);
       const body = document.getElementById(bodyId);
@@ -5267,23 +5292,7 @@
       const dataRows = rows.slice(Math.max(headerIndex, 0) + 1);
       if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${bodyId === "adminLibraryRows" && value === "ID" ? "hidden" : ""}>${escapeHtml(value)}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
-      const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
-      const hasCopyAction = ["adminVmpRows", "adminSizeRangeRows"].includes(bodyId);
-      const actionButtons = hasCopyAction
-        ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
-        : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
-      body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
-        const normalizedHeader = String(header || "").trim();
-        if (bodyId === "adminLibraryRows" && normalizedHeader === "ID") return `<td hidden>${escapeHtml(row[index] || newLibraryId())}</td>`;
-        if (isDateHeader(normalizedHeader)) return adminDateCell(row[index] || "");
-        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
-        const isVariableModuleCell = bodyId === "adminVmpRows"
-          && ["Modül", "Modul", "Module"].includes(normalizedHeader)
-          && row[sourceTypeIndex] === "Değişken";
-        if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
-        const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, row, headers);
-        return selectConfig ? adminSelectCell(row[index], selectConfig.options, selectConfig.multiple) : editableCell(row[index]);
-      }).join("")}<td>${actionButtons}</td></tr>`).join("");
+      body.innerHTML = dataRows.map(row => `<tr>${adminMatrixCells(bodyId, headers, row)}<td>${adminMatrixActionButtons(bodyId)}</td></tr>`).join("");
       bindAdminEditable(body);
       syncVmpModuleCells(body);
       syncRestrictionQuestionCells(body);
@@ -5321,19 +5330,7 @@
         defaultRow[headers.indexOf("Katsayı")] = 1;
         defaultRow[headers.indexOf("Size Etki Tipi")] = "Sabit";
       }
-      const hasCopyAction = ["adminVmpRows", "adminSizeRangeRows"].includes(bodyId);
-      const actionButtons = hasCopyAction
-        ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
-        : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
-      body.insertAdjacentHTML("beforeend", `<tr>${headers.map(header => {
-        const normalizedHeader = String(header || "").trim();
-        if (bodyId === "adminLibraryRows" && normalizedHeader === "ID") return `<td hidden>${escapeHtml(defaultRow[headers.indexOf("ID")])}</td>`;
-        if (isDateHeader(normalizedHeader)) return adminDateCell(defaultRow[headers.findIndex(item => String(item || "").trim() === normalizedHeader)] || todayInputDate());
-        const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
-        const selectConfig = isLocalizationCountry ? null : adminMatrixCellOptions(header, bodyId, defaultRow, headers);
-        const defaultValue = defaultRow[headers.findIndex(item => String(item || "").trim() === normalizedHeader)] || "";
-        return selectConfig ? adminSelectCell(defaultValue, selectConfig.options, selectConfig.multiple) : editableCell("");
-      }).join("")}<td>${actionButtons}</td></tr>`);
+      body.insertAdjacentHTML("beforeend", `<tr>${adminMatrixCells(bodyId, headers, defaultRow)}<td>${adminMatrixActionButtons(bodyId)}</td></tr>`);
       bindAdminEditable(body);
       syncVmpModuleCells(body);
       syncRestrictionQuestionCells(body);
@@ -5434,22 +5431,37 @@
       const values = [...sourceRow.children].slice(0, headers.length).map(adminCellValue);
       const dateIndex = headers.findIndex(isDateHeader);
       if (dateIndex >= 0) values[dateIndex] = todayInputDate();
-      const sourceTypeIndex = body.id === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
-      const cells = headers.map((header, index) => {
-        const normalizedHeader = String(header || "").trim();
-        if (isDateHeader(normalizedHeader)) return adminDateCell(values[index] || todayInputDate());
-        const isVariableModuleCell = body.id === "adminVmpRows"
-          && ["Modül", "Modul", "Module"].includes(normalizedHeader)
-          && values[sourceTypeIndex] === "Değişken";
-        if (isVariableModuleCell) return adminSelectCell("", sortedModuleNames(), false, "disabled");
-        const selectConfig = adminMatrixCellOptions(header, body.id, values, headers);
-        return selectConfig ? adminSelectCell(values[index], selectConfig.options, selectConfig.multiple) : editableCell(values[index] || "");
-      }).join("");
-      sourceRow.insertAdjacentHTML("afterend", `<tr>${cells}<td><button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
+      sourceRow.insertAdjacentHTML("afterend", `<tr>${adminMatrixCells(body.id, headers, values)}<td>${adminMatrixActionButtons(body.id)}</td></tr>`);
       bindAdminEditable(body);
       syncVmpModuleCells(body);
       syncRestrictionQuestionCells(body);
       markAdminDirty();
+    }
+
+    function copySelectedScopeImpactRows() {
+      const body = document.getElementById("adminScopeImpactRows");
+      if (!body) return;
+      const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
+      if (!headers.length) return;
+      const selectedRows = [...body.querySelectorAll("[data-admin-select-matrix-row]:checked")]
+        .map(input => input.closest("tr"))
+        .filter(Boolean);
+      if (!selectedRows.length) {
+        alert("Kopyalamak için en az bir satır seçin.");
+        return;
+      }
+      const copiedRows = selectedRows.map(row => {
+        const values = [...row.children].slice(0, headers.length).map(adminCellValue);
+        return `<tr>${adminMatrixCells("adminScopeImpactRows", headers, values)}<td>${adminMatrixActionButtons("adminScopeImpactRows")}</td></tr>`;
+      }).join("");
+      selectedRows[selectedRows.length - 1].insertAdjacentHTML("afterend", copiedRows);
+      selectedRows.forEach(row => {
+        const checkbox = row.querySelector("[data-admin-select-matrix-row]");
+        if (checkbox) checkbox.checked = false;
+      });
+      bindAdminEditable(body);
+      markAdminDirty();
+      alert(`${selectedRows.length} Kapsam Size Etkisi satırı kopyalandı.`);
     }
 
     function bindAdminEditable(root = document) {
@@ -6226,6 +6238,11 @@
         button.dataset.bound = "true";
         button.addEventListener("click", () => addAdminMatrixRow(button.dataset.adminAddMatrix));
       });
+      const copyScopeImpactButton = document.getElementById("copySelectedScopeImpactRowsButton");
+      if (copyScopeImpactButton && !copyScopeImpactButton.dataset.bound) {
+        copyScopeImpactButton.dataset.bound = "true";
+        copyScopeImpactButton.addEventListener("click", copySelectedScopeImpactRows);
+      }
       const addGroupButton = document.getElementById("addAdminModuleGroupButton");
       if (addGroupButton && !addGroupButton.dataset.bound) {
         addGroupButton.dataset.bound = "true";
