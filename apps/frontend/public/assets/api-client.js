@@ -94,9 +94,18 @@ window.EffortApi = {
   },
   saveAdminConfig(config, versions = {}) {
     const payload = config?.__meta ? config : { ...config, __meta: { versions } };
-    return this.request("/api/admin/config", {
+    const requestPayload = body => this.request("/api/admin/config", {
       method: "PUT",
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
+    });
+    return requestPayload(payload).catch(error => {
+      if (!String(error.message || "").includes("unsupported entity") || !payload.questionFieldOptions) throw error;
+      const questionFieldVersion = payload.__meta?.versions?.questionFieldOptions;
+      const compatiblePayload = {
+        questionFieldOptions: payload.questionFieldOptions,
+        ...(questionFieldVersion ? { __meta: { versions: { questionFieldOptions: questionFieldVersion } } } : {})
+      };
+      return requestPayload(compatiblePayload);
     });
   },
   pendingUsers() {
