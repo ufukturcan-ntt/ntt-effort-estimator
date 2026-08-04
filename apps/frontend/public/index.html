@@ -5843,10 +5843,10 @@
           variableTypes: collectDefinitionValues("adminVariableTypeOptions"),
           scopeCategories: collectDefinitionValues("adminScopeCategoryOptions"),
           effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions"),
+          sizeRanges: collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"),
           conversionScopeQuestionsImported: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeQuestionsImported)
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
-        sizeRanges: collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"),
         scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
         fixedDays: window.adminSeedData.fixedDays,
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
@@ -5996,7 +5996,7 @@
       if (config.libraryItems) window.adminSeedData.libraryItems = normalizeLibraryItems(config.libraryItems);
       if (config.scopeQuestions) window.scopeQuestions = config.scopeQuestions;
       if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
-      window.adminSeedData.sizeRanges = normalizeSizeRangeRows(config.sizeRanges || window.adminSeedData.sizeRanges);
+      window.adminSeedData.sizeRanges = normalizeSizeRangeRows(config.sizeRanges || config.questionFieldOptions?.sizeRanges || window.adminSeedData.sizeRanges);
       window.adminSeedData.scopeSizeImpacts = normalizeScopeImpactRows(config.scopeSizeImpacts || window.adminSeedData.scopeSizeImpacts);
       if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
       if (config.approvalSettings) {
