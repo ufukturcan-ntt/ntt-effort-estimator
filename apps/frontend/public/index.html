@@ -5191,7 +5191,7 @@
         const options = sizeRangeSelectOptions();
         if (normalized === "Endüstri") return { options: options.industries, multiple: true };
         if (normalized === "Implementation Type") return { options: options.implementations, multiple: true };
-        if (normalized === "System Type") return { options: options.systems, multiple: false };
+        if (normalized === "System Type") return { options: options.systems, multiple: true };
         if (normalized === "Size") return { options: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
       }
       if (bodyId === "adminRestrictionsRows" && isRestrictionQuestionHeader(header, headers)) {
