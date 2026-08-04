@@ -5268,7 +5268,8 @@
       if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${bodyId === "adminLibraryRows" && value === "ID" ? "hidden" : ""}>${escapeHtml(value)}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
       const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
-      const actionButtons = bodyId === "adminVmpRows"
+      const hasCopyAction = ["adminVmpRows", "adminSizeRangeRows"].includes(bodyId);
+      const actionButtons = hasCopyAction
         ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
         : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
       body.innerHTML = dataRows.map(row => `<tr>${headers.map((header, index) => {
@@ -5320,7 +5321,8 @@
         defaultRow[headers.indexOf("Katsayı")] = 1;
         defaultRow[headers.indexOf("Size Etki Tipi")] = "Sabit";
       }
-      const actionButtons = bodyId === "adminVmpRows"
+      const hasCopyAction = ["adminVmpRows", "adminSizeRangeRows"].includes(bodyId);
+      const actionButtons = hasCopyAction
         ? `<button class="button" data-admin-copy-matrix-row type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button>`
         : `<button class="button danger" data-admin-remove type="button">Sil</button>`;
       body.insertAdjacentHTML("beforeend", `<tr>${headers.map(header => {

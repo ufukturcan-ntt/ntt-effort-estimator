@@ -100,12 +100,15 @@ window.EffortApi = {
     });
     return requestPayload(payload).catch(error => {
       if (!String(error.message || "").includes("unsupported entity") || !payload.questionFieldOptions) throw error;
-      const questionFieldVersion = payload.__meta?.versions?.questionFieldOptions;
-      const compatiblePayload = {
-        questionFieldOptions: payload.questionFieldOptions,
-        ...(questionFieldVersion ? { __meta: { versions: { questionFieldOptions: questionFieldVersion } } } : {})
-      };
-      return requestPayload(compatiblePayload);
+      const compatibleEntities = [
+        "projectDefinitions", "moduleCatalog", "scopeQuestions", "developmentQuestions",
+        "libraryItems", "questionFieldOptions", "restrictions", "fixedDays",
+        "sizeRanges", "scopeSizeImpacts", "localizationEfforts", "variableModulePhase", "approvalSettings"
+      ].filter(entity => Object.prototype.hasOwnProperty.call(payload, entity));
+      return Promise.all(compatibleEntities.map(entity => {
+        const expectedVersion = payload.__meta?.versions?.[entity] || "";
+        return this.saveAdminEntity(entity, payload[entity], expectedVersion);
+      }));
     });
   },
   pendingUsers() {
