@@ -5866,6 +5866,34 @@
       return String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
     }
 
+    function ensureScoredScopeImpactRows(config = {}) {
+      const scoredQuestions = bundledScopeQuestions.filter(item =>
+        Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır"
+      );
+      if (!scoredQuestions.length) return config;
+      const impactRows = Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length
+        ? config.scopeSizeImpacts
+        : [scopeImpactHeaders];
+      if (!impactRows[0]?.includes("Kapsam Sorusu")) impactRows.unshift(scopeImpactHeaders);
+      impactRows[0] = scopeImpactHeaders;
+      const byName = new Map(impactRows.slice(1).map(row => [normalizeQuestionName(row[3]), row]));
+      scoredQuestions.forEach(item => {
+        const key = normalizeQuestionName(item.name);
+        const effortImpactType = item.effortImpactType || (item.answerType === "number" ? "Katsayı" : "Sabit");
+        const row = byName.get(key);
+        if (row) {
+          if (row[2] === "" || row[2] == null) row[2] = item.no;
+          if (row[4] === "" || row[4] == null) row[4] = Number(item.score) || "";
+          if (row[5] === "" || row[5] == null) row[5] = 1;
+          if (!row[6]) row[6] = effortImpactType;
+          return;
+        }
+        impactRows.push(["All", "All", item.no, item.name, Number(item.score) || "", 1, effortImpactType]);
+      });
+      config.scopeSizeImpacts = impactRows;
+      return config;
+    }
+
     function ensureBundledScopeMaintenanceRows(config = {}) {
       config.questionFieldOptions = config.questionFieldOptions || {};
       if (config.questionFieldOptions.conversionScopeQuestionsImported) return config;
@@ -5935,6 +5963,7 @@
 
     function applyAdminConfig(config = {}) {
       ensureBundledScopeMaintenanceRows(config);
+      ensureScoredScopeImpactRows(config);
       if (config.__meta?.versions) adminConfigVersions = { ...config.__meta.versions };
       ["scopeQuestions", "developmentQuestions"].forEach(key => {
         if (!config[key]) return;
