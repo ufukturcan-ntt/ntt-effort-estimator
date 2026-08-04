@@ -2700,6 +2700,21 @@
               </section>
               <section class="panel admin-section" data-admin-panel="size-ranges">
                 <div class="panel-head"><h3 class="panel-title">Size Aralıkları</h3><button class="button primary" data-admin-add-matrix="adminSizeRangeRows" type="button">+ Satır</button></div>
+                <div class="fixed-days-copy">
+                  <div>
+                    <strong>Kaynak</strong>
+                    <label><span>Endüstri</span><select id="sizeRangeCopySourceIndustry"></select></label>
+                    <label><span>Implementation Type</span><select id="sizeRangeCopySourceImplementation"></select></label>
+                    <label><span>System Type</span><select id="sizeRangeCopySourceSystem"></select></label>
+                  </div>
+                  <div>
+                    <strong>Hedef</strong>
+                    <label><span>Endüstri</span><select id="sizeRangeCopyTargetIndustry"></select></label>
+                    <label><span>Implementation Type</span><select id="sizeRangeCopyTargetImplementation"></select></label>
+                    <label><span>System Type</span><select id="sizeRangeCopyTargetSystem"></select></label>
+                  </div>
+                  <button class="button primary" id="copySizeRangeButton" type="button">Kopyala</button>
+                </div>
                 <div class="list-table admin-dense-table"><table><thead id="adminSizeRangeHead"></thead><tbody id="adminSizeRangeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="scope-impact">
@@ -3048,6 +3063,89 @@
       const cleanValues = uniqueOptionValues(values);
       select.innerHTML = cleanValues.map(value => `<option>${escapeHtml(value)}</option>`).join("");
       select.value = cleanValues.includes(selectedValue) ? selectedValue : (cleanValues[0] || "");
+    }
+
+    function sizeRangeSelectOptions() {
+      return {
+        industries: ["All", ...adminDefinitionValues(0)],
+        implementations: ["All", ...adminDefinitionValues(1)],
+        systems: ["All", ...adminDefinitionValues(2)]
+      };
+    }
+
+    function sizeRangeCopySelection(prefix) {
+      return {
+        industry: document.getElementById(`${prefix}Industry`)?.value || "All",
+        implementation: document.getElementById(`${prefix}Implementation`)?.value || "All",
+        systemType: document.getElementById(`${prefix}System`)?.value || "All"
+      };
+    }
+
+    function initializeSizeRangeCopyControls() {
+      const options = sizeRangeSelectOptions();
+      [
+        ["sizeRangeCopySource", { industry: "All", implementation: "All", systemType: "All" }],
+        ["sizeRangeCopyTarget", { industry: "All", implementation: "All", systemType: "All" }]
+      ].forEach(([prefix, defaults]) => {
+        fillSelect(document.getElementById(`${prefix}Industry`), options.industries, defaults.industry);
+        fillSelect(document.getElementById(`${prefix}Implementation`), options.implementations, defaults.implementation);
+        fillSelect(document.getElementById(`${prefix}System`), options.systems, defaults.systemType);
+      });
+      const button = document.getElementById("copySizeRangeButton");
+      if (button && !button.dataset.sizeRangeCopyBound) {
+        button.dataset.sizeRangeCopyBound = "true";
+        button.addEventListener("click", copySizeRangeSelection);
+      }
+    }
+
+    function sizeRangeDimensionValues(value = "") {
+      return String(value || "All").split(",").map(item => item.trim()).filter(Boolean);
+    }
+
+    function sizeRangeDimensionMatches(rowValue, selectedValue) {
+      const values = sizeRangeDimensionValues(rowValue);
+      const selected = String(selectedValue || "All").trim();
+      return values.includes("All") || values.includes(selected);
+    }
+
+    function sizeRangeSelectionMatches(row, headers, selection) {
+      return sizeRangeDimensionMatches(row[headers.indexOf("Endüstri")], selection.industry)
+        && sizeRangeDimensionMatches(row[headers.indexOf("Implementation Type")], selection.implementation)
+        && sizeRangeDimensionMatches(row[headers.indexOf("System Type")], selection.systemType);
+    }
+
+    function copySizeRangeSelection() {
+      window.adminSeedData.sizeRanges = normalizeSizeRangeRows(collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"));
+      const source = sizeRangeCopySelection("sizeRangeCopySource");
+      const target = sizeRangeCopySelection("sizeRangeCopyTarget");
+      if (source.industry === target.industry && source.implementation === target.implementation && source.systemType === target.systemType) {
+        alert("Kaynak ve hedef aynı olamaz.");
+        return;
+      }
+      const normalized = normalizeSizeRangeRows(window.adminSeedData?.sizeRanges || []);
+      const headers = normalized[0] || [];
+      const sourceRows = normalized.slice(1).filter(row => sizeRangeSelectionMatches(row, headers, source));
+      if (!sourceRows.length) {
+        alert("Kaynak seçim için kopyalanacak size aralığı bulunamadı.");
+        return;
+      }
+      if (!confirm("Hedef seçimdeki mevcut Size Aralıkları silinip kaynak kayıtlar kopyalanacak. Devam edilsin mi?")) return;
+      const industryIndex = headers.indexOf("Endüstri");
+      const implementationIndex = headers.indexOf("Implementation Type");
+      const systemIndex = headers.indexOf("System Type");
+      const retained = normalized.slice(1).filter(row => !sizeRangeSelectionMatches(row, headers, target));
+      const copied = sourceRows.map(row => {
+        const next = [...row];
+        next[industryIndex] = target.industry;
+        next[implementationIndex] = target.implementation;
+        next[systemIndex] = target.systemType;
+        return next;
+      });
+      window.adminSeedData.sizeRanges = [headers, ...retained, ...copied];
+      renderEditableMatrix("adminSizeRangeHead", "adminSizeRangeRows", window.adminSeedData.sizeRanges);
+      initializeSizeRangeCopyControls();
+      markAdminDirty();
+      alert(`${copied.length} Size Aralığı kaydı hedef seçime kopyalandı.`);
     }
 
     function initializeFixedDaysCopyControls() {
@@ -5169,6 +5267,13 @@
 
     function adminMatrixCellOptions(header, bodyId, row = [], headers = []) {
       const normalized = String(header || "").trim();
+      if (bodyId === "adminSizeRangeRows") {
+        const options = sizeRangeSelectOptions();
+        if (normalized === "Endüstri") return { options: options.industries, multiple: true };
+        if (normalized === "Implementation Type") return { options: options.implementations, multiple: true };
+        if (normalized === "System Type") return { options: options.systems, multiple: false };
+        if (normalized === "Size") return { options: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
+      }
       if (bodyId === "adminRestrictionsRows" && isRestrictionQuestionHeader(header, headers)) {
         const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
         const type = row[typeIndex] || "";
@@ -6177,6 +6282,7 @@
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
       renderEditableMatrix("adminSizeRangeHead", "adminSizeRangeRows", normalizeSizeRangeRows(data.sizeRanges));
+      initializeSizeRangeCopyControls();
       renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
@@ -7045,12 +7151,11 @@
     }
 
     function matchesSizeRangeDimension(rowValue, selectedValue) {
-      const value = String(rowValue || "All").trim();
-      return value === "All" || value === String(selectedValue || "All").trim();
+      return sizeRangeDimensionMatches(rowValue, selectedValue);
     }
 
     function sizeRangeSpecificity(row) {
-      return [row[0], row[1], row[2]].filter(value => String(value || "All").trim() !== "All").length;
+      return [row[0], row[1], row[2]].filter(value => !sizeRangeDimensionValues(value).includes("All")).length;
     }
 
     function sizeRangeDefinitions(filters = currentSizeRangeFilters()) {
