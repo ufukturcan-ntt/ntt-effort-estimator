@@ -2696,7 +2696,7 @@
               </section>
               <section class="panel admin-section" data-admin-panel="scope">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Soruları</h3><button class="button primary" data-admin-add="adminScopeRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table admin-scope-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Kategori</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
+                <div class="list-table admin-question-table admin-scope-question-table"><table><thead><tr><th>No</th><th>Değişken Tip</th><th>Kategori</th><th>Kapsam Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminScopeRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="size-ranges">
                 <div class="panel-head"><h3 class="panel-title">Size Aralıkları</h3><button class="button primary" data-admin-add-matrix="adminSizeRangeRows" type="button">+ Satır</button></div>
@@ -2708,7 +2708,7 @@
               </section>
               <section class="panel admin-section" data-admin-panel="development">
                 <div class="panel-head"><h3 class="panel-title">Geliştirme Soruları</h3><button class="button primary" data-admin-add="adminDevelopmentRows" type="button">+ Yeni Soru</button></div>
-                <div class="list-table admin-question-table admin-development-question-table"><table><thead><tr><th>No</th><th>Değişken Grup</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
+                <div class="list-table admin-question-table admin-development-question-table"><table><thead><tr><th>No</th><th>Değişken Tip</th><th>Geliştirme Tanımı</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody id="adminDevelopmentRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="library">
                 <div class="panel-head"><h3 class="panel-title">Kütüphane Tanımları</h3><button class="button primary" data-admin-add-matrix="adminLibraryRows" type="button">+ Kütüphane Kaydı</button></div>
@@ -5091,15 +5091,14 @@
       return [sizeRangeHeaders, ...normalized];
     }
 
-    const scopeImpactHeaders = ["Endüstri", "Implementation Type", "No", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
+    const scopeImpactHeaders = ["No", "Implementation Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
 
     function defaultScopeImpactRows() {
       return [
         scopeImpactHeaders,
-        ...(window.scopeQuestions || []).filter(item => Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır").map(item => [
+        ...(window.scopeQuestions || []).filter(item => Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır").map((item, index) => [
+          index + 1,
           "All",
-          "All",
-          item.no,
           item.name,
           Number(item.score) || "",
           1,
@@ -5114,38 +5113,35 @@
       if (headerIndex < 0) return defaultScopeImpactRows();
       const headers = source[headerIndex].map(cell => String(cell || "").trim());
       const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
-      const normalized = source.slice(headerIndex + 1).map(row => {
+      const normalized = source.slice(headerIndex + 1).map((row, index) => {
         const oldSizeImpact = row[idx("Size Etki", "Size Impact")] || "";
         if (["hayır", "no", "false"].includes(String(oldSizeImpact).trim().toLocaleLowerCase("tr-TR"))) return null;
         return [
-          row[idx("Endüstri", "Industry")] || "All",
+          index + 1,
           row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
-          row[idx("No")] || "",
           row[idx("Kapsam Sorusu", "Scope Question")] || "",
           row[idx("Puan", "Score")] || "",
           row[idx("Katsayı", "Coefficient")] || 1,
           row[idx("Size Etki Tipi", "Size Impact Type")] || ""
         ];
-      }).filter(row => row && row[3] && Number(String(row[4] || "").replace(",", ".")) > 0);
+      }).filter(row => row && row[2]);
       return [scopeImpactHeaders, ...normalized];
     }
 
     function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "") {
       const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
       const implementation = implementationOverride || document.getElementById("projectImplementation")?.value || "All";
-      const industry = industryOverride || document.getElementById("projectIndustry")?.value || "All";
-      const matches = rows.slice(1).filter(row => String(row[3] || "").trim() === item.name)
-        .filter(row => ["All", industry].includes(String(row[0] || "").trim()))
-        .filter(row => ["All", implementation].includes(String(row[1] || "").trim()));
+      const matches = rows.slice(1).filter(row => String(row[2] || "").trim() === item.name)
+        .filter(row => sizeRangeDimensionMatches(row[1], implementation));
       const row = matches
-        .sort((a, b) => ((b[0] !== "All") + (b[1] !== "All")) - ((a[0] !== "All") + (a[1] !== "All")))[0];
+        .sort((a, b) => ((b[1] !== "All") - (a[1] !== "All")))[0];
       if (!row) return { sizeImpact: false, score: 0, effortImpactType: "" };
-      const score = Number(String(row[4] || "").replace(",", ".")) || 0;
-      const coefficient = Number(String(row[5] || 1).replace(",", ".")) || 1;
+      const score = Number(String(row[3] || "").replace(",", ".")) || 0;
+      const coefficient = Number(String(row[4] || 1).replace(",", ".")) || 1;
       return {
         sizeImpact: true,
         score: score * coefficient,
-        effortImpactType: row[6] || (item.answerType === "number" ? "Katsayı" : "Sabit")
+        effortImpactType: row[5] || (item.answerType === "number" ? "Katsayı" : "Sabit")
       };
     }
 
@@ -5193,6 +5189,9 @@
         if (normalized === "Implementation Type") return { options: options.implementations, multiple: true };
         if (normalized === "System Type") return { options: options.systems, multiple: true };
         if (normalized === "Size") return { options: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
+      }
+      if (bodyId === "adminScopeImpactRows" && normalized === "Implementation Type") {
+        return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
       }
       if (bodyId === "adminRestrictionsRows" && isRestrictionQuestionHeader(header, headers)) {
         const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
@@ -5322,9 +5321,8 @@
       }
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
-        defaultRow[headers.indexOf("Endüstri")] = "All";
+        defaultRow[headers.indexOf("No")] = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
         defaultRow[headers.indexOf("Implementation Type")] = "All";
-        defaultRow[headers.indexOf("No")] = firstQuestion.no || "";
         defaultRow[headers.indexOf("Kapsam Sorusu")] = firstQuestion.name || "";
         defaultRow[headers.indexOf("Puan")] = "";
         defaultRow[headers.indexOf("Katsayı")] = 1;
@@ -5616,17 +5614,14 @@
       const target = document.getElementById(targetId);
       if (!target) return;
       const fieldOptions = currentQuestionFieldOptions();
-      target.innerHTML = questions.map(item => {
-        const hasSizeImpact = item.sizeImpact === true || item.sizeImpact === "Evet" || (item.sizeImpact == null && Number(item.score) > 0);
-        const groupValue = item.group || (targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme");
+      target.innerHTML = questions.map((item, index) => {
+        const noValue = targetId === "adminScopeRows" ? index + 1 : (item.no || index + 1);
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
-        const effortImpactType = item.effortImpactType || "Sabit";
         const actionButtons = `<div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div>`;
         if (targetId === "adminDevelopmentRows") {
           return `
         <tr>
-          ${editableCell(item.no)}
-          ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
+          ${editableCell(noValue)}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${editableCell(item.name)}
           ${editableCell(item.description)}
@@ -5637,8 +5632,7 @@
         const categoryValue = item.category || "";
         return `
         <tr>
-          ${editableCell(item.no)}
-          ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
+          ${editableCell(noValue)}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
           ${editableCell(item.name)}
@@ -5653,13 +5647,11 @@
     function addAdminQuestion(targetId) {
       const target = document.getElementById(targetId);
       if (!target) return;
-      const no = target.querySelectorAll("tr").length + 1;
-      const group = targetId === "adminScopeRows" ? "Kapsam" : "Geliştirme";
+      const no = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const fieldOptions = currentQuestionFieldOptions();
       if (targetId === "adminDevelopmentRows") {
         target.insertAdjacentHTML("beforeend", `<tr>
           ${editableCell(no)}
-          ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
           ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
           ${["Yeni geliştirme", "Açıklama"].map(editableCell).join("")}
           <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
@@ -5670,7 +5662,6 @@
       }
       target.insertAdjacentHTML("beforeend", `<tr>
         ${editableCell(no)}
-        ${adminSelectCell(group, optionValuesWithCurrent(fieldOptions.variableGroups, group))}
         ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
         ${adminSelectCell("", fieldOptions.scopeCategories)}
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
@@ -5750,34 +5741,30 @@
       if (!sourceRow || !target) return;
       const fieldOptions = currentQuestionFieldOptions();
       if (target.id === "adminDevelopmentRows") {
-        const cells = [...sourceRow.children].slice(0, 5).map(adminCellValue);
+        const cells = [...sourceRow.children].slice(0, 4).map(adminCellValue);
         const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
-        const groupValue = cells[1] || "Geliştirme";
-        const variableTypeValue = cells[2] || "Evet/Hayır";
+        const variableTypeValue = cells[1] || "Evet/Hayır";
         target.insertAdjacentHTML("beforeend", `<tr>
           ${editableCell(nextNo)}
-          ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
-          ${editableCell(`${cells[3] || "Yeni geliştirme"} - Kopya`)}
-          ${editableCell(cells[4] || "")}
+          ${editableCell(`${cells[2] || "Yeni geliştirme"} - Kopya`)}
+          ${editableCell(cells[3] || "")}
           <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
         </tr>`);
         bindAdminEditable(target);
         markAdminDirty();
         return;
       }
-      const cells = [...sourceRow.children].slice(0, 6).map(adminCellValue);
+      const cells = [...sourceRow.children].slice(0, 5).map(adminCellValue);
       const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
-      const groupValue = cells[1] || "Kapsam";
-      const variableTypeValue = cells[2] || "Evet/Hayır";
-      const categoryValue = cells[3] || "";
+      const variableTypeValue = cells[1] || "Evet/Hayır";
+      const categoryValue = cells[2] || "";
       target.insertAdjacentHTML("beforeend", `<tr>
         ${editableCell(nextNo)}
-        ${adminSelectCell(groupValue, optionValuesWithCurrent(fieldOptions.variableGroups, groupValue))}
         ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
         ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
-        ${editableCell(`${cells[4] || "Yeni soru"} - Kopya`)}
-        ${editableCell(cells[5] || "")}
+        ${editableCell(`${cells[3] || "Yeni soru"} - Kopya`)}
+        ${editableCell(cells[4] || "")}
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
@@ -5819,14 +5806,14 @@
     function collectQuestionAdminRows(targetId) {
       return [...document.querySelectorAll(`#${targetId} tr`)].map(row => {
         if (targetId === "adminDevelopmentRows") {
-          const cells = [...row.children].slice(0, 5).map(adminCellValue);
-          const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
+          const cells = [...row.children].slice(0, 4).map(adminCellValue);
+          const answerType = isNumberVariableType(cells[1]) ? "number" : "yesno";
           return {
             no: Number(cells[0]) || cells[0],
-            group: cells[1],
-            variableType: cells[2],
-            name: cells[3],
-            description: cells[4],
+            group: "Geliştirme",
+            variableType: cells[1],
+            name: cells[2],
+            description: cells[3],
             sizeImpact: false,
             score: 0,
             effortImpactType: "",
@@ -5834,15 +5821,15 @@
             active: true
           };
         }
-        const cells = [...row.children].slice(0, 6).map(adminCellValue);
-        const answerType = isNumberVariableType(cells[2]) ? "number" : "yesno";
+        const cells = [...row.children].slice(0, 5).map(adminCellValue);
+        const answerType = isNumberVariableType(cells[1]) ? "number" : "yesno";
         return {
           no: Number(cells[0]) || cells[0],
-          group: cells[1],
-          variableType: cells[2],
-          category: cells[3],
-          name: cells[4],
-          description: cells[5],
+          group: "Kapsam",
+          variableType: cells[1],
+          category: cells[2],
+          name: cells[3],
+          description: cells[4],
           sizeImpact: false,
           score: 0,
           effortImpactType: "",
@@ -5914,22 +5901,19 @@
         ? config.scopeSizeImpacts
         : [scopeImpactHeaders];
       if (!impactRows[0]?.includes("Kapsam Sorusu")) impactRows.unshift(scopeImpactHeaders);
-      impactRows[0] = scopeImpactHeaders;
-      const byName = new Map(impactRows.slice(1).map(row => [normalizeQuestionName(row[3]), row]));
+      const normalizedImpactRows = normalizeScopeImpactRows(impactRows);
+      const byName = new Map(normalizedImpactRows.slice(1).map(row => [normalizeQuestionName(row[2]), row]));
       scoredQuestions.forEach(item => {
         const key = normalizeQuestionName(item.name);
         const effortImpactType = item.effortImpactType || (item.answerType === "number" ? "Katsayı" : "Sabit");
         const row = byName.get(key);
         if (row) {
-          if (row[2] === "" || row[2] == null) row[2] = item.no;
-          if (row[4] === "" || row[4] == null) row[4] = Number(item.score) || "";
-          if (row[5] === "" || row[5] == null) row[5] = 1;
-          if (!row[6]) row[6] = effortImpactType;
-          return;
+          if (row[3] === "" || row[3] == null) row[3] = Number(item.score) || "";
+          if (row[4] === "" || row[4] == null) row[4] = 1;
+          if (!row[5]) row[5] = effortImpactType;
         }
-        impactRows.push(["All", "All", item.no, item.name, Number(item.score) || "", 1, effortImpactType]);
       });
-      config.scopeSizeImpacts = impactRows;
+      config.scopeSizeImpacts = normalizeScopeImpactRows(normalizedImpactRows);
       return config;
     }
 
@@ -5946,15 +5930,14 @@
         ...bundledConversionQuestions.map(item => item.category)
       ]);
 
-      const impactRows = Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders];
-      if (!impactRows[0]?.includes("Kapsam Sorusu")) impactRows.unshift(scopeImpactHeaders);
-      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[3])));
+      const impactRows = normalizeScopeImpactRows(Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders]);
+      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[2])));
       bundledConversionQuestions.forEach(item => {
         if (impactNames.has(normalizeQuestionName(item.name))) return;
-        impactRows.push(["All", "All", item.no, item.name, "", 1, ""]);
+        impactRows.push([impactRows.length, "All", item.name, "", 1, ""]);
         impactNames.add(normalizeQuestionName(item.name));
       });
-      config.scopeSizeImpacts = impactRows;
+      config.scopeSizeImpacts = normalizeScopeImpactRows(impactRows);
 
       const restrictionHeaders = ["No", "Variable Type", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?", "Notes", "Usage"];
       const restrictionRows = Array.isArray(config.restrictions) && config.restrictions.length ? config.restrictions : [restrictionHeaders];
