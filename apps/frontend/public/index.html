@@ -1169,19 +1169,25 @@
 
     .admin-development-question-table th:nth-child(1) { width: 5%; }
     .admin-development-question-table th:nth-child(2) { width: 12%; }
-    .admin-development-question-table th:nth-child(3) { width: 12%; }
-    .admin-development-question-table th:nth-child(4) { width: 24%; }
-    .admin-development-question-table th:nth-child(5) { width: 37%; }
-    .admin-development-question-table th:nth-child(6) { width: 10%; }
+    .admin-development-question-table th:nth-child(3) { width: 39%; }
+    .admin-development-question-table th:nth-child(4) { width: 34%; }
+    .admin-development-question-table th:nth-child(5) { width: 10%; }
 
-    .admin-development-question-table td,
-    .admin-development-question-table .admin-edit {
-      white-space: nowrap;
+    .admin-development-question-table td:nth-child(3),
+    .admin-development-question-table td:nth-child(4),
+    .admin-development-question-table td:nth-child(3) .admin-edit,
+    .admin-development-question-table td:nth-child(4) .admin-edit {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
 
-    .admin-development-question-table .admin-edit {
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .admin-development-question-table td:last-child {
+      text-align: right;
+    }
+
+    .admin-development-question-table td:last-child .quick-actions {
+      justify-content: flex-end;
     }
 
     .admin-question-table .quick-actions {
@@ -3052,7 +3058,6 @@
 
     function sizeRangeSelectOptions() {
       return {
-        industries: ["All", ...adminDefinitionValues(0)],
         implementations: ["All", ...adminDefinitionValues(1)],
         systems: ["All", ...adminDefinitionValues(2)]
       };
@@ -5061,15 +5066,15 @@
       return String(value || "").toLocaleLowerCase("tr-TR").includes("sayı");
     }
 
-    const sizeRangeHeaders = ["Endüstri", "Implementation Type", "System Type", "Size", "Min", "Max", "Multiplier"];
+    const sizeRangeHeaders = ["Implementation Type", "System Type", "Size", "Min", "Max", "Multiplier"];
 
     function defaultSizeRangeRows() {
       return [
         sizeRangeHeaders,
-        ["All", "All", "All", "SMALL", 0, 40, 1],
-        ["All", "All", "All", "MEDIUM", 41, 70, 1.25],
-        ["All", "All", "All", "LARGE", 71, 100, 1.5],
-        ["All", "All", "All", "X-LARGE", 101, "", 1.75]
+        ["All", "All", "SMALL", 0, 40, 1],
+        ["All", "All", "MEDIUM", 41, 70, 1.25],
+        ["All", "All", "LARGE", 71, 100, 1.5],
+        ["All", "All", "X-LARGE", 101, "", 1.75]
       ];
     }
 
@@ -5080,14 +5085,13 @@
       const headers = source[headerIndex].map(cell => String(cell || "").trim());
       const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
       const normalized = source.slice(headerIndex + 1).map(row => [
-        row[idx("Endüstri", "Industry")] || "All",
         row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
         row[idx("System Type", "Sistem Türü")] || "All",
         row[idx("Size")] || "",
         row[idx("Min")] ?? "",
         row[idx("Max")] ?? "",
         row[idx("Multiplier", "Çarpan")] || ""
-      ]).filter(row => row[3]);
+      ]).filter(row => row[2]);
       return [sizeRangeHeaders, ...normalized];
     }
 
@@ -5185,7 +5189,6 @@
       const normalized = String(header || "").trim();
       if (bodyId === "adminSizeRangeRows") {
         const options = sizeRangeSelectOptions();
-        if (normalized === "Endüstri") return { options: options.industries, multiple: true };
         if (normalized === "Implementation Type") return { options: options.implementations, multiple: true };
         if (normalized === "System Type") return { options: options.systems, multiple: true };
         if (normalized === "Size") return { options: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
@@ -5311,7 +5314,6 @@
       if (bodyId === "adminLibraryRows") defaultRow[headers.indexOf("ID")] = newLibraryId();
       if (bodyId === "adminVmpRows" && headers.some(isDateHeader)) defaultRow[headers.findIndex(isDateHeader)] = todayInputDate();
       if (bodyId === "adminSizeRangeRows") {
-        defaultRow[headers.indexOf("Endüstri")] = "All";
         defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("System Type")] = "All";
         defaultRow[headers.indexOf("Size")] = "SMALL";
@@ -7076,23 +7078,21 @@
     }
 
     function sizeRangeSpecificity(row) {
-      return [row[0], row[1], row[2]].filter(value => !sizeRangeDimensionValues(value).includes("All")).length;
+      return [row[0], row[1]].filter(value => !sizeRangeDimensionValues(value).includes("All")).length;
     }
 
     function sizeRangeDefinitions(filters = currentSizeRangeFilters()) {
       const selected = {
-        industry: filters.industry || "All",
         implementation: filters.implementation || "All",
         system: filters.system || "All"
       };
       const rows = normalizeSizeRangeRows(window.adminSeedData?.sizeRanges).slice(1)
-        .filter(row => matchesSizeRangeDimension(row[0], selected.industry))
-        .filter(row => matchesSizeRangeDimension(row[1], selected.implementation))
-        .filter(row => matchesSizeRangeDimension(row[2], selected.system))
+        .filter(row => matchesSizeRangeDimension(row[0], selected.implementation))
+        .filter(row => matchesSizeRangeDimension(row[1], selected.system))
         .sort((a, b) => sizeRangeSpecificity(b) - sizeRangeSpecificity(a));
       const bySize = new Map();
       rows.forEach(row => {
-        const fixedKey = normalizeSizeKey(row[3]);
+        const fixedKey = normalizeSizeKey(row[2]);
         if (!bySize.has(fixedKey)) bySize.set(fixedKey, row);
       });
       return [...bySize.values()];
@@ -7101,17 +7101,17 @@
     function projectSizeFromScore(score, filters = currentSizeRangeFilters()) {
       const ranges = sizeRangeDefinitions(filters);
       const matched = ranges.find(row => {
-        const min = Number(String(row[4] || 0).replace(",", ".")) || 0;
-        const maxText = String(row[5] ?? "").trim();
+        const min = Number(String(row[3] || 0).replace(",", ".")) || 0;
+        const maxText = String(row[4] ?? "").trim();
         const max = maxText === "" ? Infinity : Number(maxText.replace(",", "."));
         return score >= min && score <= max;
       });
       if (matched) {
-        const fixedKey = normalizeSizeKey(matched[3]);
+        const fixedKey = normalizeSizeKey(matched[2]);
         const label = sizeLabelForKey(fixedKey);
-        const min = Number(String(matched[4] || 0).replace(",", ".")) || 0;
-        const maxText = String(matched[5] ?? "").trim();
-        const multiplier = Number(String(matched[6] || 1).replace(",", ".")) || 1;
+        const min = Number(String(matched[3] || 0).replace(",", ".")) || 0;
+        const maxText = String(matched[4] ?? "").trim();
+        const multiplier = Number(String(matched[5] || 1).replace(",", ".")) || 1;
         return {
           code: label.code,
           fixedKey,
