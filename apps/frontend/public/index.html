@@ -5105,7 +5105,7 @@
       return [sizeRangeHeaders, ...normalized];
     }
 
-    const scopeImpactHeaders = ["No", "Question ID", "Implementation Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
+    const scopeImpactHeaders = ["No", "Question ID", "Implementation Type", "System Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
 
     function defaultScopeImpactRows() {
       return [
@@ -5113,6 +5113,7 @@
         ...(window.scopeQuestions || []).filter(item => Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır").map((item, index) => [
           index + 1,
           questionIdFor(item, "scope"),
+          "All",
           "All",
           item.name,
           Number(item.score) || "",
@@ -5135,30 +5136,37 @@
           index + 1,
           row[idx("Question ID", "Kapsam Soru ID")] || questionIdFromName("scope", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
           row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
+          row[idx("System Type", "Sistem Türü")] || "All",
           questionDisplayName("scope", row[idx("Question ID", "Kapsam Soru ID")] || "", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
           row[idx("Puan", "Score")] || "",
           row[idx("Katsayı", "Coefficient")] || 1,
           row[idx("Size Etki Tipi", "Size Impact Type")] || ""
         ];
-      }).filter(row => row && row[3]);
+      }).filter(row => row && row[4]);
       return [scopeImpactHeaders, ...normalized];
     }
 
-    function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "") {
+    function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "", systemOverride = "") {
       const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
       const implementation = implementationOverride || document.getElementById("projectImplementation")?.value || "All";
+      const systemType = systemOverride || document.getElementById("projectSystem")?.value || "All";
       const itemId = questionIdFor(item, "scope");
-      const matches = rows.slice(1).filter(row => String(row[1] || "").trim() === itemId || String(row[3] || "").trim() === item.name)
-        .filter(row => sizeRangeDimensionMatches(row[2], implementation));
+      const matches = rows.slice(1).filter(row => String(row[1] || "").trim() === itemId || String(row[4] || "").trim() === item.name)
+        .filter(row => sizeRangeDimensionMatches(row[2], implementation))
+        .filter(row => sizeRangeDimensionMatches(row[3], systemType));
       const row = matches
-        .sort((a, b) => ((b[1] !== "All") - (a[1] !== "All")))[0];
+        .sort((a, b) => {
+          const specificity = row => (sizeRangeDimensionValues(row[2]).includes("All") ? 0 : 2)
+            + (sizeRangeDimensionValues(row[3]).includes("All") ? 0 : 1);
+          return specificity(b) - specificity(a);
+        })[0];
       if (!row) return { sizeImpact: false, score: 0, effortImpactType: "" };
-      const score = Number(String(row[4] || "").replace(",", ".")) || 0;
-      const coefficient = Number(String(row[5] || 1).replace(",", ".")) || 1;
+      const score = Number(String(row[5] || "").replace(",", ".")) || 0;
+      const coefficient = Number(String(row[6] || 1).replace(",", ".")) || 1;
       return {
         sizeImpact: true,
         score: score * coefficient,
-        effortImpactType: row[6] || (item.answerType === "number" ? "Katsayı" : "Sabit")
+        effortImpactType: row[7] || (item.answerType === "number" ? "Katsayı" : "Sabit")
       };
     }
 
@@ -5208,6 +5216,9 @@
       }
       if (bodyId === "adminScopeImpactRows" && normalized === "Implementation Type") {
         return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
+      }
+      if (bodyId === "adminScopeImpactRows" && normalized === "System Type") {
+        return { options: ["All", ...adminDefinitionValues(2)], multiple: true };
       }
       if (bodyId === "adminRestrictionsRows" && isRestrictionQuestionHeader(header, headers)) {
         const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
@@ -5367,6 +5378,7 @@
         defaultRow[headers.indexOf("No")] = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
         defaultRow[headers.indexOf("Question ID")] = questionIdFor(firstQuestion, "scope");
         defaultRow[headers.indexOf("Implementation Type")] = "All";
+        defaultRow[headers.indexOf("System Type")] = "All";
         defaultRow[headers.indexOf("Kapsam Sorusu")] = firstQuestion.name || "";
         defaultRow[headers.indexOf("Puan")] = "";
         defaultRow[headers.indexOf("Katsayı")] = 1;
@@ -5930,10 +5942,12 @@
         if (bodyId === "adminScopeImpactRows") {
           const idIndex = headers.indexOf("Question ID");
           const questionIndex = headers.indexOf("Kapsam Sorusu");
+          const systemIndex = headers.indexOf("System Type");
           if (idIndex >= 0 && questionIndex >= 0) {
             values[idIndex] = questionIdFromName("scope", values[questionIndex]) || values[idIndex];
             values[questionIndex] = questionDisplayName("scope", values[idIndex], values[questionIndex]);
           }
+          if (systemIndex >= 0 && !values[systemIndex]) values[systemIndex] = "All";
         }
         return values;
       }).filter(row => row.some(Boolean));
@@ -6032,7 +6046,7 @@
       if (!impactRows[0]?.includes("Kapsam Sorusu")) impactRows.unshift(scopeImpactHeaders);
       const normalizedImpactRows = normalizeScopeImpactRows(impactRows);
       const byId = new Map(normalizedImpactRows.slice(1).map(row => [row[1], row]));
-      const byName = new Map(normalizedImpactRows.slice(1).map(row => [normalizeQuestionName(row[3]), row]));
+      const byName = new Map(normalizedImpactRows.slice(1).map(row => [normalizeQuestionName(row[4]), row]));
       scoredQuestions.forEach(item => {
         const id = questionIdFor(item, "scope");
         const key = normalizeQuestionName(item.name);
@@ -6040,10 +6054,11 @@
         const row = byId.get(id) || byName.get(key);
         if (row) {
           row[1] = row[1] || id;
-          row[3] = item.name;
-          if (row[4] === "" || row[4] == null) row[4] = Number(item.score) || "";
-          if (row[5] === "" || row[5] == null) row[5] = 1;
-          if (!row[6]) row[6] = effortImpactType;
+          row[3] = row[3] || "All";
+          row[4] = item.name;
+          if (row[5] === "" || row[5] == null) row[5] = Number(item.score) || "";
+          if (row[6] === "" || row[6] == null) row[6] = 1;
+          if (!row[7]) row[7] = effortImpactType;
         }
       });
       config.scopeSizeImpacts = normalizeScopeImpactRows(normalizedImpactRows);
@@ -6065,11 +6080,11 @@
 
       const impactRows = normalizeScopeImpactRows(Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders]);
       const impactIds = new Set(impactRows.slice(1).map(row => row[1]).filter(Boolean));
-      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[3])));
+      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[4])));
       bundledConversionQuestions.forEach(item => {
         const id = questionIdFor(item, "scope");
         if (impactIds.has(id) || impactNames.has(normalizeQuestionName(item.name))) return;
-        impactRows.push([impactRows.length, id, "All", item.name, "", 1, ""]);
+        impactRows.push([impactRows.length, id, "All", "All", item.name, "", 1, ""]);
         impactIds.add(id);
         impactNames.add(normalizeQuestionName(item.name));
       });
@@ -6430,8 +6445,9 @@
       const definition = offerJson(offer.project_definition);
       const implementation = offer.implementation_type || definition.implementation || "";
       const industry = offer.industry || definition.industry || "";
+      const systemType = offer.system_type || definition.system || "";
       return (window.scopeQuestions || []).reduce((total, item) => {
-        return total + answerImpact(item, answers[String(item.no)], true, implementation, industry);
+        return total + answerImpact(item, answers[String(item.no)], true, implementation, industry, systemType);
       }, 0);
     }
 
@@ -7168,9 +7184,9 @@
         && matchesAllowed(restriction?.systemTypes || item.systemTypes, filters.system);
     }
 
-    function answerImpact(item, value, useScopeImpactMaintenance = false, implementation = "", industry = "") {
+    function answerImpact(item, value, useScopeImpactMaintenance = false, implementation = "", industry = "", systemType = "") {
       if (!value || value === "Seçiniz" || value === "Hayır") return 0;
-      const impact = useScopeImpactMaintenance ? scopeImpactForQuestion(item, implementation, industry) : item;
+      const impact = useScopeImpactMaintenance ? scopeImpactForQuestion(item, implementation, industry, systemType) : item;
       if (impact.sizeImpact === false || impact.sizeImpact === "Hayır") return 0;
       const score = Number(impact.score) || 0;
       if (item.answerType === "number") return Math.max(Number(value) || 0, 0) * score;
