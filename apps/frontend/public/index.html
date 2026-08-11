@@ -2874,7 +2874,7 @@
       const sourceHeaders = headers.filter(Boolean).map(header => canonicalPhaseName(String(header || "").trim()));
       const isVmp = sourceHeaders.includes("Kaynak Tipi");
       const cleanHeaders = isVmp
-        ? ["Kaynak Tipi", "Kapsam Sorusu", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", "Tarih", ...vmpPhaseHeaders]
+        ? ["Kaynak Tipi", "Kapsam Soru ID", "Kapsam Sorusu", "Geliştirme Soru ID", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", "Tarih", ...vmpPhaseHeaders]
         : sourceHeaders;
       const cleanedRows = [];
       const seen = new Set();
@@ -2886,6 +2886,16 @@
               return sourceIndex >= 0 ? sourceRow[sourceIndex] ?? "" : "";
             })
           : sourceRow.slice(0, cleanHeaders.length);
+        if (isVmp) {
+          const scopeIdIndex = cleanHeaders.indexOf("Kapsam Soru ID");
+          const scopeIndex = cleanHeaders.indexOf("Kapsam Sorusu");
+          const devIdIndex = cleanHeaders.indexOf("Geliştirme Soru ID");
+          const devIndex = cleanHeaders.indexOf("Geliştirme Sorusu");
+          cleanRow[scopeIdIndex] = cleanRow[scopeIdIndex] || questionIdFromName("scope", cleanRow[scopeIndex]);
+          cleanRow[scopeIndex] = questionDisplayName("scope", cleanRow[scopeIdIndex], cleanRow[scopeIndex]);
+          cleanRow[devIdIndex] = cleanRow[devIdIndex] || questionIdFromName("development", cleanRow[devIndex]);
+          cleanRow[devIndex] = questionDisplayName("development", cleanRow[devIdIndex], cleanRow[devIndex]);
+        }
         while (cleanRow.length < cleanHeaders.length) cleanRow.push("");
         if (!cleanRow.some(value => String(value || "").trim())) return;
         if (!isVmp) {
@@ -5095,13 +5105,14 @@
       return [sizeRangeHeaders, ...normalized];
     }
 
-    const scopeImpactHeaders = ["No", "Implementation Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
+    const scopeImpactHeaders = ["No", "Question ID", "Implementation Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
 
     function defaultScopeImpactRows() {
       return [
         scopeImpactHeaders,
         ...(window.scopeQuestions || []).filter(item => Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır").map((item, index) => [
           index + 1,
+          questionIdFor(item, "scope"),
           "All",
           item.name,
           Number(item.score) || "",
@@ -5122,30 +5133,32 @@
         if (["hayır", "no", "false"].includes(String(oldSizeImpact).trim().toLocaleLowerCase("tr-TR"))) return null;
         return [
           index + 1,
+          row[idx("Question ID", "Kapsam Soru ID")] || questionIdFromName("scope", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
           row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
-          row[idx("Kapsam Sorusu", "Scope Question")] || "",
+          questionDisplayName("scope", row[idx("Question ID", "Kapsam Soru ID")] || "", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
           row[idx("Puan", "Score")] || "",
           row[idx("Katsayı", "Coefficient")] || 1,
           row[idx("Size Etki Tipi", "Size Impact Type")] || ""
         ];
-      }).filter(row => row && row[2]);
+      }).filter(row => row && row[3]);
       return [scopeImpactHeaders, ...normalized];
     }
 
     function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "") {
       const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
       const implementation = implementationOverride || document.getElementById("projectImplementation")?.value || "All";
-      const matches = rows.slice(1).filter(row => String(row[2] || "").trim() === item.name)
-        .filter(row => sizeRangeDimensionMatches(row[1], implementation));
+      const itemId = questionIdFor(item, "scope");
+      const matches = rows.slice(1).filter(row => String(row[1] || "").trim() === itemId || String(row[3] || "").trim() === item.name)
+        .filter(row => sizeRangeDimensionMatches(row[2], implementation));
       const row = matches
         .sort((a, b) => ((b[1] !== "All") - (a[1] !== "All")))[0];
       if (!row) return { sizeImpact: false, score: 0, effortImpactType: "" };
-      const score = Number(String(row[3] || "").replace(",", ".")) || 0;
-      const coefficient = Number(String(row[4] || 1).replace(",", ".")) || 1;
+      const score = Number(String(row[4] || "").replace(",", ".")) || 0;
+      const coefficient = Number(String(row[5] || 1).replace(",", ".")) || 1;
       return {
         sizeImpact: true,
         score: score * coefficient,
-        effortImpactType: row[5] || (item.answerType === "number" ? "Katsayı" : "Sabit")
+        effortImpactType: row[6] || (item.answerType === "number" ? "Katsayı" : "Sabit")
       };
     }
 
@@ -5209,6 +5222,34 @@
       return headers.findIndex(item => String(item || "").trim() === normalizedTarget);
     }
 
+    const restrictionHeaders = ["No", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?", "Notes", "Usage"];
+
+    function normalizeRestrictionRows(rows = window.adminSeedData?.restrictions || []) {
+      const source = Array.isArray(rows) && rows.length ? rows : [restrictionHeaders];
+      const headerIndex = source.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
+      if (headerIndex < 0) return [restrictionHeaders];
+      const headers = source[headerIndex].map(cell => String(cell || "").trim());
+      const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
+      const normalized = source.slice(headerIndex + 1).map(row => {
+        const type = row[idx("Variable Type")] || "Kapsam";
+        const question = row[idx("Question")] || "";
+        const questionId = row[idx("Question ID")] || questionIdFromName(questionTypeFromLabel(type), question);
+        return [
+          row[idx("No")] || "",
+          type,
+          questionId,
+          questionDisplayName(questionTypeFromLabel(type), questionId, question),
+          row[idx("Allowed Industries")] || "All",
+          row[idx("Allowed Implementation Types")] || "All",
+          row[idx("Allowed System Types")] || "All",
+          row[idx("Active?")] || "Yes",
+          row[idx("Notes")] || "",
+          row[idx("Usage")] || ""
+        ];
+      }).filter(row => row[3]);
+      return [restrictionHeaders, ...normalized];
+    }
+
     function isRestrictionQuestionHeader(header, headers = []) {
       const normalized = String(header || "").trim();
       if (["Question", "Soru"].includes(normalized)) return true;
@@ -5266,7 +5307,7 @@
       const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
       return headers.map((header, index) => {
         const normalizedHeader = String(header || "").trim();
-        if (bodyId === "adminLibraryRows" && normalizedHeader === "ID") return `<td hidden>${escapeHtml(values[index] || newLibraryId())}</td>`;
+        if ((bodyId === "adminLibraryRows" && normalizedHeader === "ID") || isHiddenAdminColumn(normalizedHeader)) return `<td hidden>${escapeHtml(values[index] || "")}</td>`;
         if (isDateHeader(normalizedHeader)) return adminDateCell(values[index] || todayInputDate());
         const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
         const isVariableModuleCell = bodyId === "adminVmpRows"
@@ -5292,7 +5333,7 @@
       });
       const headers = rows[Math.max(headerIndex, 0)];
       const dataRows = rows.slice(Math.max(headerIndex, 0) + 1);
-      if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${bodyId === "adminLibraryRows" && value === "ID" ? "hidden" : ""}>${escapeHtml(value)}</th>`).join("")}<th>İşlem</th></tr>`;
+      if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${(bodyId === "adminLibraryRows" && value === "ID") || isHiddenAdminColumn(value) ? "hidden" : ""}>${escapeHtml(value)}</th>`).join("")}<th>İşlem</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
       body.innerHTML = dataRows.map(row => `<tr>${adminMatrixCells(bodyId, headers, row)}<td>${adminMatrixActionButtons(bodyId)}</td></tr>`).join("");
       bindAdminEditable(body);
@@ -5324,6 +5365,7 @@
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
         defaultRow[headers.indexOf("No")] = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
+        defaultRow[headers.indexOf("Question ID")] = questionIdFor(firstQuestion, "scope");
         defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("Kapsam Sorusu")] = firstQuestion.name || "";
         defaultRow[headers.indexOf("Puan")] = "";
@@ -5344,6 +5386,7 @@
         const normalized = String(header || "").trim();
         if (normalized === "No") return editableCell(nextNo);
         if (normalized === "Variable Type") return adminSelectCell("Kapsam", ["Kapsam", "Geliştirme"]);
+        if (normalized === "Question ID") return `<td hidden></td>`;
         if (normalized === "Question") return adminSelectCell("", ["", ...adminQuestionNamesByType("Kapsam")], false, "data-restriction-question");
         if (normalized === "Allowed Industries") return adminSelectCell(rowValues[index] || "All", ["All", ...adminDefinitionValues(0)], true);
         if (normalized === "Allowed Implementation Types") return adminSelectCell(rowValues[index] || "All", ["All", ...adminDefinitionValues(1)], true);
@@ -5617,12 +5660,14 @@
       if (!target) return;
       const fieldOptions = currentQuestionFieldOptions();
       target.innerHTML = questions.map((item, index) => {
+        const questionType = targetId === "adminDevelopmentRows" ? "development" : "scope";
+        const questionId = questionIdFor(item, questionType);
         const noValue = targetId === "adminScopeRows" ? index + 1 : (item.no || index + 1);
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
         const actionButtons = `<div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div>`;
         if (targetId === "adminDevelopmentRows") {
           return `
-        <tr>
+        <tr data-question-id="${escapeHtml(questionId)}">
           ${editableCell(noValue)}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${editableCell(item.name)}
@@ -5633,7 +5678,7 @@
         }
         const categoryValue = item.category || "";
         return `
-        <tr>
+        <tr data-question-id="${escapeHtml(questionId)}">
           ${editableCell(noValue)}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
@@ -5652,7 +5697,8 @@
       const no = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const fieldOptions = currentQuestionFieldOptions();
       if (targetId === "adminDevelopmentRows") {
-        target.insertAdjacentHTML("beforeend", `<tr>
+        const questionId = `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
           ${editableCell(no)}
           ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
           ${["Yeni geliştirme", "Açıklama"].map(editableCell).join("")}
@@ -5662,7 +5708,8 @@
         markAdminDirty();
         return;
       }
-      target.insertAdjacentHTML("beforeend", `<tr>
+      const questionId = `scope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
         ${editableCell(no)}
         ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
         ${adminSelectCell("", fieldOptions.scopeCategories)}
@@ -5746,7 +5793,8 @@
         const cells = [...sourceRow.children].slice(0, 4).map(adminCellValue);
         const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
         const variableTypeValue = cells[1] || "Evet/Hayır";
-        target.insertAdjacentHTML("beforeend", `<tr>
+        const questionId = `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+        target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
           ${editableCell(nextNo)}
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${editableCell(`${cells[2] || "Yeni geliştirme"} - Kopya`)}
@@ -5761,7 +5809,8 @@
       const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const variableTypeValue = cells[1] || "Evet/Hayır";
       const categoryValue = cells[2] || "";
-      target.insertAdjacentHTML("beforeend", `<tr>
+      const questionId = `scope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
         ${editableCell(nextNo)}
         ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
         ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
@@ -5811,6 +5860,7 @@
           const cells = [...row.children].slice(0, 4).map(adminCellValue);
           const answerType = isNumberVariableType(cells[1]) ? "number" : "yesno";
           return {
+            id: row.dataset.questionId || stableQuestionId("development", cells[0], cells[2]),
             no: Number(cells[0]) || cells[0],
             group: "Geliştirme",
             variableType: cells[1],
@@ -5826,6 +5876,7 @@
         const cells = [...row.children].slice(0, 5).map(adminCellValue);
         const answerType = isNumberVariableType(cells[1]) ? "number" : "yesno";
         return {
+          id: row.dataset.questionId || stableQuestionId("scope", cells[0], cells[3]),
           no: Number(cells[0]) || cells[0],
           group: "Kapsam",
           variableType: cells[1],
@@ -5853,8 +5904,42 @@
       const rows = [...document.querySelectorAll(`#${bodyId} tr`)].map(row => {
         const values = [...row.children].slice(0, headers.length).map(adminCellValue);
         if (sourceTypeIndex >= 0 && moduleIndex >= 0 && values[sourceTypeIndex] === "Değişken") values[moduleIndex] = "";
+        if (bodyId === "adminVmpRows") {
+          const scopeIdIndex = headers.indexOf("Kapsam Soru ID");
+          const scopeIndex = headers.indexOf("Kapsam Sorusu");
+          const devIdIndex = headers.indexOf("Geliştirme Soru ID");
+          const devIndex = headers.indexOf("Geliştirme Sorusu");
+          if (scopeIdIndex >= 0 && scopeIndex >= 0) {
+            values[scopeIdIndex] = questionIdFromName("scope", values[scopeIndex]) || values[scopeIdIndex];
+            values[scopeIndex] = questionDisplayName("scope", values[scopeIdIndex], values[scopeIndex]);
+          }
+          if (devIdIndex >= 0 && devIndex >= 0) {
+            values[devIdIndex] = questionIdFromName("development", values[devIndex]) || values[devIdIndex];
+            values[devIndex] = questionDisplayName("development", values[devIdIndex], values[devIndex]);
+          }
+        }
+        if (bodyId === "adminRestrictionsRows") {
+          const typeIndex = headers.indexOf("Variable Type");
+          const idIndex = headers.indexOf("Question ID");
+          const questionIndex = headers.indexOf("Question");
+          if (idIndex >= 0 && questionIndex >= 0) {
+            values[idIndex] = questionIdFromName(questionTypeFromLabel(values[typeIndex]), values[questionIndex]) || values[idIndex];
+            values[questionIndex] = questionDisplayName(questionTypeFromLabel(values[typeIndex]), values[idIndex], values[questionIndex]);
+          }
+        }
+        if (bodyId === "adminScopeImpactRows") {
+          const idIndex = headers.indexOf("Question ID");
+          const questionIndex = headers.indexOf("Kapsam Sorusu");
+          if (idIndex >= 0 && questionIndex >= 0) {
+            values[idIndex] = questionIdFromName("scope", values[questionIndex]) || values[idIndex];
+            values[questionIndex] = questionDisplayName("scope", values[idIndex], values[questionIndex]);
+          }
+        }
         return values;
       }).filter(row => row.some(Boolean));
+      if (bodyId === "adminRestrictionsRows") return normalizeRestrictionRows([headers, ...rows]);
+      if (bodyId === "adminScopeImpactRows") return normalizeScopeImpactRows([headers, ...rows]);
+      if (bodyId === "adminVmpRows") return normalizeVariableModulePhaseRows([headers, ...rows]);
       return [headers, ...rows];
     }
 
@@ -5894,6 +5979,48 @@
       return String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
     }
 
+    function stableQuestionId(type = "scope", no = "", name = "") {
+      const prefix = String(type || "scope").toLocaleLowerCase("tr-TR").includes("geli") ? "dev" : "scope";
+      const number = String(no || "").trim();
+      if (number) return `${prefix}-${number}`;
+      const text = normalizeQuestionName(name).replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+      return `${prefix}-${text || Date.now().toString(36)}`;
+    }
+
+    function questionIdFor(item = {}, type = "scope") {
+      return item.id || item.questionId || stableQuestionId(type, item.no, item.name);
+    }
+
+    function questionTypeFromLabel(type = "") {
+      const normalized = String(type || "").trim().toLocaleLowerCase("tr-TR");
+      return normalized === "geliştirme" || normalized === "development" || normalized === "dev" ? "development" : "scope";
+    }
+
+    function questionListByType(type = "scope") {
+      return questionTypeFromLabel(type) === "development" ? (window.developmentQuestions || []) : (window.scopeQuestions || []);
+    }
+
+    function findQuestionByIdOrName(type = "scope", id = "", name = "") {
+      const normalizedName = normalizeQuestionName(name);
+      return questionListByType(type).find(item => questionIdFor(item, type) === id)
+        || questionListByType(type).find(item => normalizeQuestionName(item.name) === normalizedName)
+        || null;
+    }
+
+    function questionDisplayName(type = "scope", id = "", fallback = "") {
+      const question = findQuestionByIdOrName(type, id, fallback);
+      return question ? (type === "development" ? canonicalDevelopmentName(question.name) : question.name) : fallback;
+    }
+
+    function questionIdFromName(type = "scope", fallback = "") {
+      const question = findQuestionByIdOrName(type, "", fallback);
+      return question ? questionIdFor(question, type) : "";
+    }
+
+    function isHiddenAdminColumn(header = "") {
+      return ["Question ID", "Kapsam Soru ID", "Geliştirme Soru ID"].includes(String(header || "").trim());
+    }
+
     function ensureScoredScopeImpactRows(config = {}) {
       const scoredQuestions = bundledScopeQuestions.filter(item =>
         Number(item.score) > 0 && item.sizeImpact !== false && item.sizeImpact !== "Hayır"
@@ -5904,15 +6031,19 @@
         : [scopeImpactHeaders];
       if (!impactRows[0]?.includes("Kapsam Sorusu")) impactRows.unshift(scopeImpactHeaders);
       const normalizedImpactRows = normalizeScopeImpactRows(impactRows);
-      const byName = new Map(normalizedImpactRows.slice(1).map(row => [normalizeQuestionName(row[2]), row]));
+      const byId = new Map(normalizedImpactRows.slice(1).map(row => [row[1], row]));
+      const byName = new Map(normalizedImpactRows.slice(1).map(row => [normalizeQuestionName(row[3]), row]));
       scoredQuestions.forEach(item => {
+        const id = questionIdFor(item, "scope");
         const key = normalizeQuestionName(item.name);
         const effortImpactType = item.effortImpactType || (item.answerType === "number" ? "Katsayı" : "Sabit");
-        const row = byName.get(key);
+        const row = byId.get(id) || byName.get(key);
         if (row) {
-          if (row[3] === "" || row[3] == null) row[3] = Number(item.score) || "";
-          if (row[4] === "" || row[4] == null) row[4] = 1;
-          if (!row[5]) row[5] = effortImpactType;
+          row[1] = row[1] || id;
+          row[3] = item.name;
+          if (row[4] === "" || row[4] == null) row[4] = Number(item.score) || "";
+          if (row[5] === "" || row[5] == null) row[5] = 1;
+          if (!row[6]) row[6] = effortImpactType;
         }
       });
       config.scopeSizeImpacts = normalizeScopeImpactRows(normalizedImpactRows);
@@ -5933,26 +6064,30 @@
       ]);
 
       const impactRows = normalizeScopeImpactRows(Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders]);
-      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[2])));
+      const impactIds = new Set(impactRows.slice(1).map(row => row[1]).filter(Boolean));
+      const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[3])));
       bundledConversionQuestions.forEach(item => {
-        if (impactNames.has(normalizeQuestionName(item.name))) return;
-        impactRows.push([impactRows.length, "All", item.name, "", 1, ""]);
+        const id = questionIdFor(item, "scope");
+        if (impactIds.has(id) || impactNames.has(normalizeQuestionName(item.name))) return;
+        impactRows.push([impactRows.length, id, "All", item.name, "", 1, ""]);
+        impactIds.add(id);
         impactNames.add(normalizeQuestionName(item.name));
       });
       config.scopeSizeImpacts = normalizeScopeImpactRows(impactRows);
 
-      const restrictionHeaders = ["No", "Variable Type", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?", "Notes", "Usage"];
-      const restrictionRows = Array.isArray(config.restrictions) && config.restrictions.length ? config.restrictions : [restrictionHeaders];
-      if (!restrictionRows[0]?.includes("Question")) restrictionRows.unshift(restrictionHeaders);
-      const restrictionNames = new Set(restrictionRows.slice(1).map(row => normalizeQuestionName(row[2])));
+      const restrictionRows = normalizeRestrictionRows(Array.isArray(config.restrictions) && config.restrictions.length ? config.restrictions : [restrictionHeaders]);
+      const restrictionIds = new Set(restrictionRows.slice(1).map(row => row[2]).filter(Boolean));
+      const restrictionNames = new Set(restrictionRows.slice(1).map(row => normalizeQuestionName(row[3])));
       let nextNo = Math.max(0, ...restrictionRows.slice(1).map(row => Number(row[0]) || 0));
       bundledConversionQuestions.forEach(item => {
-        if (restrictionNames.has(normalizeQuestionName(item.name))) return;
+        const id = questionIdFor(item, "scope");
+        if (restrictionIds.has(id) || restrictionNames.has(normalizeQuestionName(item.name))) return;
         nextNo += 1;
-        restrictionRows.push([nextNo, "Kapsam", item.name, "All", "All", "All", "Yes", "", ""]);
+        restrictionRows.push([nextNo, "Kapsam", id, item.name, "All", "All", "All", "Yes", "", ""]);
+        restrictionIds.add(id);
         restrictionNames.add(normalizeQuestionName(item.name));
       });
-      config.restrictions = restrictionRows;
+      config.restrictions = normalizeRestrictionRows(restrictionRows);
       config.questionFieldOptions.conversionScopeQuestionsImported = true;
       return config;
     }
@@ -6204,7 +6339,7 @@
       renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
-      renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", data.restrictions || []);
+      renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", normalizeRestrictionRows(data.restrictions || []));
       initializeFixedDaysEditor();
       renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", data.localizationEfforts || []);
       renderEditableMatrix("adminVmpHead", "adminVmpRows", data.variableModulePhase || []);
@@ -7000,16 +7135,18 @@
     }
 
     function questionRestriction(item, targetId) {
-      const rows = window.adminSeedData?.restrictions || [];
+      const rows = normalizeRestrictionRows(window.adminSeedData?.restrictions || []);
       const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
       if (headerIndex < 0) return null;
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
       const typeIndex = headers.indexOf("Variable Type");
+      const idIndex = headers.indexOf("Question ID");
       const questionIndex = headers.indexOf("Question");
       const expectedType = targetId === "scopeQuestions" ? "Kapsam" : "Geliştirme";
+      const expectedId = questionIdFor(item, expectedType);
       const row = rows.slice(headerIndex + 1).find(candidate =>
         String(candidate[typeIndex] || "").trim() === expectedType
-        && String(candidate[questionIndex] || "").trim() === item.name
+        && (String(candidate[idIndex] || "").trim() === expectedId || String(candidate[questionIndex] || "").trim() === item.name)
       );
       if (!row) return null;
       const value = header => row[headers.indexOf(header)];
