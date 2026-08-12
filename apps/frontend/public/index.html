@@ -3358,7 +3358,7 @@
 
     const phaseHeaders = ["Analiz","Dokümantasyon","Dokümantasyon Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri Aktarım","Internal Entegrasyon Testi","Entegrasyon Testi","Eğitim","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Canlı Anaveri Kontrol","Canlı Anaveri Aktarım"];
     const vmpPhaseHeaders = [...phaseHeaders, "Hypercare", "Canlı Destek"];
-    const effortPhaseHeaders = ["Implementation Type", "Sıra", "Efor Başlığı", "VMP Dahil"];
+    const effortPhaseHeaders = ["Implementation Type", "Sıra", "Efor Başlığı"];
     const supportPhaseHeaders = new Set(["Hypercare", "Canlı Destek"]);
 
     function defaultEffortPhaseRows() {
@@ -3369,8 +3369,7 @@
           vmpPhaseHeaders.map((phase, index) => [
             implementation,
             index + 1,
-            phase,
-            "Yes"
+            phase
           ])
         )
       ];
@@ -3386,8 +3385,7 @@
         const implementation = row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || "All";
         const order = Number(row[idx("Sıra")] || row[idx("Order")] || index + 1) || index + 1;
         const phase = canonicalPhaseName(row[idx("Efor Başlığı")] || row[idx("Phase")] || row[idx("Başlık")] || "");
-        const includeVmp = row[idx("VMP Dahil")] || row[idx("VMP Included")] || "Yes";
-        return [implementation, order, phase, includeVmp];
+        return [implementation, order, phase];
       }).filter(row => row[2]);
       return [effortPhaseHeaders, ...normalized];
     }
@@ -3402,9 +3400,8 @@
       const rows = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases);
       const matches = rows.slice(1)
         .filter(row => implementationMatches(row[0], implementation))
-        .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]))
-        .filter(row => !includeVmp || String(row[3] || "Yes").trim().toLowerCase() !== "no");
-      const fallback = (includeVmp ? vmpPhaseHeaders : phaseHeaders).map((phase, index) => ["All", index + 1, phase, "Yes"]);
+        .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]));
+      const fallback = (includeVmp ? vmpPhaseHeaders : phaseHeaders).map((phase, index) => ["All", index + 1, phase]);
       return (matches.length ? matches : fallback)
         .sort((a, b) => (Number(a[1]) || 0) - (Number(b[1]) || 0));
     }
@@ -3425,7 +3422,6 @@
       const rows = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases);
       const configured = rows.slice(1)
         .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]))
-        .filter(row => !includeVmp || String(row[3] || "Yes").trim().toLowerCase() !== "no")
         .sort((a, b) => (Number(a[1]) || 0) - (Number(b[1]) || 0))
         .map(row => canonicalPhaseName(row[2]));
       return uniqueOptionValues([...(includeVmp ? vmpPhaseHeaders : phaseHeaders), ...configured]);
@@ -5360,8 +5356,7 @@
         if (normalized === "Size") return { options: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
       }
       if (bodyId === "adminEffortPhaseRows") {
-        if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
-        if (normalized === "VMP Dahil") return { options: ["Yes", "No"], multiple: false };
+        if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: false };
       }
       if (["adminLocalizationRows", "adminVmpRows"].includes(bodyId) && normalized === "Implementation Type") {
         return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
@@ -5529,7 +5524,6 @@
         defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("Sıra")] = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[1])) || 0)) + 1;
         defaultRow[headers.indexOf("Efor Başlığı")] = "Yeni Efor Başlığı";
-        defaultRow[headers.indexOf("VMP Dahil")] = "Yes";
       }
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
