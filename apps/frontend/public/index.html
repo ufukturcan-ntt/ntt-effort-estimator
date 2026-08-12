@@ -2216,6 +2216,7 @@
             <button class="admin-tree-item" data-admin-section="modules" type="button" onclick="openAdminSection('modules')"><span class="nav-icon">M</span><span>Modüller</span><span class="nav-count">M</span></button>
             <button class="admin-tree-item" data-admin-section="scope" type="button" onclick="openAdminSection('scope')"><span class="nav-icon">K</span><span>Kapsam Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="size-ranges" type="button" onclick="openAdminSection('size-ranges')"><span class="nav-icon">Z</span><span>Size Aralıkları</span><span class="nav-count">SZ</span></button>
+            <button class="admin-tree-item" data-admin-section="effort-phases" type="button" onclick="openAdminSection('effort-phases')"><span class="nav-icon">B</span><span>Efor Başlıkları</span><span class="nav-count">EB</span></button>
             <button class="admin-tree-item" data-admin-section="scope-impact" type="button" onclick="openAdminSection('scope-impact')"><span class="nav-icon">S</span><span>Kapsam Size Etkisi</span><span class="nav-count">SI</span></button>
             <button class="admin-tree-item" data-admin-section="development" type="button" onclick="openAdminSection('development')"><span class="nav-icon">G</span><span>Geliştirme Soruları</span><span class="nav-count">Q</span></button>
             <button class="admin-tree-item" data-admin-section="library" type="button" onclick="openAdminSection('library')"><span class="nav-icon">K</span><span>Kütüphane Tanımları</span><span class="nav-count">KT</span></button>
@@ -2708,6 +2709,10 @@
                 <div class="panel-head"><h3 class="panel-title">Size Aralıkları</h3><button class="button primary" data-admin-add-matrix="adminSizeRangeRows" type="button">+ Satır</button></div>
                 <div class="list-table admin-dense-table"><table><thead id="adminSizeRangeHead"></thead><tbody id="adminSizeRangeRows"></tbody></table></div>
               </section>
+              <section class="panel admin-section" data-admin-panel="effort-phases">
+                <div class="panel-head"><h3 class="panel-title">Efor Başlıkları</h3><button class="button primary" data-admin-add-matrix="adminEffortPhaseRows" type="button">+ Başlık</button></div>
+                <div class="list-table admin-dense-table"><table><thead id="adminEffortPhaseHead"></thead><tbody id="adminEffortPhaseRows"></tbody></table></div>
+              </section>
               <section class="panel admin-section" data-admin-panel="scope-impact">
                 <div class="panel-head"><h3 class="panel-title">Kapsam Size Etkisi</h3><div class="quick-actions"><button class="button" id="copySelectedScopeImpactRowsButton" type="button">Seçilenleri Kopyala</button><button class="button primary" data-admin-add-matrix="adminScopeImpactRows" type="button">+ Satır</button></div></div>
                 <div class="list-table admin-dense-table"><table><thead id="adminScopeImpactHead"></thead><tbody id="adminScopeImpactRows"></tbody></table></div>
@@ -2864,9 +2869,20 @@
       if (headerIndex < 0) return normalizedRows;
       const headers = normalizedRows[headerIndex];
       const moduleIndex = headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()));
-      if (moduleIndex >= 0) return normalizedRows;
-      headers.splice(1, 0, "Modül");
-      normalizedRows.slice(headerIndex + 1).forEach(row => row.splice(1, 0, "FI"));
+      if (moduleIndex < 0) {
+        headers.splice(1, 0, "Modül");
+        normalizedRows.slice(headerIndex + 1).forEach(row => row.splice(1, 0, "FI"));
+      }
+      if (!headers.includes("Implementation Type")) {
+        const insertIndex = Math.max(headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim())) + 1, 2);
+        headers.splice(insertIndex, 0, "Implementation Type");
+        normalizedRows.slice(headerIndex + 1).forEach(row => row.splice(insertIndex, 0, "All"));
+      }
+      allConfiguredPhaseHeaders(false).forEach(phase => {
+        if (headers.includes(phase)) return;
+        headers.push(phase);
+        normalizedRows.slice(headerIndex + 1).forEach(row => row.push(""));
+      });
       return normalizedRows;
     }
 
@@ -2874,7 +2890,19 @@
       const sourceHeaders = headers.filter(Boolean).map(header => canonicalPhaseName(String(header || "").trim()));
       const isVmp = sourceHeaders.includes("Kaynak Tipi");
       const cleanHeaders = isVmp
-        ? ["Kaynak Tipi", "Kapsam Soru ID", "Kapsam Sorusu", "Geliştirme Soru ID", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", "Tarih", ...vmpPhaseHeaders]
+        ? uniqueOptionValues([
+            "Implementation Type",
+            ...sourceHeaders,
+            "Kapsam Soru ID",
+            "Kapsam Sorusu",
+            "Geliştirme Soru ID",
+            "Geliştirme Sorusu",
+            "Modül",
+            "Hedef Modül",
+            "Efor Bazı",
+            "Tarih",
+            ...allConfiguredPhaseHeaders(true)
+          ])
         : sourceHeaders;
       const cleanedRows = [];
       const seen = new Set();
@@ -2891,6 +2919,8 @@
           const scopeIndex = cleanHeaders.indexOf("Kapsam Sorusu");
           const devIdIndex = cleanHeaders.indexOf("Geliştirme Soru ID");
           const devIndex = cleanHeaders.indexOf("Geliştirme Sorusu");
+          const implementationIndex = cleanHeaders.indexOf("Implementation Type");
+          cleanRow[implementationIndex] = cleanRow[implementationIndex] || "All";
           cleanRow[scopeIdIndex] = cleanRow[scopeIdIndex] || questionIdFromName("scope", cleanRow[scopeIndex]);
           cleanRow[scopeIndex] = questionDisplayName("scope", cleanRow[scopeIdIndex], cleanRow[scopeIndex]);
           cleanRow[devIdIndex] = cleanRow[devIdIndex] || questionIdFromName("development", cleanRow[devIndex]);
@@ -2952,9 +2982,21 @@
       const canonicalRows = rows.map(row => row.map(canonicalPhaseName));
       const existingHeader = canonicalRows.find(row => row.includes("System Type") && (row.includes("Modül") || row.includes("Column1")));
       if (existingHeader) {
-        return canonicalRows.map(row => row.map(value => value === "Column1" ? "Modül" : value));
+        const sourceHeaders = existingHeader.map(value => value === "Column1" ? "Modül" : value);
+        const cleanHeaders = ["Modül", "Size", ...allConfiguredPhaseHeaders(false), "Implementation Type", "System Type"];
+        const sourceIndex = header => sourceHeaders.indexOf(header);
+        return [
+          cleanHeaders,
+          ...canonicalRows.filter(row => row !== existingHeader).map(row =>
+            cleanHeaders.map(header => {
+              const index = sourceIndex(header);
+              return index >= 0 ? row[index] ?? "" : "";
+            })
+          ).filter(row => row.some(Boolean))
+        ];
       }
-      const output = [["Modül", "Size", ...phaseHeaders, "Implementation Type", "System Type"]];
+      const fixedPhases = allConfiguredPhaseHeaders(false);
+      const output = [["Modül", "Size", ...fixedPhases, "Implementation Type", "System Type"]];
       let implementation = "All";
       let size = "All";
       canonicalRows.forEach(row => {
@@ -2971,7 +3013,7 @@
         if (!first || ["Column1", "Modül"].includes(first)) return;
         const rowImplementation = String(row[row.length - 1] || "").trim();
         if (rowImplementation && adminDefinitionValues(1).includes(rowImplementation)) implementation = rowImplementation;
-        const phaseValues = phaseHeaders.map(phase => {
+        const phaseValues = fixedPhases.map(phase => {
           const headerRow = canonicalRows.find(candidate => candidate.includes("Column1") && candidate.includes(phase));
           const index = headerRow?.indexOf(phase) ?? -1;
           return index >= 0 ? (row[index] ?? "") : "";
@@ -2996,7 +3038,7 @@
           normalized.push([
             module,
             "All",
-            ...phaseHeaders.map(phase => Number(values?.[phase]) || 0),
+            ...allConfiguredPhaseHeaders(false).map(phase => Number(values?.[phase]) || 0),
             implementation,
             "SAP S/4HANA Private Cloud"
           ]);
@@ -3012,6 +3054,7 @@
       const sizeIndex = headers.indexOf("Size");
       const implementationIndex = headers.indexOf("Implementation Type");
       const systemIndex = headers.indexOf("System Type");
+      const activePhases = phaseHeadersForImplementation(implementation, false);
       const selected = new Map();
       rows.slice(1).forEach(row => {
         const rowImplementation = row[implementationIndex] || "All";
@@ -3029,7 +3072,7 @@
         if ((selected.get(module)?.specificity ?? -1) > specificity) return;
         selected.set(module, {
           specificity,
-          values: Object.fromEntries(phaseHeaders.map(phase => [phase, Number(row[headers.indexOf(phase)]) || 0]))
+          values: Object.fromEntries(activePhases.map(phase => [phase, Number(row[headers.indexOf(phase)]) || 0]))
         });
       });
       return Object.fromEntries([...selected.entries()].map(([module, entry]) => [module, entry.values]));
@@ -3143,7 +3186,8 @@
     }
 
     function fixedDaysRowTotal(row, headers) {
-      return phaseHeaders.reduce((sum, phase) => sum + (Number(row[headers.indexOf(phase)]) || 0), 0);
+      const implementation = row[headers.indexOf("Implementation Type")] || "All";
+      return phaseHeadersForImplementation(implementation, false).reduce((sum, phase) => sum + (Number(row[headers.indexOf(phase)]) || 0), 0);
     }
 
     function refreshFixedDaysRowTotal(row) {
@@ -3164,6 +3208,7 @@
       const sizeIndex = headers.indexOf("Size");
       const implementationIndex = headers.indexOf("Implementation Type");
       const systemIndex = headers.indexOf("System Type");
+      const activePhases = phaseHeadersForImplementation(selection.implementation, false);
       const retained = normalized.slice(1).filter(row =>
         row[sizeIndex] !== selection.size
         || row[implementationIndex] !== selection.implementation
@@ -3175,7 +3220,14 @@
           const value = String(input.value || "").trim().replace(",", ".");
           return value === "" ? "" : Number(value);
         });
-        return [module, selection.size, ...values, selection.implementation, selection.systemType];
+        const valueMap = Object.fromEntries(activePhases.map((phase, index) => [phase, values[index] ?? ""]));
+        return headers.map(header => {
+          if (header === "Modül") return module;
+          if (header === "Size") return selection.size;
+          if (header === "Implementation Type") return selection.implementation;
+          if (header === "System Type") return selection.systemType;
+          return valueMap[header] ?? "";
+        });
       }).filter(row => row[moduleIndex]);
       window.adminSeedData.fixedDays = [headers, ...retained, ...editorRows];
     }
@@ -3198,11 +3250,12 @@
         && row[indexes.implementation] === selection.implementation
         && row[indexes.system] === selection.systemType
       );
-      head.innerHTML = `<tr><th>Modül</th>${phaseHeaders.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th><th>İşlem</th></tr>`;
+      const activePhases = phaseHeadersForImplementation(selection.implementation, false);
+      head.innerHTML = `<tr><th>Modül</th>${activePhases.map(phase => `<th>${phase}</th>`).join("")}<th>Toplam</th><th>İşlem</th></tr>`;
       body.innerHTML = matching.map(row => `
         <tr>
           ${adminSelectCell(row[indexes.module], sortedModuleNames()).replace("<select", '<select data-fixed-module')}
-          ${phaseHeaders.map(phase => `<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="${escapeHtml(row[headers.indexOf(phase)] ?? "")}"></td>`).join("")}
+          ${activePhases.map(phase => `<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="${escapeHtml(row[headers.indexOf(phase)] ?? "")}"></td>`).join("")}
           <td><strong data-fixed-total>${fmt(fixedDaysRowTotal(row, headers))}</strong></td>
           <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
         </tr>
@@ -3255,7 +3308,7 @@
           body.insertAdjacentHTML("beforeend", `
             <tr>
               ${adminSelectCell(module, sortedModuleNames()).replace("<select", '<select data-fixed-module')}
-              ${phaseHeaders.map(() => '<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="0"></td>').join("")}
+              ${phaseHeadersForImplementation(fixedDaysEditorSelection().implementation, false).map(() => '<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="0"></td>').join("")}
               <td><strong data-fixed-total>0</strong></td>
               <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
             </tr>
@@ -3284,14 +3337,16 @@
       const headers = rows[headerIndex] || [];
       const countryIndex = headers.findIndex(header => ["Ülke", "Ulke", "Ãœlke"].includes(String(header || "").trim()));
       const moduleIndex = headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()));
+      const implementationIndex = headers.indexOf("Implementation Type");
       const phaseEntries = headers
         .map((phase, index) => ({ phase, index }))
-        .filter(({ index }) => index !== countryIndex && index !== moduleIndex);
+        .filter(({ index }) => index !== countryIndex && index !== moduleIndex && index !== implementationIndex);
       const parsed = (headerIndex >= 0 ? rows.slice(headerIndex + 1) : [])
         .filter(row => row[countryIndex])
         .map(row => ({
           country: row[countryIndex],
           module: row[moduleIndex] || "FI",
+          implementation: row[implementationIndex] || "All",
           selected: false,
           values: Object.fromEntries(phaseEntries.map(({ phase, index }) => [phase, Number(row[index]) || 0]))
         }));
@@ -3301,10 +3356,81 @@
       ];
     }
 
-    let localizationCatalog = buildLocalizationCatalog();
-
     const phaseHeaders = ["Analiz","Dokümantasyon","Dokümantasyon Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri Aktarım","Internal Entegrasyon Testi","Entegrasyon Testi","Eğitim","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Canlı Anaveri Kontrol","Canlı Anaveri Aktarım"];
     const vmpPhaseHeaders = [...phaseHeaders, "Hypercare", "Canlı Destek"];
+    const effortPhaseHeaders = ["Implementation Type", "Sıra", "Efor Başlığı", "VMP Dahil"];
+    const supportPhaseHeaders = new Set(["Hypercare", "Canlı Destek"]);
+
+    function defaultEffortPhaseRows() {
+      const implementations = ["Greenfield", "Rollout"];
+      return [
+        effortPhaseHeaders,
+        ...implementations.flatMap(implementation =>
+          vmpPhaseHeaders.map((phase, index) => [
+            implementation,
+            index + 1,
+            phase,
+            "Yes"
+          ])
+        )
+      ];
+    }
+
+    function normalizeEffortPhaseRows(rows = window.adminSeedData?.effortPhases) {
+      const source = Array.isArray(rows) && rows.length ? rows : defaultEffortPhaseRows();
+      const headerIndex = source.findIndex(row => row.some(cell => String(cell || "").trim() === "Efor Başlığı"));
+      if (headerIndex < 0) return defaultEffortPhaseRows();
+      const headers = source[headerIndex].map(cell => String(cell || "").trim());
+      const idx = label => headers.indexOf(label);
+      const normalized = source.slice(headerIndex + 1).map((row, index) => {
+        const implementation = row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || "All";
+        const order = Number(row[idx("Sıra")] || row[idx("Order")] || index + 1) || index + 1;
+        const phase = canonicalPhaseName(row[idx("Efor Başlığı")] || row[idx("Phase")] || row[idx("Başlık")] || "");
+        const includeVmp = row[idx("VMP Dahil")] || row[idx("VMP Included")] || "Yes";
+        return [implementation, order, phase, includeVmp];
+      }).filter(row => row[2]);
+      return [effortPhaseHeaders, ...normalized];
+    }
+
+    function implementationMatches(rowImplementation = "All", selectedImplementation = "All") {
+      const values = sizeRangeDimensionValues(rowImplementation);
+      const selected = String(selectedImplementation || "All").trim();
+      return values.includes("All") || values.includes(selected);
+    }
+
+    function effortPhaseRowsForImplementation(implementation = "All", includeVmp = false) {
+      const rows = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases);
+      const matches = rows.slice(1)
+        .filter(row => implementationMatches(row[0], implementation))
+        .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]))
+        .filter(row => !includeVmp || String(row[3] || "Yes").trim().toLowerCase() !== "no");
+      const fallback = (includeVmp ? vmpPhaseHeaders : phaseHeaders).map((phase, index) => ["All", index + 1, phase, "Yes"]);
+      return (matches.length ? matches : fallback)
+        .sort((a, b) => (Number(a[1]) || 0) - (Number(b[1]) || 0));
+    }
+
+    function phaseHeadersForImplementation(implementation = "All", includeVmp = false) {
+      return uniqueOptionValues(effortPhaseRowsForImplementation(implementation, includeVmp).map(row => canonicalPhaseName(row[2])));
+    }
+
+    function currentImplementationType() {
+      return document.getElementById("projectImplementation")?.value || "Conversion";
+    }
+
+    function currentPhaseHeaders(includeVmp = false) {
+      return phaseHeadersForImplementation(currentImplementationType(), includeVmp);
+    }
+
+    function allConfiguredPhaseHeaders(includeVmp = false) {
+      const rows = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases);
+      const configured = rows.slice(1)
+        .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]))
+        .filter(row => !includeVmp || String(row[3] || "Yes").trim().toLowerCase() !== "no")
+        .sort((a, b) => (Number(a[1]) || 0) - (Number(b[1]) || 0))
+        .map(row => canonicalPhaseName(row[2]));
+      return uniqueOptionValues([...(includeVmp ? vmpPhaseHeaders : phaseHeaders), ...configured]);
+    }
+
     const phaseNameAliases = {
       "Onay": "Dokümantasyon Onay",
       "QA Anaveri": "QA Anaveri Aktarım",
@@ -3317,6 +3443,7 @@
     }
 
     window.adminSeedData.fixedDays = ensureWorkbookFixedDaysRows(window.adminSeedData?.fixedDays || []);
+    let localizationCatalog = buildLocalizationCatalog();
 
     const finalEffortBase = {
       FI: {"Analiz":2,"Dokümantasyon":1,"Uyarlama":.5,"Birim Test":.25,"QA Sistem Ayağa Kaldırma":.25,"Internal Entegrasyon Testi":.5,"Entegrasyon Testi":1},
@@ -3361,20 +3488,24 @@
       return normalized;
     }
 
-    function developmentEffortDefinitions() {
+    function developmentEffortDefinitions(implementation = currentImplementationType()) {
       const rows = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []);
       const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
       if (headerIndex < 0) return developmentEfforts;
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+      const implementationIndex = headers.indexOf("Implementation Type");
       const sourceTypeIndex = headers.indexOf("Kaynak Tipi");
       const sourceIndexes = ["Kapsam Sorusu", "Geliştirme Sorusu", "Modül", "Kaynak"]
         .map(header => headers.indexOf(header))
         .filter(index => index >= 0);
       const moduleIndex = headers.findIndex(header => ["Hedef Modül", "Hedef ModÃ¼l"].includes(header));
-      const phaseIndexes = phaseHeaders
+      const activePhases = phaseHeadersForImplementation(implementation, true);
+      const phaseIndexes = activePhases
         .map(phase => headers.indexOf(phase))
         .filter(index => index >= 0);
-      const parsed = rows.slice(headerIndex + 1).map(row => {
+      const parsed = rows.slice(headerIndex + 1).filter(row =>
+        implementationIndex < 0 || implementationMatches(row[implementationIndex] || "All", implementation)
+      ).map(row => {
         const effort = phaseIndexes.reduce((sum, index) => sum + (Number(row[index]) || 0), 0);
         const source = sourceIndexes.map(index => row[index]).find(Boolean);
         return [row[sourceTypeIndex], canonicalDevelopmentName(source), row[moduleIndex], effort];
@@ -3382,21 +3513,25 @@
       return parsed.length ? parsed : developmentEfforts;
     }
 
-    function scopeProjectEffortDefinitions() {
+    function scopeProjectEffortDefinitions(implementation = currentImplementationType()) {
       const rows = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []);
       const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
       if (headerIndex < 0) return [];
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+      const implementationIndex = headers.indexOf("Implementation Type");
       const scopeIndex = headers.indexOf("Kapsam Sorusu");
       const moduleIndex = headers.findIndex(header => ["Hedef Modül", "Hedef ModÃ¼l"].includes(header));
       if (scopeIndex < 0 || moduleIndex < 0) return [];
-      const phaseIndexes = phaseHeaders
+      const activePhases = phaseHeadersForImplementation(implementation, false);
+      const phaseIndexes = activePhases
         .map(phase => [phase, headers.indexOf(phase)])
         .filter(([, index]) => index >= 0);
-      return rows.slice(headerIndex + 1).map(row => {
+      return rows.slice(headerIndex + 1).filter(row =>
+        implementationIndex < 0 || implementationMatches(row[implementationIndex] || "All", implementation)
+      ).map(row => {
         const name = String(row[scopeIndex] || "").trim();
         const moduleName = String(row[moduleIndex] || "").trim();
-        const values = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+        const values = Object.fromEntries(activePhases.map(phase => [phase, 0]));
         phaseIndexes.forEach(([phase, index]) => values[phase] = Number(row[index]) || 0);
         return { name, moduleName, values };
       }).filter(row => row.name && row.moduleName && sumValues(row.values) > 0);
@@ -3413,18 +3548,19 @@
       return selected;
     }
 
-    function scopeProjectEffortAdditions(scopeAnswers = {}, moduleNames = []) {
+    function scopeProjectEffortAdditions(scopeAnswers = {}, moduleNames = [], implementation = currentImplementationType()) {
       const moduleSet = new Set(moduleNames);
       const selected = selectedScopeMultipliers(scopeAnswers);
-      const additions = new Map(moduleNames.map(module => [module, Object.fromEntries(phaseHeaders.map(phase => [phase, 0]))]));
-      scopeProjectEffortDefinitions().forEach(({ name, moduleName, values }) => {
+      const activePhases = phaseHeadersForImplementation(implementation, false);
+      const additions = new Map(moduleNames.map(module => [module, Object.fromEntries(activePhases.map(phase => [phase, 0]))]));
+      scopeProjectEffortDefinitions(implementation).forEach(({ name, moduleName, values }) => {
         const multiplier = selected.get(name);
         if (!multiplier) return;
         const targets = moduleName === "Hepsi" ? moduleNames : (moduleSet.has(moduleName) ? [moduleName] : []);
         targets.forEach(module => {
           const current = additions.get(module);
           if (!current) return;
-          phaseHeaders.forEach(phase => current[phase] += (Number(values[phase]) || 0) * multiplier);
+          activePhases.forEach(phase => current[phase] += (Number(values[phase]) || 0) * multiplier);
         });
       });
       return additions;
@@ -4434,7 +4570,8 @@
     }
 
     function sumPhases(values) {
-      return phaseHeaders.reduce((total, phase) => total + (Number(values?.[phase]) || 0), 0);
+      const phases = uniqueOptionValues([...currentPhaseHeaders(false), ...Object.keys(values || {})]);
+      return phases.reduce((total, phase) => total + (Number(values?.[phase]) || 0), 0);
     }
 
     function statusLabel(status) {
@@ -4663,7 +4800,12 @@
     function activeLocalizations() {
       const selectedModules = new Set(selectedModuleNames());
       const countries = new Set(selectedLocalizationCountries());
-      return localizationCatalog.filter(item => countries.has(item.country) && selectedModules.has(item.module));
+      const implementation = currentImplementationType();
+      return localizationCatalog.filter(item =>
+        countries.has(item.country)
+        && selectedModules.has(item.module)
+        && implementationMatches(item.implementation || "All", implementation)
+      );
     }
 
     function renderLocalizationEfforts() {
@@ -4687,22 +4829,23 @@
     function renderLocalizationEffortTable(rows = activeLocalizations()) {
       const head = document.getElementById("localizationEffortHead");
       const body = document.getElementById("localizationEffortRows");
-      if (head) head.innerHTML = `<tr><th>${displayRecord("Modül")}</th><th>${displayRecord("Ülke")}</th>${phaseHeaders.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
+      const activePhases = currentPhaseHeaders(false);
+      if (head) head.innerHTML = `<tr><th>${displayRecord("Modül")}</th><th>${displayRecord("Ülke")}</th>${activePhases.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
       if (!body) return;
-      const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+      const phaseTotals = Object.fromEntries(activePhases.map(phase => [phase, 0]));
       const rowHtml = rows.map(row => {
-        phaseHeaders.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
+        activePhases.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
         return `
           <tr>
             <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
             <td><span class="module-chip"><span class="module-initial">${row.country.slice(0,2).toUpperCase()}</span>${escapeHtml(displayRecord(row.country))}</span></td>
-            ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
+            ${activePhases.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
             <td><strong>${fmt(sumPhases(row.values))}</strong></td>
           </tr>
         `;
       }).join("");
-      const totalRow = `<tr><td colspan="2"><strong>${displayRecord("Toplam")}</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
-      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 3}">${currentLanguage === "en" ? "Localization selection is pending." : "Lokalizasyon seçimi yapılmadı."}</td></tr>`;
+      const totalRow = `<tr><td colspan="2"><strong>${displayRecord("Toplam")}</strong></td>${activePhases.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
+      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${activePhases.length + 3}">${currentLanguage === "en" ? "Localization selection is pending." : "Lokalizasyon seçimi yapılmadı."}</td></tr>`;
     }
 
     function hypercareValue(moduleName) {
@@ -4771,11 +4914,12 @@
       const selectedNames = selectedModuleNames();
       const scopeAdditions = scopeProjectEffortAdditions(questionAnswers.scopeQuestions, selectedNames);
       const names = [...new Set([...selectedNames, ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
+      const activePhases = phaseHeadersForImplementation(implementation, false);
       return names.map(name => {
         const base = isFixedOnlyModule(name) ? {} : (fixedRows[name] || finalEffortBase[name] || {});
         const scopeValues = isFixedOnlyModule(name) ? {} : (scopeAdditions.get(name) || {});
         const teamMultiplier = isTeamSplitEnabled() ? Math.max(Number(moduleState.get(name)?.team) || 1, 1) : 1;
-        const values = Object.fromEntries(phaseHeaders.map(phase => {
+        const values = Object.fromEntries(activePhases.map(phase => {
           const baseValue = Number(base[phase]) || 0;
           const sizeValue = Number(sizeRow[phase]) || 0;
           const scopeValue = Number(scopeValues[phase]) || 0;
@@ -4790,13 +4934,14 @@
     function renderFinalEffort() {
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
-      if (head) head.innerHTML = `<tr><th>${displayRecord("Modül")}</th>${phaseHeaders.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Sabit Efor")}</th><th>Hypercare</th><th>Go-Live Support</th><th>${displayRecord("Toplam")}</th></tr>`;
+      const activePhases = currentPhaseHeaders(false);
+      if (head) head.innerHTML = `<tr><th>${displayRecord("Modül")}</th>${activePhases.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Sabit Efor")}</th><th>Hypercare</th><th>Go-Live Support</th><th>${displayRecord("Toplam")}</th></tr>`;
       const rows = finalRowsForSelectedModules();
-      const phaseTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+      const phaseTotals = Object.fromEntries(activePhases.map(phase => [phase, 0]));
       let fixedEffortTotal = 0;
       if (body) {
         const rowHtml = rows.map(row => {
-          phaseHeaders.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
+          activePhases.forEach(phase => phaseTotals[phase] += Number(row.values[phase]) || 0);
           const fixedEffort = Number(row.fixedEffort) || 0;
           fixedEffortTotal += fixedEffort;
           const hypercare = hypercareValue(row.module);
@@ -4804,7 +4949,7 @@
           return `
             <tr>
               <td><span class="module-chip"><span class="module-initial">${initials(row.module)}</span>${row.module}</span></td>
-              ${phaseHeaders.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
+              ${activePhases.map(phase => `<td>${fmt(row.values[phase] || 0)}</td>`).join("")}
               <td>${fmt(fixedEffort)}</td>
               <td>${fmt(hypercare)}</td>
               <td>${fmt(golive)}</td>
@@ -4814,8 +4959,8 @@
         }).join("");
         const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
         const goliveTotal = rows.reduce((sum, row) => sum + (Number(hypercareState.get(row.module)?.goliveDays) || 0), 0);
-        const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${phaseHeaders.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
-        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${phaseHeaders.length + 5}">${currentLanguage === "en" ? "Module selection is pending." : "Modül seçimi yapılmadı."}</td></tr>`;
+        const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${activePhases.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
+        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${activePhases.length + 5}">${currentLanguage === "en" ? "Module selection is pending." : "Modül seçimi yapılmadı."}</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
       setText("projectEffortTotal", fmt(total));
@@ -5214,6 +5359,13 @@
         if (normalized === "System Type") return { options: options.systems, multiple: true };
         if (normalized === "Size") return { options: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"], multiple: false };
       }
+      if (bodyId === "adminEffortPhaseRows") {
+        if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
+        if (normalized === "VMP Dahil") return { options: ["Yes", "No"], multiple: false };
+      }
+      if (["adminLocalizationRows", "adminVmpRows"].includes(bodyId) && normalized === "Implementation Type") {
+        return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
+      }
       if (bodyId === "adminScopeImpactRows" && normalized === "Implementation Type") {
         return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
       }
@@ -5372,6 +5524,12 @@
         defaultRow[headers.indexOf("Min")] = 0;
         defaultRow[headers.indexOf("Max")] = 40;
         defaultRow[headers.indexOf("Multiplier")] = 1;
+      }
+      if (bodyId === "adminEffortPhaseRows") {
+        defaultRow[headers.indexOf("Implementation Type")] = "All";
+        defaultRow[headers.indexOf("Sıra")] = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[1])) || 0)) + 1;
+        defaultRow[headers.indexOf("Efor Başlığı")] = "Yeni Efor Başlığı";
+        defaultRow[headers.indexOf("VMP Dahil")] = "Yes";
       }
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
@@ -5953,6 +6111,7 @@
       }).filter(row => row.some(Boolean));
       if (bodyId === "adminRestrictionsRows") return normalizeRestrictionRows([headers, ...rows]);
       if (bodyId === "adminScopeImpactRows") return normalizeScopeImpactRows([headers, ...rows]);
+      if (bodyId === "adminEffortPhaseRows") return normalizeEffortPhaseRows([headers, ...rows]);
       if (bodyId === "adminVmpRows") return normalizeVariableModulePhaseRows([headers, ...rows]);
       return [headers, ...rows];
     }
@@ -5975,6 +6134,7 @@
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
+        effortPhases: collectMatrixRows("adminEffortPhaseHead", "adminEffortPhaseRows"),
         fixedDays: window.adminSeedData.fixedDays,
         localizationEfforts: collectMatrixRows("adminLocalizationHead", "adminLocalizationRows"),
         variableModulePhase: collectMatrixRows("adminVmpHead", "adminVmpRows"),
@@ -6157,6 +6317,7 @@
         ));
       });
       if (config.variableModulePhase) config.variableModulePhase = normalizeVariableModulePhaseRows(config.variableModulePhase);
+      if (config.effortPhases) config.effortPhases = normalizeEffortPhaseRows(config.effortPhases);
       ["fixedDays", "localizationEfforts", "variableModulePhase"].forEach(key => {
         if (config[key]) config[key] = config[key].map(row => row.map(canonicalPhaseName));
       });
@@ -6164,6 +6325,7 @@
       if (config.projectDefinitions) window.adminSeedData.projectDefinitions = config.projectDefinitions;
       if (config.questionFieldOptions) window.adminSeedData.questionFieldOptions = config.questionFieldOptions;
       if (config.restrictions) window.adminSeedData.restrictions = config.restrictions;
+      if (config.effortPhases) window.adminSeedData.effortPhases = config.effortPhases;
       if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
       if (config.localizationEfforts) window.adminSeedData.localizationEfforts = config.localizationEfforts;
       if (config.variableModulePhase) window.adminSeedData.variableModulePhase = config.variableModulePhase;
@@ -6351,13 +6513,14 @@
       renderAdminModules();
       renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
       renderEditableMatrix("adminSizeRangeHead", "adminSizeRangeRows", normalizeSizeRangeRows(data.sizeRanges));
+      renderEditableMatrix("adminEffortPhaseHead", "adminEffortPhaseRows", normalizeEffortPhaseRows(data.effortPhases));
       renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
       renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
       renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
       renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", normalizeRestrictionRows(data.restrictions || []));
       initializeFixedDaysEditor();
-      renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", data.localizationEfforts || []);
-      renderEditableMatrix("adminVmpHead", "adminVmpRows", data.variableModulePhase || []);
+      renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", normalizeLocalizationEffortRows(data.localizationEfforts || []));
+      renderEditableMatrix("adminVmpHead", "adminVmpRows", normalizeVariableModulePhaseRows(data.variableModulePhase || []));
       document.querySelectorAll("[data-admin-add]").forEach(button => {
         if (button.dataset.bound) return;
         button.dataset.bound = "true";
@@ -6471,7 +6634,7 @@
       const fixedValues = effectiveFixedEffortValues(offerFixedEfforts(offer), systemType, offerJson(offer.scope_answers));
       const selectedOfferModules = offerSelectedModules(offer);
       const selectedOfferModuleNames = selectedOfferModules.map(item => item.module);
-      const scopeAdditions = scopeProjectEffortAdditions(offerJson(offer.scope_answers), selectedOfferModuleNames);
+      const scopeAdditions = scopeProjectEffortAdditions(offerJson(offer.scope_answers), selectedOfferModuleNames, implementation);
       const effortModules = [...new Map([
         ...selectedOfferModules.map(item => [item.module, item]),
         ...fixedEffortModules.filter(module => fixedValues[module] > 0).map(module => [module, { module, team: 1 }])
@@ -6479,7 +6642,8 @@
       return effortModules.map(({ module, team }) => {
         const base = isFixedOnlyModule(module) ? {} : (fixedRows[module] || finalEffortBase[module] || {});
         const scopeValues = isFixedOnlyModule(module) ? {} : (scopeAdditions.get(module) || {});
-        const values = Object.fromEntries(phaseHeaders.map(phase => [
+        const activePhases = phaseHeadersForImplementation(implementation, false);
+        const values = Object.fromEntries(activePhases.map(phase => [
           phase,
           ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (Number(scopeValues[phase]) || 0)
         ]));
@@ -6496,6 +6660,8 @@
 
     function developmentEffortRowsForOffer(offer, moduleNames) {
       moduleNames = developmentModuleNames(moduleNames);
+      const definition = offerJson(offer.project_definition);
+      const implementation = offer.implementation_type || definition.implementation || "All";
       const fixedValues = offerFixedEfforts(offer);
       const abapIncluded = offerAbapFixedEffortIncluded(offer);
       const selectedDevelopments = selectedDevelopmentMultipliers(
@@ -6504,7 +6670,7 @@
       );
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
-      developmentEffortDefinitions().forEach(([, name, moduleName, effort]) => {
+      developmentEffortDefinitions(implementation).forEach(([, name, moduleName, effort]) => {
         const multiplier = selectedDevelopments.get(name);
         if (!multiplier || (moduleName !== "Hepsi" && !moduleSet.has(moduleName))) return;
         if (!grouped.has(name)) grouped.set(name, Object.fromEntries(moduleNames.map(module => [module, 0])));
@@ -6529,12 +6695,15 @@
     function buildBacklogWorkbook(offer) {
       if (!window.XLSX) throw new Error("Excel bileşeni yüklenemedi.");
       const projectRows = projectEffortRowsForOffer(offer);
+      const definition = offerJson(offer.project_definition);
+      const implementation = offer.implementation_type || definition.implementation || "All";
+      const activePhases = phaseHeadersForImplementation(implementation, false);
       const moduleNames = projectRows.map(row => row.module);
       const developmentModules = developmentModuleNames(moduleNames);
       const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
       const backlogRows = [["Backlog Kalemi", "Kategori", "Modül", "Efor Tipi / Geliştirme Maddesi", "Efor (Gün)"]];
       projectRows.forEach(row => {
-        phaseHeaders.forEach(phase => {
+        activePhases.forEach(phase => {
           backlogRows.push([`${row.module}-${phase}`, "Proje Eforu", row.module, phase, row.values[phase] || 0]);
         });
         backlogRows.push([`${row.module}-Sabit Efor`, "Proje Eforu", row.module, "Sabit Efor", row.fixedEffort || 0]);
@@ -6582,15 +6751,23 @@
 
     function offerLocalizationRows(offer, moduleNames) {
       const selection = offerJson(offer.localization_selection);
+      const definition = offerJson(offer.project_definition);
+      const implementation = offer.implementation_type || definition.implementation || "All";
       const moduleSet = new Set(moduleNames);
       const countries = new Set(Object.entries(selection)
         .filter(([, selected]) => Boolean(selected))
         .map(([key]) => key.includes("::") ? key.split("::")[0] : key));
-      return localizationCatalog.filter(item => moduleSet.has(item.module) && countries.has(item.country));
+      return localizationCatalog.filter(item =>
+        moduleSet.has(item.module)
+        && countries.has(item.country)
+        && implementationMatches(item.implementation || "All", implementation)
+      );
     }
 
     function offerPrintHtml(offer) {
       const definition = offerJson(offer.project_definition);
+      const implementation = offer.implementation_type || definition.implementation || "All";
+      const activePhases = phaseHeadersForImplementation(implementation, false);
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
       const developmentModules = developmentModuleNames(moduleNames);
@@ -6599,7 +6776,7 @@
       const scopeScore = offerScopeScore(offer);
       const size = projectSizeFromScore(scopeScore, {
         industry: offer.industry || definition.industry || "All",
-        implementation: offer.implementation_type || definition.implementation || "All",
+        implementation,
         system: offer.system_type || definition.system || "All"
       });
       const projectTotal = projectRows.reduce((sum, row) => sum + sumValues(row.values) + (Number(row.fixedEffort) || 0), 0);
@@ -6626,21 +6803,21 @@
       const projectTableRows = projectRows.map(row => {
         const fixedEffort = Number(row.fixedEffort) || 0;
         const total = sumValues(row.values) + fixedEffort + (Number(row.hypercare) || 0) + (Number(row.golive) || 0);
-        return [row.module, ...phaseHeaders.map(phase => fmt(row.values[phase] || 0)), fmt(fixedEffort), fmt(row.hypercare || 0), fmt(row.golive || 0), fmt(total)];
+        return [row.module, ...activePhases.map(phase => fmt(row.values[phase] || 0)), fmt(fixedEffort), fmt(row.hypercare || 0), fmt(row.golive || 0), fmt(total)];
       });
-      const projectTotals = Object.fromEntries(phaseHeaders.map(phase => [phase, 0]));
+      const projectTotals = Object.fromEntries(activePhases.map(phase => [phase, 0]));
       let fixedEffortPrintTotal = 0;
       projectRows.forEach(row => {
-        phaseHeaders.forEach(phase => projectTotals[phase] += Number(row.values[phase]) || 0);
+        activePhases.forEach(phase => projectTotals[phase] += Number(row.values[phase]) || 0);
         fixedEffortPrintTotal += Number(row.fixedEffort) || 0;
       });
       if (projectRows.length) {
-        projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...phaseHeaders.map(phase => fmt(projectTotals[phase])), fmt(fixedEffortPrintTotal), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
+        projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...activePhases.map(phase => fmt(projectTotals[phase])), fmt(fixedEffortPrintTotal), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
       }
       const localizationTableRows = localizationRows.map(row => [
         row.module,
         row.country,
-        ...phaseHeaders.map(phase => fmt(row.values[phase] || 0)),
+        ...activePhases.map(phase => fmt(row.values[phase] || 0)),
         fmt(sumPhases(row.values))
       ]);
       const developmentTableRows = developmentRows.map(row => {
@@ -6712,9 +6889,9 @@
           <h2>${escapeHtml(t("finalSummary"))}</h2>
           <div class="grid">${summaryRows.map(([key, value]) => `<div class="metric"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)} g</strong></div>`).join("")}</div>
           <h2>${escapeHtml(t("projectEfforts"))}</h2>
-          ${printTable([t("modules"), ...phaseHeaders, currentLanguage === "en" ? "Fixed Effort" : "Sabit Efor", "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"))}
+          ${printTable([t("modules"), ...activePhases, currentLanguage === "en" ? "Fixed Effort" : "Sabit Efor", "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"))}
           <h2>${escapeHtml(t("localizationEfforts"))}</h2>
-          ${printTable([t("modules"), currentLanguage === "en" ? "Country" : "Ülke", ...phaseHeaders, currentLanguage === "en" ? "Total" : "Toplam"], localizationTableRows, t("noLocalizationEffort"))}
+          ${printTable([t("modules"), currentLanguage === "en" ? "Country" : "Ülke", ...activePhases, currentLanguage === "en" ? "Total" : "Toplam"], localizationTableRows, t("noLocalizationEffort"))}
           <h2>${escapeHtml(t("developmentEfforts"))}</h2>
           ${printTable([currentLanguage === "en" ? "Development" : "Geliştirme", ...developmentModules, currentLanguage === "en" ? "Total" : "Toplam"], developmentTableRows, t("noDevelopmentEffort"))}
         </body>
@@ -6735,12 +6912,18 @@
 
     function localizationTotalForOffer(offer, moduleNames) {
       const selection = offerJson(offer.localization_selection);
+      const definition = offerJson(offer.project_definition);
+      const implementation = offer.implementation_type || definition.implementation || "All";
       const moduleSet = new Set(moduleNames);
       const countries = new Set(Object.entries(selection)
         .filter(([, selected]) => Boolean(selected))
         .map(([key]) => key.includes("::") ? key.split("::")[0] : key));
       return localizationCatalog
-        .filter(item => moduleSet.has(item.module) && countries.has(item.country))
+        .filter(item =>
+          moduleSet.has(item.module)
+          && countries.has(item.country)
+          && implementationMatches(item.implementation || "All", implementation)
+        )
         .reduce((sum, item) => sum + sumPhases(item.values), 0);
     }
 
