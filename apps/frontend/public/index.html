@@ -6137,7 +6137,8 @@
           scopeCategories: collectDefinitionValues("adminScopeCategoryOptions"),
           effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions"),
           sizeRanges: collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"),
-          conversionScopeQuestionsImported: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeQuestionsImported)
+          conversionScopeQuestionsImported: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeQuestionsImported),
+          conversionScopeImpactMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeImpactMaintenanceSeeded)
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
@@ -6336,7 +6337,22 @@
     }
 
     function ensureConversionScopeImpactRows(config = {}) {
+      config.questionFieldOptions = config.questionFieldOptions || {};
       const rows = normalizeScopeImpactRows(Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders]);
+      if (config.questionFieldOptions.conversionScopeImpactMaintenanceSeeded) {
+        config.scopeSizeImpacts = rows;
+        return config;
+      }
+      const seededNames = new Set(conversionScopeImpactMaintenance.map(([, question]) => normalizeQuestionName(question)));
+      const hasSeededRows = rows.slice(1).some(row =>
+        seededNames.has(normalizeQuestionName(row[4]))
+        && conversionScopeImpactImplementations.includes(String(row[2] || "").trim())
+      );
+      if (hasSeededRows) {
+        config.questionFieldOptions.conversionScopeImpactMaintenanceSeeded = true;
+        config.scopeSizeImpacts = rows;
+        return config;
+      }
       const rowIndexByKey = new Map(rows.slice(1).map((row, index) => [`${normalizeQuestionName(row[4])}\u001f${row[2]}`, index + 1]));
       conversionScopeImpactMaintenance.forEach(([no, question, baseType, values]) => {
         const effectType = String(baseType || "").toLocaleLowerCase("tr-TR").includes("sayı") ? "Katsayı" : "Sabit";
@@ -6362,6 +6378,7 @@
         });
       });
       config.scopeSizeImpacts = normalizeScopeImpactRows(rows);
+      config.questionFieldOptions.conversionScopeImpactMaintenanceSeeded = true;
       return config;
     }
 
