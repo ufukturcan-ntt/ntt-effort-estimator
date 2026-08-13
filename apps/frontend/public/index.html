@@ -2800,6 +2800,7 @@
   <script src="assets/questions.js"></script>
   <script src="assets/fixed-days.js"></script>
   <script src="assets/admin-data.js"></script>
+  <script src="assets/excel-v18-maintenance.js"></script>
   <script src="assets/xlsx.full.min.js"></script>
   <script>
     const modules = [
@@ -6138,7 +6139,9 @@
           effortImpactTypes: collectDefinitionValues("adminEffortImpactTypeOptions"),
           sizeRanges: collectMatrixRows("adminSizeRangeHead", "adminSizeRangeRows"),
           conversionScopeQuestionsImported: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeQuestionsImported),
-          conversionScopeImpactMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeImpactMaintenanceSeeded)
+          conversionScopeImpactMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeImpactMaintenanceSeeded),
+          v18TipPuanRestrictionsSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.v18TipPuanRestrictionsSeeded),
+          v18FixedDaysMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.v18FixedDaysMaintenanceSeeded)
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
@@ -6382,6 +6385,164 @@
       return config;
     }
 
+    function v18MaintenanceData() {
+      return window.excelV18Maintenance || {};
+    }
+
+    function v18ImplementationTypes() {
+      const data = v18MaintenanceData();
+      return uniqueOptionValues([
+        ...(data.tipPuanRestrictions || []).flatMap(item => item.allowedImplementationTypes || []),
+        ...(data.fixedEffortPhases || []).map(item => item.implementation),
+        ...(data.fixedDays || []).map(item => item.implementation)
+      ].filter(Boolean));
+    }
+
+    function ensureV18ImplementationTypes(config = {}) {
+      const additions = v18ImplementationTypes();
+      if (!additions.length) return config;
+      const rows = Array.isArray(config.projectDefinitions) && config.projectDefinitions.length
+        ? config.projectDefinitions.map(row => [...row])
+        : (window.adminSeedData?.projectDefinitions || []).map(row => [...row]);
+      if (!rows.length) return config;
+      const headers = rows[0];
+      const implementationIndex = headers.indexOf("Implementation Type");
+      if (implementationIndex < 0) return config;
+      const existing = new Set(rows.slice(1).map(row => row[implementationIndex]).filter(Boolean));
+      additions.forEach(implementation => {
+        if (existing.has(implementation)) return;
+        const row = Array.from({ length: headers.length }, () => "");
+        row[implementationIndex] = implementation;
+        rows.push(row);
+        existing.add(implementation);
+      });
+      config.projectDefinitions = rows;
+      return config;
+    }
+
+    function ensureV18TipPuanRestrictionRows(config = {}) {
+      const data = v18MaintenanceData();
+      const sourceRows = Array.isArray(data.tipPuanRestrictions) ? data.tipPuanRestrictions : [];
+      if (!sourceRows.length) return config;
+      config.questionFieldOptions = config.questionFieldOptions || {};
+      const rows = normalizeRestrictionRows(Array.isArray(config.restrictions) && config.restrictions.length ? config.restrictions : [restrictionHeaders]);
+      if (config.questionFieldOptions.v18TipPuanRestrictionsSeeded) {
+        config.restrictions = rows;
+        return config;
+      }
+      const template = rows.slice(1).find(row => row[8] || row[9]) || [];
+      const defaultNotes = template[8] || "All = tüm seçeneklerde göster; birden fazla değer için virgül kullanın.";
+      const defaultUsage = template[9] || "Scope/Development Applicable? filtresi TRUE seçiliyken sadece uygun sorular gösterilir.";
+      const rowIndexByKey = new Map(rows.slice(1).map((row, index) => [
+        `${questionTypeFromLabel(row[1])}\u001f${normalizeQuestionName(row[3])}`,
+        index + 1
+      ]));
+      let nextNo = Math.max(0, ...rows.slice(1).map(row => Number(row[0]) || 0));
+      sourceRows.forEach(item => {
+        const question = String(item.question || "").trim();
+        if (!question) return;
+        const allowed = uniqueOptionValues(item.allowedImplementationTypes || []).join(", ") || "All";
+        const questionId = questionIdFromName("scope", question) || stableQuestionId("scope", item.no, question);
+        const key = `scope\u001f${normalizeQuestionName(question)}`;
+        const existingIndex = rowIndexByKey.get(key);
+        const row = [
+          existingIndex ? rows[existingIndex][0] : ++nextNo,
+          "Kapsam",
+          questionId,
+          questionDisplayName("scope", questionId, question),
+          "All",
+          allowed,
+          "All",
+          "Yes",
+          existingIndex ? (rows[existingIndex][8] || defaultNotes) : defaultNotes,
+          existingIndex ? (rows[existingIndex][9] || defaultUsage) : defaultUsage
+        ];
+        if (existingIndex) rows[existingIndex] = row;
+        else {
+          rowIndexByKey.set(key, rows.length);
+          rows.push(row);
+        }
+      });
+      config.restrictions = normalizeRestrictionRows(rows);
+      config.questionFieldOptions.v18TipPuanRestrictionsSeeded = true;
+      return config;
+    }
+
+    function ensureV18EffortPhaseRows(config = {}) {
+      const data = v18MaintenanceData();
+      const sourceRows = Array.isArray(data.fixedEffortPhases) ? data.fixedEffortPhases : [];
+      if (!sourceRows.length) return config;
+      config.questionFieldOptions = config.questionFieldOptions || {};
+      const rows = normalizeEffortPhaseRows(Array.isArray(config.effortPhases) && config.effortPhases.length ? config.effortPhases : window.adminSeedData?.effortPhases);
+      if (config.questionFieldOptions.v18FixedDaysMaintenanceSeeded) {
+        config.effortPhases = rows;
+        window.adminSeedData.effortPhases = rows;
+        return config;
+      }
+      const rowIndexByKey = new Map(rows.slice(1).map((row, index) => [
+        `${String(row[0] || "").trim()}\u001f${canonicalPhaseName(row[2])}`,
+        index + 1
+      ]));
+      sourceRows.forEach(item => {
+        const implementation = String(item.implementation || "").trim();
+        const phase = canonicalPhaseName(item.phase || "");
+        if (!implementation || !phase) return;
+        const nextRow = [implementation, Number(item.order) || rows.length, phase];
+        const key = `${implementation}\u001f${phase}`;
+        if (rowIndexByKey.has(key)) rows[rowIndexByKey.get(key)] = nextRow;
+        else {
+          rowIndexByKey.set(key, rows.length);
+          rows.push(nextRow);
+        }
+      });
+      config.effortPhases = normalizeEffortPhaseRows(rows);
+      window.adminSeedData.effortPhases = config.effortPhases;
+      return config;
+    }
+
+    function ensureV18FixedDaysRows(config = {}) {
+      const data = v18MaintenanceData();
+      const sourceRows = Array.isArray(data.fixedDays) ? data.fixedDays : [];
+      if (!sourceRows.length) return config;
+      config.questionFieldOptions = config.questionFieldOptions || {};
+      const rows = normalizeFixedDaysRows(Array.isArray(config.fixedDays) && config.fixedDays.length ? config.fixedDays : window.adminSeedData?.fixedDays || []);
+      if (config.questionFieldOptions.v18FixedDaysMaintenanceSeeded) {
+        config.fixedDays = rows;
+        return config;
+      }
+      const headers = rows[0] || ["Modül", "Size", ...allConfiguredPhaseHeaders(false), "Implementation Type", "System Type"];
+      const moduleIndex = headers.indexOf("Modül");
+      const sizeIndex = headers.indexOf("Size");
+      const implementationIndex = headers.indexOf("Implementation Type");
+      const systemIndex = headers.indexOf("System Type");
+      const keyFor = row => [
+        row[moduleIndex],
+        row[sizeIndex],
+        row[implementationIndex],
+        row[systemIndex] || "All"
+      ].map(value => String(value || "").trim()).join("\u001f");
+      const rowIndexByKey = new Map(rows.slice(1).map((row, index) => [keyFor(row), index + 1]));
+      sourceRows.forEach(item => {
+        const row = headers.map(header => {
+          if (header === "Modül") return item.module || "";
+          if (header === "Size") return item.size || "All";
+          if (header === "Implementation Type") return item.implementation || "All";
+          if (header === "System Type") return item.systemType || "All";
+          return item.values?.[header] ?? 0;
+        });
+        if (!row[moduleIndex]) return;
+        const key = keyFor(row);
+        if (rowIndexByKey.has(key)) rows[rowIndexByKey.get(key)] = row;
+        else {
+          rowIndexByKey.set(key, rows.length);
+          rows.push(row);
+        }
+      });
+      config.fixedDays = normalizeFixedDaysRows(rows);
+      config.questionFieldOptions.v18FixedDaysMaintenanceSeeded = true;
+      return config;
+    }
+
     function syncModuleStateWithCatalog() {
       const names = new Set(moduleCatalog.map(item => item.module));
       [...moduleState.keys()].forEach(name => {
@@ -6415,6 +6576,10 @@
       ensureScoredScopeImpactRows(config);
       ensureConversionImplementationTypes(config);
       ensureConversionScopeImpactRows(config);
+      ensureV18ImplementationTypes(config);
+      ensureV18TipPuanRestrictionRows(config);
+      ensureV18EffortPhaseRows(config);
+      ensureV18FixedDaysRows(config);
       if (config.__meta?.versions) adminConfigVersions = { ...config.__meta.versions };
       ["scopeQuestions", "developmentQuestions"].forEach(key => {
         if (!config[key]) return;

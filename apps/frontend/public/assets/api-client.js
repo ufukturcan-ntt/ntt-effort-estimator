@@ -103,7 +103,7 @@ window.EffortApi = {
       const compatibleEntities = [
         "projectDefinitions", "moduleCatalog", "scopeQuestions", "developmentQuestions",
         "libraryItems", "questionFieldOptions", "restrictions", "fixedDays",
-        "sizeRanges", "scopeSizeImpacts", "localizationEfforts", "variableModulePhase", "approvalSettings"
+        "sizeRanges", "scopeSizeImpacts", "effortPhases", "localizationEfforts", "variableModulePhase", "approvalSettings"
       ].filter(entity => Object.prototype.hasOwnProperty.call(payload, entity));
       return Promise.all(compatibleEntities.map(entity => {
         const expectedVersion = payload.__meta?.versions?.[entity] || "";
