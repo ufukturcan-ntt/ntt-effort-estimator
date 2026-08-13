@@ -2469,7 +2469,7 @@
                 <div class="input-field"><label>Müşteri adı</label><input id="projectCustomer" value="Ufuk Enerji AŞ" /></div>
                 <div class="input-field"><label>Proje adı</label><input id="projectName" value="S4 Dönüşüm" /></div>
                 <div class="input-field"><label>Endüstri</label><select id="projectIndustry"><option value="">Seçiniz</option><option>Konfeksiyon</option><option>Perakende</option><option>Otomotiv</option><option>FMCG</option><option>Kimya</option><option>İlaç</option><option>Enerji</option><option>Tekstil</option><option>Ambalaj</option><option>Demir & Çelik</option></select></div>
-                <div class="input-field"><label>Implementasyon türü</label><select id="projectImplementation"><option value="">Seçiniz</option><option>Conversion</option><option>Greenfield</option><option>Brownfield</option><option>Rollout</option><option>Migration</option><option>Upgrade</option></select></div>
+                <div class="input-field"><label>Implementasyon türü</label><select id="projectImplementation"><option value="">Seçiniz</option><option>Conversion</option><option>Greenfield</option><option>Brownfield Conversion</option><option>Rollout</option><option>Data Migration</option><option>Release Upgrade</option></select></div>
                 <div class="input-field"><label>Sistem türü</label><select id="projectSystem"><option value="">Seçiniz</option><option>SAP S/4HANA Private Cloud</option><option>SAP ECC</option><option>SAP Rise</option><option>SAP S/4HANA Public Cloud</option><option>SAP On-Premise</option><option>SAP DM</option><option>Siemens OPCenter - Dicrete</option><option>Siemens OPCenter - Process Manufacturing</option><option>Siemens OPCenter - Pharma</option></select></div>
                 <div class="input-field"><label>Versiyon</label><input id="projectVersion" value="V1" /></div>
                 <div class="input-field" style="grid-column:1 / -1"><label>Notlar</label><textarea id="projectNotes">Dikkat edilmesi gereken varsayımlar ve satış notları.</textarea></div>
@@ -2992,6 +2992,22 @@
       return finalizeVariableModulePhaseRows(newHeaders, dataRows);
     }
 
+    const implementationTypeAliases = {
+      Brownfield: "Brownfield Conversion",
+      Migration: "Data Migration",
+      Upgrade: "Release Upgrade"
+    };
+
+    function canonicalImplementationType(value = "") {
+      const text = String(value || "").trim();
+      return implementationTypeAliases[text] || text;
+    }
+
+    function canonicalImplementationList(value = "") {
+      const values = String(value || "All").split(",").map(item => canonicalImplementationType(item)).filter(Boolean);
+      return [...new Set(values)].join(", ");
+    }
+
     function normalizeFixedDaysRows(rows = []) {
       const canonicalRows = rows.map(row => row.map(canonicalPhaseName));
       const existingHeader = canonicalRows.find(row => row.includes("System Type") && (row.includes("Modül") || row.includes("Column1")));
@@ -3004,7 +3020,8 @@
           ...canonicalRows.filter(row => row !== existingHeader).map(row =>
             cleanHeaders.map(header => {
               const index = sourceIndex(header);
-              return index >= 0 ? row[index] ?? "" : "";
+              const value = index >= 0 ? row[index] ?? "" : "";
+              return normalizeImplementationCell(value, header);
             })
           ).filter(row => row.some(Boolean))
         ];
@@ -3017,7 +3034,7 @@
         const first = String(row[0] || "").trim();
         const marker = first.match(/^Implementation Type:\\s*(.+)$/i);
         if (marker) {
-          implementation = marker[1].trim() || "All";
+          implementation = canonicalImplementationType(marker[1]) || "All";
           return;
         }
         if (["SMALL", "MEDIUM", "LARGE", "X-LARGE"].includes(first.toUpperCase())) {
@@ -3025,7 +3042,7 @@
           return;
         }
         if (!first || ["Column1", "Modül"].includes(first)) return;
-        const rowImplementation = String(row[row.length - 1] || "").trim();
+        const rowImplementation = canonicalImplementationType(row[row.length - 1]);
         if (rowImplementation && adminDefinitionValues(1).includes(rowImplementation)) implementation = rowImplementation;
         const phaseValues = fixedPhases.map(phase => {
           const headerRow = canonicalRows.find(candidate => candidate.includes("Column1") && candidate.includes(phase));
@@ -3035,7 +3052,7 @@
         const systemType = ["Conversion", "Greenfield"].includes(implementation)
           ? "SAP S/4HANA Private Cloud"
           : "All";
-        output.push([first, size, ...phaseValues, implementation || "All", systemType]);
+        output.push([first, size, ...phaseValues, canonicalImplementationList(implementation || "All"), systemType]);
       });
       return output;
     }
@@ -3396,7 +3413,7 @@
       const headers = source[headerIndex].map(cell => String(cell || "").trim());
       const idx = label => headers.indexOf(label);
       const normalized = source.slice(headerIndex + 1).map((row, index) => {
-        const implementation = row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || "All";
+        const implementation = canonicalImplementationList(row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || "All");
         const order = Number(row[idx("Sıra")] || row[idx("Order")] || index + 1) || index + 1;
         const phase = canonicalPhaseName(row[idx("Efor Başlığı")] || row[idx("Phase")] || row[idx("Başlık")] || "");
         return [implementation, order, phase];
@@ -5143,7 +5160,8 @@
     }
 
     function adminDefinitionValues(index) {
-      const values = (window.adminSeedData?.projectDefinitions || []).slice(1).map(row => row[index]).filter(Boolean);
+      const definitions = normalizeProjectDefinitionRows(window.adminSeedData?.projectDefinitions || []);
+      const values = definitions.slice(1).map(row => index === 1 ? canonicalImplementationType(row[index]) : row[index]).filter(Boolean);
       if (index === 2) values.push(...mesBasisMultiplierSystemTypes);
       return [...new Set(values)];
     }
@@ -5161,6 +5179,35 @@
 
     function uniqueOptionValues(values = []) {
       return [...new Set(values.map(value => String(value || "").trim()).filter(Boolean))];
+    }
+
+    function normalizeProjectDefinitionRows(rows = window.adminSeedData?.projectDefinitions || []) {
+      if (!Array.isArray(rows) || !rows.length) return rows;
+      const headerIndex = rows.findIndex(row => row?.includes?.("Implementation Type"));
+      if (headerIndex < 0) return rows;
+      const headers = rows[headerIndex];
+      const implementationIndex = headers.indexOf("Implementation Type");
+      const seenImplementations = new Set();
+      return [
+        ...rows.slice(0, headerIndex + 1),
+        ...rows.slice(headerIndex + 1).map(row => {
+          const next = [...row];
+          next[implementationIndex] = canonicalImplementationType(next[implementationIndex]);
+          return next;
+        }).filter(row => {
+          const implementation = row[implementationIndex];
+          if (!implementation) return true;
+          if (seenImplementations.has(implementation)) return false;
+          seenImplementations.add(implementation);
+          return true;
+        })
+      ];
+    }
+
+    function normalizeImplementationCell(value = "", header = "") {
+      return String(header || "").trim() === "Implementation Type"
+        ? canonicalImplementationList(value)
+        : value;
     }
 
     function displayVariableType(value) {
@@ -5250,7 +5297,7 @@
       const headers = source[headerIndex].map(cell => String(cell || "").trim());
       const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
       const normalized = source.slice(headerIndex + 1).map(row => [
-        row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
+        canonicalImplementationList(row[idx("Implementation Type", "İmplementasyon Türü")] || "All"),
         row[idx("System Type", "Sistem Türü")] || "All",
         row[idx("Size")] || "",
         row[idx("Min")] ?? "",
@@ -5290,7 +5337,7 @@
         return [
           index + 1,
           row[idx("Question ID", "Kapsam Soru ID")] || questionIdFromName("scope", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
-          row[idx("Implementation Type", "İmplementasyon Türü")] || "All",
+          canonicalImplementationList(row[idx("Implementation Type", "İmplementasyon Türü")] || "All"),
           row[idx("System Type", "Sistem Türü")] || "All",
           questionDisplayName("scope", row[idx("Question ID", "Kapsam Soru ID")] || "", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
           row[idx("Puan", "Score")] || "",
@@ -5412,7 +5459,7 @@
           questionId,
           questionDisplayName(questionTypeFromLabel(type), questionId, question),
           row[idx("Allowed Industries")] || "All",
-          row[idx("Allowed Implementation Types")] || "All",
+          canonicalImplementationList(row[idx("Allowed Implementation Types")] || "All"),
           row[idx("Allowed System Types")] || "All",
           row[idx("Active?")] || "Yes",
           row[idx("Notes")] || "",
@@ -6016,7 +6063,7 @@
         ["Endüstri", "Implementation Type", "System Type", "Modüller"],
         ...Array.from({ length: max }, (_, index) => [
           industries[index] || "",
-          implementations[index] || "",
+          canonicalImplementationType(implementations[index] || ""),
           systems[index] || "",
           moduleNames[index] || ""
         ])
@@ -6575,7 +6622,40 @@
       setSelectOptions("projectSystem", adminDefinitionValues(2));
     }
 
+    function normalizeImplementationMatrixRows(rows = [], implementationHeaders = ["Implementation Type", "Allowed Implementation Types"]) {
+      if (!Array.isArray(rows) || !rows.length) return rows;
+      const headerIndex = rows.findIndex(row => Array.isArray(row) && row.some(cell => implementationHeaders.includes(String(cell || "").trim())));
+      if (headerIndex < 0) return rows;
+      const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+      const indexes = headers
+        .map((header, index) => implementationHeaders.includes(header) ? index : -1)
+        .filter(index => index >= 0);
+      if (!indexes.length) return rows;
+      return rows.map((row, rowIndex) => {
+        if (rowIndex <= headerIndex || !Array.isArray(row)) return row;
+        const next = [...row];
+        indexes.forEach(index => {
+          next[index] = canonicalImplementationList(next[index] || "All");
+        });
+        return next;
+      });
+    }
+
+    function normalizeImplementationTypeReferences(config = {}) {
+      if (config.projectDefinitions) config.projectDefinitions = normalizeProjectDefinitionRows(config.projectDefinitions);
+      if (config.questionFieldOptions?.sizeRanges) config.questionFieldOptions.sizeRanges = normalizeImplementationMatrixRows(config.questionFieldOptions.sizeRanges, ["Implementation Type"]);
+      if (config.sizeRanges) config.sizeRanges = normalizeImplementationMatrixRows(config.sizeRanges, ["Implementation Type"]);
+      if (config.restrictions) config.restrictions = normalizeImplementationMatrixRows(config.restrictions, ["Allowed Implementation Types"]);
+      if (config.scopeSizeImpacts) config.scopeSizeImpacts = normalizeImplementationMatrixRows(config.scopeSizeImpacts, ["Implementation Type"]);
+      if (config.effortPhases) config.effortPhases = normalizeImplementationMatrixRows(config.effortPhases, ["Implementation Type"]);
+      if (config.fixedDays) config.fixedDays = normalizeImplementationMatrixRows(config.fixedDays, ["Implementation Type"]);
+      if (config.localizationEfforts) config.localizationEfforts = normalizeImplementationMatrixRows(config.localizationEfforts, ["Implementation Type"]);
+      if (config.variableModulePhase) config.variableModulePhase = normalizeImplementationMatrixRows(config.variableModulePhase, ["Implementation Type"]);
+      return config;
+    }
+
     function applyAdminConfig(config = {}) {
+      normalizeImplementationTypeReferences(config);
       ensureBundledScopeMaintenanceRows(config);
       ensureScoredScopeImpactRows(config);
       ensureConversionImplementationTypes(config);
