@@ -6141,7 +6141,8 @@
           conversionScopeQuestionsImported: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeQuestionsImported),
           conversionScopeImpactMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.conversionScopeImpactMaintenanceSeeded),
           v18TipPuanRestrictionsSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.v18TipPuanRestrictionsSeeded),
-          v18FixedDaysMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.v18FixedDaysMaintenanceSeeded)
+          v18FixedDaysMaintenanceSeeded: Boolean(window.adminSeedData?.questionFieldOptions?.v18FixedDaysMaintenanceSeeded),
+          v18FixedDaysMaintenanceVersion: window.adminSeedData?.questionFieldOptions?.v18FixedDaysMaintenanceVersion || ""
         },
         restrictions: collectMatrixRows("adminRestrictionsHead", "adminRestrictionsRows"),
         scopeSizeImpacts: collectMatrixRows("adminScopeImpactHead", "adminScopeImpactRows"),
@@ -6473,8 +6474,9 @@
       const sourceRows = Array.isArray(data.fixedEffortPhases) ? data.fixedEffortPhases : [];
       if (!sourceRows.length) return config;
       config.questionFieldOptions = config.questionFieldOptions || {};
+      const maintenanceVersion = data.version || "v18";
       const rows = normalizeEffortPhaseRows(Array.isArray(config.effortPhases) && config.effortPhases.length ? config.effortPhases : window.adminSeedData?.effortPhases);
-      if (config.questionFieldOptions.v18FixedDaysMaintenanceSeeded) {
+      if (config.questionFieldOptions.v18FixedDaysMaintenanceSeeded && config.questionFieldOptions.v18FixedDaysMaintenanceVersion === maintenanceVersion) {
         config.effortPhases = rows;
         window.adminSeedData.effortPhases = rows;
         return config;
@@ -6505,8 +6507,9 @@
       const sourceRows = Array.isArray(data.fixedDays) ? data.fixedDays : [];
       if (!sourceRows.length) return config;
       config.questionFieldOptions = config.questionFieldOptions || {};
+      const maintenanceVersion = data.version || "v18";
       const rows = normalizeFixedDaysRows(Array.isArray(config.fixedDays) && config.fixedDays.length ? config.fixedDays : window.adminSeedData?.fixedDays || []);
-      if (config.questionFieldOptions.v18FixedDaysMaintenanceSeeded) {
+      if (config.questionFieldOptions.v18FixedDaysMaintenanceSeeded && config.questionFieldOptions.v18FixedDaysMaintenanceVersion === maintenanceVersion) {
         config.fixedDays = rows;
         return config;
       }
@@ -6540,6 +6543,7 @@
       });
       config.fixedDays = normalizeFixedDaysRows(rows);
       config.questionFieldOptions.v18FixedDaysMaintenanceSeeded = true;
+      config.questionFieldOptions.v18FixedDaysMaintenanceVersion = maintenanceVersion;
       return config;
     }
 
