@@ -3800,6 +3800,8 @@
     let navigationHistoryReady = false;
     let adminPageRendered = false;
     let adminPageDirty = true;
+    const adminRenderedSections = new Set();
+    let workbookRenderTimer = null;
     let adminUsersLoading = false;
     let adminUsersLoaded = false;
 
@@ -4315,8 +4317,9 @@
         renderModuleGroups?.();
         renderLocalizationControls?.();
         refreshQuestionLists?.();
-        renderWorkbookDrivenScreens?.();
-        renderAllWorks?.();
+        scheduleWorkbookDrivenRender?.();
+        if (document.getElementById("overview")?.classList.contains("active") || document.getElementById("allworks")?.classList.contains("active")) renderAllWorks?.();
+        if (document.getElementById("admin")?.classList.contains("active")) renderAdminPageIfNeeded?.(true);
       }, 120);
     }
 
@@ -6718,6 +6721,7 @@
       refreshQuestionLists();
       renderLocalizationControls();
       renderWorkbookDrivenScreens();
+      adminRenderedSections.clear();
       adminPageDirty = true;
       renderAdminPageIfNeeded();
       markAdminClean();
@@ -6732,18 +6736,20 @@
         invalidEmail.focus();
         throw new Error("Geçerli bir onay e-posta adresi girin.");
       }
-      const config = collectAdminConfig();
       const originalText = button?.textContent;
       if (button) {
         button.disabled = true;
         button.textContent = "Kaydediliyor";
       }
       try {
+        renderAdminPage({ all: true });
+        const config = collectAdminConfig();
         config.__meta = { versions: adminConfigVersions };
         const savedConfig = await window.EffortApi.saveAdminConfig(config);
         applyAdminConfig(savedConfig || config);
         renderLocalizationControls();
         renderWorkbookDrivenScreens();
+        adminRenderedSections.clear();
         adminPageDirty = true;
         renderAdminPageIfNeeded(true);
         markAdminClean();
@@ -6776,6 +6782,7 @@
         panel.hidden = !isActive;
         panel.style.setProperty("display", isActive ? "block" : "none", "important");
       });
+      renderAdminPageIfNeeded();
     }
 
     window.openAdminSection = openAdminSection;
@@ -6858,34 +6865,58 @@
     function renderAdminPageIfNeeded(force = false) {
       const isAdminOpen = document.getElementById("admin")?.classList.contains("active");
       if (!isAdminOpen && !force) return;
-      if (!force && adminPageRendered && !adminPageDirty) return;
+      const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
+      if (!force && adminPageRendered && !adminPageDirty && adminRenderedSections.has(activeSection)) return;
       renderAdminPage();
       adminPageRendered = true;
       adminPageDirty = false;
     }
 
-    function renderAdminPage() {
+    const adminSectionOrder = ["users", "definitions", "modules", "scope", "size-ranges", "effort-phases", "scope-impact", "development", "library", "restrictions", "fixed", "localization", "vmp"];
+
+    function renderAdminSection(section) {
       const data = window.adminSeedData || {};
       const projectDefinitions = (data.projectDefinitions || []).slice(1);
-      renderDefinitionList("adminIndustryList", projectDefinitions.map(row => row[0]), "Endüstri tanımı yok.");
-      renderDefinitionList("adminImplementationList", projectDefinitions.map(row => row[1]), "İmplementasyon türü yok.");
-      renderDefinitionList("adminSystemList", projectDefinitions.map(row => row[2]), "Sistem türü yok.");
       const fieldOptions = currentQuestionFieldOptions();
-      renderDefinitionList("adminVariableGroupOptions", fieldOptions.variableGroups, "Değişken grup seçeneği yok.");
-      renderDefinitionList("adminVariableTypeOptions", fieldOptions.variableTypes, "Değişken tip seçeneği yok.");
-      renderDefinitionList("adminScopeCategoryOptions", fieldOptions.scopeCategories, "Kategori seçeneği yok.");
-      renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
-      renderAdminModules();
-      renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
-      renderEditableMatrix("adminSizeRangeHead", "adminSizeRangeRows", normalizeSizeRangeRows(data.sizeRanges));
-      renderEditableMatrix("adminEffortPhaseHead", "adminEffortPhaseRows", normalizeEffortPhaseRows(data.effortPhases));
-      renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
-      renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
-      renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
-      renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", normalizeRestrictionRows(data.restrictions || []));
-      initializeFixedDaysEditor();
-      renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", normalizeLocalizationEffortRows(data.localizationEfforts || []));
-      renderEditableMatrix("adminVmpHead", "adminVmpRows", normalizeVariableModulePhaseRows(data.variableModulePhase || []));
+      if (section === "definitions") {
+        renderDefinitionList("adminIndustryList", projectDefinitions.map(row => row[0]), "Endüstri tanımı yok.");
+        renderDefinitionList("adminImplementationList", projectDefinitions.map(row => row[1]), "İmplementasyon türü yok.");
+        renderDefinitionList("adminSystemList", projectDefinitions.map(row => row[2]), "Sistem türü yok.");
+        renderDefinitionList("adminVariableGroupOptions", fieldOptions.variableGroups, "Değişken grup seçeneği yok.");
+        renderDefinitionList("adminVariableTypeOptions", fieldOptions.variableTypes, "Değişken tip seçeneği yok.");
+        renderDefinitionList("adminScopeCategoryOptions", fieldOptions.scopeCategories, "Kategori seçeneği yok.");
+        renderDefinitionList("adminEffortImpactTypeOptions", fieldOptions.effortImpactTypes, "Efor etki tipi seçeneği yok.");
+      } else if (section === "modules") {
+        renderAdminModules();
+      } else if (section === "scope") {
+        renderQuestionAdmin("adminScopeRows", window.scopeQuestions || []);
+      } else if (section === "size-ranges") {
+        renderEditableMatrix("adminSizeRangeHead", "adminSizeRangeRows", normalizeSizeRangeRows(data.sizeRanges));
+      } else if (section === "effort-phases") {
+        renderEditableMatrix("adminEffortPhaseHead", "adminEffortPhaseRows", normalizeEffortPhaseRows(data.effortPhases));
+      } else if (section === "scope-impact") {
+        renderEditableMatrix("adminScopeImpactHead", "adminScopeImpactRows", normalizeScopeImpactRows(data.scopeSizeImpacts));
+      } else if (section === "development") {
+        renderQuestionAdmin("adminDevelopmentRows", window.developmentQuestions || []);
+      } else if (section === "library") {
+        renderEditableMatrix("adminLibraryHead", "adminLibraryRows", data.libraryItems || [["ID", "Geliştirme Tanımı", "Geliştirme Açıklaması", "Modül"]]);
+      } else if (section === "restrictions") {
+        renderEditableMatrix("adminRestrictionsHead", "adminRestrictionsRows", normalizeRestrictionRows(data.restrictions || []));
+      } else if (section === "fixed") {
+        initializeFixedDaysEditor();
+      } else if (section === "localization") {
+        renderEditableMatrix("adminLocalizationHead", "adminLocalizationRows", normalizeLocalizationEffortRows(data.localizationEfforts || []));
+      } else if (section === "vmp") {
+        renderEditableMatrix("adminVmpHead", "adminVmpRows", normalizeVariableModulePhaseRows(data.variableModulePhase || []));
+      }
+      adminRenderedSections.add(section);
+    }
+
+    function renderAdminPage(options = {}) {
+      const data = window.adminSeedData || {};
+      const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
+      const sections = options.all ? adminSectionOrder : [activeSection];
+      sections.forEach(section => renderAdminSection(section));
       document.querySelectorAll("[data-admin-add]").forEach(button => {
         if (button.dataset.bound) return;
         button.dataset.bound = "true";
@@ -6933,6 +6964,10 @@
     }
 
     function renderWorkbookDrivenScreens() {
+      if (workbookRenderTimer) {
+        clearTimeout(workbookRenderTimer);
+        workbookRenderTimer = null;
+      }
       const selectedCount = selectedModuleNames().length;
       setText("selectedModuleCount", selectedCount);
       setText("moduleNavCount", selectedCount);
@@ -6949,6 +6984,11 @@
       setText("finalHypercareTotal", fmt(supportTotal));
       setText("finalGrandTotal", fmt(localizationTotal + projectTotal + developmentTotal + supportTotal));
       renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
+    }
+
+    function scheduleWorkbookDrivenRender(delay = 50) {
+      clearTimeout(workbookRenderTimer);
+      workbookRenderTimer = setTimeout(renderWorkbookDrivenScreens, delay);
     }
 
     function offerJson(value, fallback = {}) {
@@ -7909,7 +7949,7 @@
           else delete questionAnswers[targetId][key];
           markDirty();
           updateQuestionMetrics();
-          renderWorkbookDrivenScreens();
+          scheduleWorkbookDrivenRender();
         });
         control.addEventListener("change", () => {
           const key = control.closest(".question-card")?.dataset.questionKey;
@@ -7918,7 +7958,7 @@
           else delete questionAnswers[targetId][key];
           markDirty();
           updateQuestionMetrics();
-          renderWorkbookDrivenScreens();
+          scheduleWorkbookDrivenRender();
         });
       });
       const countTarget = targetId === "scopeQuestions" ? "scopeVisibleCount" : "developmentVisibleCount";
