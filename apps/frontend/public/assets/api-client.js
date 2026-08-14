@@ -1,27 +1,50 @@
 window.EffortApi = {
+  sessionErrorMessage: "Oturum doğrulanamadı. Lütfen tekrar giriş yapıp işlemi yeniden deneyin.",
+  loginCredentialsFromForm() {
+    const email = document.getElementById("loginEmail")?.value || "";
+    const password = document.getElementById("loginPassword")?.value || "";
+    return email && password ? { email, password } : null;
+  },
+  async refreshSessionFromForm() {
+    const credentials = this.loginCredentialsFromForm();
+    if (!credentials) return null;
+    return this.login(credentials);
+  },
+  async parseErrorMessage(response) {
+    const message = await response.text();
+    try {
+      return JSON.parse(message).error || message;
+    } catch (_error) {
+      return message;
+    }
+  },
   async request(path, options = {}) {
     const baseUrl = window.APP_CONFIG?.API_BASE_URL || "";
-    const accessToken = sessionStorage.getItem("effortAccessToken") || "";
-    const response = await fetch(`${baseUrl}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...(options.headers || {})
-      },
-      ...options
-    });
+    const { retryAuth, headers: optionHeaders = {}, ...fetchOptions } = options;
+    const send = async () => {
+      const accessToken = sessionStorage.getItem("effortAccessToken") || "";
+      return fetch(`${baseUrl}${path}`, {
+        ...fetchOptions,
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...optionHeaders
+        }
+      });
+    };
+    let response = await send();
+    if (response.status === 401 && path !== "/api/login" && retryAuth !== false) {
+      await this.refreshSessionFromForm();
+      response = await send();
+    }
     if (!response.ok) {
-      const message = await response.text();
-      let parsedMessage = message;
-      try {
-        parsedMessage = JSON.parse(message).error || message;
-      } catch (_error) {}
-      throw new Error(parsedMessage || `API error ${response.status}`);
+      const parsedMessage = await this.parseErrorMessage(response);
+      throw new Error(response.status === 401 ? this.sessionErrorMessage : (parsedMessage || `API error ${response.status}`));
     }
     return response.status === 204 ? null : response.json();
   },
   login(payload) {
-    return this.request("/api/login", { method: "POST", body: JSON.stringify(payload) })
+    return this.request("/api/login", { method: "POST", body: JSON.stringify(payload), retryAuth: false })
       .then(user => {
         if (user.access_token) sessionStorage.setItem("effortAccessToken", user.access_token);
         return user;

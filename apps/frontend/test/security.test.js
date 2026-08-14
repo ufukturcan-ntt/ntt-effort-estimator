@@ -9,6 +9,11 @@ test("API client sends bearer authentication", () => {
   assert.match(apiClient, /Authorization:\s*`Bearer \$\{accessToken\}`/);
 });
 
+test("API client keeps authorization when sending update precondition headers", () => {
+  assert.match(apiClient, /headers:\s*\{\s*"Content-Type":\s*"application\/json",\s*\.\.\.\(accessToken \? \{ Authorization:\s*`Bearer \$\{accessToken\}` \} : \{\}\),\s*\.\.\.optionHeaders/s);
+  assert.match(apiClient, /headers:\s*expectedUpdatedAt \? \{ "If-Match": expectedUpdatedAt \} : \{\}/);
+});
+
 test("offer actions distinguish owners from viewers", () => {
   assert.match(html, /function isOfferOwner\(offer\)/);
   assert.match(html, /if \(!isOfferOwner\(offer\)\) accessMode = "view"/);
