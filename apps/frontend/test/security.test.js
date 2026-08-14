@@ -44,3 +44,8 @@ test("large Excel library is lazy-loaded", () => {
   assert.match(html, /function ensureXlsxLoaded\(\)/);
   assert.match(html, /await ensureXlsxLoaded\(\)/);
 });
+
+test("authenticated header buttons render before heavier data hydration", () => {
+  assert.match(html, /currentUser = await window\.EffortApi\.me\(\);\s*showAuthenticatedApp\(\);\s*try \{\s*await loadAdminConfig\(\);/s);
+  assert.match(html, /currentUser = await window\.EffortApi\.login\(\{[\s\S]*?\}\);\s*showAuthenticatedApp\(\);\s*setWorkMode\(false\);[\s\S]*?await loadAdminConfig\(\);/s);
+});

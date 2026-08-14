@@ -8593,13 +8593,13 @@
       if (!window.EffortApi || !sessionStorage.getItem("effortAccessToken")) return false;
       try {
         currentUser = await window.EffortApi.me();
+        showAuthenticatedApp();
         try {
           await loadAdminConfig();
         } catch (adminError) {
           console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
         }
         await loadOffers();
-        showAuthenticatedApp();
         const screenId = storedScreenId();
         const offerContext = storedOfferContext();
         if (offerScreens.has(screenId) && offerContext?.id) {
@@ -8665,16 +8665,17 @@
           email: document.getElementById("loginEmail").value,
           password: document.getElementById("loginPassword").value
         });
+        showAuthenticatedApp();
+        setWorkMode(false);
+        openScreen("overview");
+        ensureNavigationHistory("overview");
+        applyLanguage();
         try {
           await loadAdminConfig();
         } catch (adminError) {
           console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
         }
         await loadOffers();
-        showAuthenticatedApp();
-        setWorkMode(false);
-        openScreen("overview");
-        ensureNavigationHistory("overview");
         applyLanguage();
         wakeTranslationQueue();
       } catch (error) {
