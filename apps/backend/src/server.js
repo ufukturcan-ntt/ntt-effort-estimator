@@ -682,6 +682,23 @@ app.delete("/api/offers/:id", requireAuth, async (req, res, next) => {
   }
 });
 
+app.delete("/api/admin/offers/:offerNo", requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const offerNo = String(req.params.offerNo || "").trim();
+    if (!offerNo) return res.status(400).json({ error: "Offer number required" });
+    const result = await query(
+      `delete from offer
+       where offer_no = $1
+       returning id, offer_no, status, customer_name, project_name`,
+      [offerNo]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: "Teklif bulunamadı" });
+    res.json({ deleted: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get("/api/admin", requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const result = await query(`select entity, payload, updated_at from admin_config order by entity`);

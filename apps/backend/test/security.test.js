@@ -41,3 +41,9 @@ test("offer update SQL uses contiguous parameter numbers", () => {
   assert.match(server, /and user_id = \$16/);
   assert.doesNotMatch(server, /payload\.systemType,\s*null,\s*totalEffort/s);
 });
+
+test("admin offer delete endpoint requires admin authorization", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /app\.delete\("\/api\/admin\/offers\/:offerNo", requireAuth, requireAdmin/);
+  assert.match(server, /where offer_no = \$1/);
+});
