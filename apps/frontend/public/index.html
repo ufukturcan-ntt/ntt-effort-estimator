@@ -2800,7 +2800,6 @@
   <script src="assets/fixed-days.js"></script>
   <script src="assets/admin-data.js"></script>
   <script src="assets/excel-v18-maintenance.js"></script>
-  <script src="assets/xlsx.full.min.js"></script>
   <script>
     const modules = [
       {module:"SD",analysis:2,build:.5,test:1.75,hypercare:28,golive:80,total:113.5},
@@ -4521,14 +4520,16 @@
         if (!button.disabled) button.textContent = t("save");
       });
       setAdminMenuLabels();
-      renderAllWorks?.();
-      refreshProjectDefinitionSelects?.();
-      renderModuleGroups?.();
-      renderLocalizationControls?.();
-      refreshQuestionLists?.();
-      renderWorkbookDrivenScreens?.();
-      rerenderScreenNavigation?.();
-      wakeTranslationQueue();
+      if (currentUser) {
+        renderAllWorks?.();
+        refreshProjectDefinitionSelects?.();
+        renderModuleGroups?.();
+        renderLocalizationControls?.();
+        refreshQuestionLists?.();
+        renderWorkbookDrivenScreens?.();
+        rerenderScreenNavigation?.();
+        wakeTranslationQueue();
+      }
     }
 
     const phases = [
@@ -7097,6 +7098,34 @@
       return sheet;
     }
 
+    function loadScriptOnce(src, globalName) {
+      if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+      const existing = document.querySelector(`script[data-lazy-src="${src}"]`);
+      if (existing?.dataset.loaded === "true") return Promise.resolve(globalName ? window[globalName] : true);
+      if (existing?.dataset.promiseId) return window.lazyScriptPromises?.[existing.dataset.promiseId];
+      window.lazyScriptPromises = window.lazyScriptPromises || {};
+      const promiseId = `lazy-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const script = existing || document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.dataset.lazySrc = src;
+      script.dataset.promiseId = promiseId;
+      const promise = new Promise((resolve, reject) => {
+        script.addEventListener("load", () => {
+          script.dataset.loaded = "true";
+          resolve(globalName ? window[globalName] : true);
+        }, { once: true });
+        script.addEventListener("error", () => reject(new Error(`${src} yüklenemedi.`)), { once: true });
+      });
+      window.lazyScriptPromises[promiseId] = promise;
+      if (!existing) document.head.appendChild(script);
+      return promise;
+    }
+
+    function ensureXlsxLoaded() {
+      return loadScriptOnce("assets/xlsx.full.min.js", "XLSX");
+    }
+
     function buildBacklogWorkbook(offer) {
       if (!window.XLSX) throw new Error("Excel bileşeni yüklenemedi.");
       const projectRows = projectEffortRowsForOffer(offer);
@@ -7136,7 +7165,8 @@
       return workbook;
     }
 
-    function exportBacklogWorkbook(offer) {
+    async function exportBacklogWorkbook(offer) {
+      await ensureXlsxLoaded();
       const workbook = buildBacklogWorkbook(offer);
       const safeName = String(offer.offer_no || offer.project_name || "Teklif")
         .replace(/[\\/:*?"<>|]+/g, "-")
@@ -7634,7 +7664,7 @@
             button.textContent = "Hazırlanıyor";
             try {
               const offer = await window.EffortApi.getOffer(offerId);
-              exportBacklogWorkbook(offer);
+              await exportBacklogWorkbook(offer);
             } catch (error) {
               console.error(error);
               alert(`Backlog Excel oluşturulamadı: ${error.message}`);
@@ -8514,6 +8544,9 @@
       applyUserPermissions();
       document.getElementById("loginShell")?.classList.add("is-hidden");
       document.getElementById("appShell")?.classList.remove("is-locked");
+      renderRows("moduleRows", modules.slice(0, 12));
+      renderPhases();
+      renderScreenNavigation();
       const name = currentUser?.display_name || currentUser?.email || "Kullanıcı";
       const menuName = document.getElementById("userMenuName");
       if (menuName) menuName.textContent = name;
@@ -8754,19 +8787,9 @@
     });
 
     async function initializeApp() {
-      const hasStoredSession = Boolean(sessionStorage.getItem("effortAccessToken"));
       primeStoredScreenBeforeRestore();
       bindAdminNavigation();
       bindUserMenu();
-      renderRows("moduleRows", modules.slice(0, 12));
-      renderPhases();
-      refreshProjectDefinitionSelects();
-      renderModuleGroups();
-      renderLocalizationControls();
-      if (!hasStoredSession) renderWorkbookDrivenScreens();
-      renderScreenNavigation();
-      renderAllWorks();
-      refreshQuestionLists();
       applyLanguage();
       await restoreAuthenticatedSession();
     }

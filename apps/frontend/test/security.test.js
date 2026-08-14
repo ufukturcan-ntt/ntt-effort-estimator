@@ -38,3 +38,9 @@ test("admin configuration is saved in one request", () => {
   assert.match(html, /EffortApi\.saveAdminConfig\(config\)/);
   assert.doesNotMatch(html, /Promise\.all\(Object\.entries\(config\)/);
 });
+
+test("large Excel library is lazy-loaded", () => {
+  assert.doesNotMatch(html, /<script src="assets\/xlsx\.full\.min\.js"><\/script>/);
+  assert.match(html, /function ensureXlsxLoaded\(\)/);
+  assert.match(html, /await ensureXlsxLoaded\(\)/);
+});
