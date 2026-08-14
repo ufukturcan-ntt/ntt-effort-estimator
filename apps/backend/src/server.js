@@ -567,17 +567,17 @@ app.put("/api/offers/:id", requireAuth, async (req, res, next) => {
         industry = coalesce($5, industry),
         implementation_type = coalesce($6, implementation_type),
         system_type = coalesce($7, system_type),
-        total_effort = coalesce($9::numeric, total_effort),
-        project_definition = coalesce($10::jsonb, project_definition),
-        scope_answers = coalesce($11::jsonb, scope_answers),
-        development_answers = coalesce($12::jsonb, development_answers),
-        module_selection = coalesce($13::jsonb, module_selection),
-        localization_selection = coalesce($14::jsonb, localization_selection),
-        hypercare_inputs = coalesce($15::jsonb, hypercare_inputs),
-        final_effort = coalesce($16::jsonb, final_effort),
+        total_effort = coalesce($8::numeric, total_effort),
+        project_definition = coalesce($9::jsonb, project_definition),
+        scope_answers = coalesce($10::jsonb, scope_answers),
+        development_answers = coalesce($11::jsonb, development_answers),
+        module_selection = coalesce($12::jsonb, module_selection),
+        localization_selection = coalesce($13::jsonb, localization_selection),
+        hypercare_inputs = coalesce($14::jsonb, hypercare_inputs),
+        final_effort = coalesce($15::jsonb, final_effort),
         updated_at = now()
        where id = $1
-         and user_id = $17
+         and user_id = $16
          and status <> 'APPROVED'
        returning *`,
       [
@@ -588,7 +588,6 @@ app.put("/api/offers/:id", requireAuth, async (req, res, next) => {
         payload.industry,
         payload.implementationType,
         payload.systemType,
-        null,
         totalEffort,
         payload.projectDefinition == null ? null : JSON.stringify(payload.projectDefinition),
         payload.scopeAnswers == null ? null : JSON.stringify(payload.scopeAnswers),

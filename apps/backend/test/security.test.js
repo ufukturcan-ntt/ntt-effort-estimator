@@ -33,3 +33,11 @@ test("admin bulk save uses a database transaction", () => {
   assert.match(server, /client\.query\("commit"\)/);
   assert.match(server, /client\.query\("rollback"\)/);
 });
+
+test("offer update SQL uses contiguous parameter numbers", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /total_effort = coalesce\(\$8::numeric, total_effort\)/);
+  assert.match(server, /final_effort = coalesce\(\$15::jsonb, final_effort\)/);
+  assert.match(server, /and user_id = \$16/);
+  assert.doesNotMatch(server, /payload\.systemType,\s*null,\s*totalEffort/s);
+});
