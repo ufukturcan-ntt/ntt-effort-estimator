@@ -8252,7 +8252,7 @@
       });
     }
 
-    function resetSelectableState(mode, offer = null) {
+    function resetSelectableState(mode, offer = null, options = {}) {
       const savedModules = offerJson(offer?.module_selection);
       const savedLocalizations = offerJson(offer?.localization_selection);
       const savedHypercare = offerJson(offer?.hypercare_inputs);
@@ -8295,10 +8295,12 @@
         questionAnswers.developmentQuestions = {};
         librarySelections.clear();
       }
-      renderModuleGroups();
-      renderLocalizationControls();
-      refreshQuestionLists({ preserveAnswers: mode === "existing" });
-      renderWorkbookDrivenScreens();
+      if (options.render !== false) {
+        renderModuleGroups();
+        renderLocalizationControls();
+        refreshQuestionLists({ preserveAnswers: mode === "existing" });
+        renderWorkbookDrivenScreens();
+      }
     }
 
     function setProjectForm(values, options = {}) {
@@ -8318,7 +8320,7 @@
       questionAnswers.scopeQuestions = {};
       questionAnswers.developmentQuestions = {};
       updateProjectSummary(values);
-      refreshQuestionLists({ preserveAnswers: options.preserveAnswers !== false });
+      if (options.renderQuestions !== false) refreshQuestionLists({ preserveAnswers: options.preserveAnswers !== false });
       ["projectCustomer", "projectName", "projectIndustry", "projectImplementation", "projectSystem", "projectVersion", "projectNotes"].forEach(id => {
         const el = document.getElementById(id);
         if (!el || el.dataset.dirtyBound) return;
@@ -8330,6 +8332,22 @@
         el.addEventListener("change", markDirty);
       });
       markClean();
+    }
+
+    function hydrateNewOfferScreens() {
+      const steps = [
+        () => renderModuleGroups(),
+        () => renderLocalizationControls(),
+        () => refreshQuestionLists({ preserveAnswers: false }),
+        () => renderWorkbookDrivenScreens()
+      ];
+      const runStep = () => {
+        const step = steps.shift();
+        if (!step) return;
+        step();
+        setTimeout(runStep, 0);
+      };
+      requestAnimationFrame(runStep);
     }
 
     function openScreen(screenId, options = {}) {
@@ -8533,11 +8551,12 @@
         version: "",
         notes: "",
         effort: "0"
-      }, { preserveAnswers: false });
-      resetSelectableState("new");
+      }, { preserveAnswers: false, renderQuestions: false });
+      resetSelectableState("new", null, { render: false });
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
+      hydrateNewOfferScreens();
     }
 
     function showAuthenticatedApp() {

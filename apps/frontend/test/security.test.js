@@ -49,3 +49,8 @@ test("authenticated header buttons render before heavier data hydration", () => 
   assert.match(html, /currentUser = await window\.EffortApi\.me\(\);\s*showAuthenticatedApp\(\);\s*try \{\s*await loadAdminConfig\(\);/s);
   assert.match(html, /currentUser = await window\.EffortApi\.login\(\{[\s\S]*?\}\);\s*showAuthenticatedApp\(\);\s*setWorkMode\(false\);[\s\S]*?await loadAdminConfig\(\);/s);
 });
+
+test("new offer screen opens before heavy panel hydration", () => {
+  assert.match(html, /function hydrateNewOfferScreens\(\)/);
+  assert.match(html, /setProjectForm\(\{[\s\S]*?\}, \{ preserveAnswers: false, renderQuestions: false \}\);\s*resetSelectableState\("new", null, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateNewOfferScreens\(\);/s);
+});
