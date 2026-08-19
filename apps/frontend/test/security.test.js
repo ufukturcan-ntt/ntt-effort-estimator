@@ -54,3 +54,10 @@ test("new offer screen opens before heavy panel hydration", () => {
   assert.match(html, /function hydrateNewOfferScreens\(\)/);
   assert.match(html, /setProjectForm\(\{[\s\S]*?\}, \{ preserveAnswers: false, renderQuestions: false \}\);\s*resetSelectableState\("new", null, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateNewOfferScreens\(\);/s);
 });
+
+test("question restriction rows preserve question values by stable id", () => {
+  assert.match(html, /const displayName = questionDisplayName\(questionType, questionId, question\)/);
+  assert.match(html, /\.filter\(row => row\[2\] \|\| row\[3\]\)/);
+  assert.match(html, /const current = questionDisplayName\(questionType, idValue, currentText\)/);
+  assert.match(html, /uniqueOptionValues\(\["", \.\.\.adminQuestionNamesByType\(typeSelect\.value\), current\]\)/);
+});

@@ -5454,13 +5454,15 @@
       const idx = (...labels) => labels.map(label => headers.indexOf(label)).find(index => index >= 0);
       const normalized = source.slice(headerIndex + 1).map(row => {
         const type = row[idx("Variable Type")] || "Kapsam";
+        const questionType = questionTypeFromLabel(type);
         const question = row[idx("Question")] || "";
-        const questionId = row[idx("Question ID")] || questionIdFromName(questionTypeFromLabel(type), question);
+        const questionId = row[idx("Question ID")] || questionIdFromName(questionType, question);
+        const displayName = questionDisplayName(questionType, questionId, question);
         return [
           row[idx("No")] || "",
           type,
           questionId,
-          questionDisplayName(questionTypeFromLabel(type), questionId, question),
+          displayName,
           row[idx("Allowed Industries")] || "All",
           canonicalImplementationList(row[idx("Allowed Implementation Types")] || "All"),
           row[idx("Allowed System Types")] || "All",
@@ -5468,7 +5470,7 @@
           row[idx("Notes")] || "",
           row[idx("Usage")] || ""
         ];
-      }).filter(row => row[3]);
+      }).filter(row => row[2] || row[3]);
       return [restrictionHeaders, ...normalized];
     }
 
@@ -5633,6 +5635,7 @@
       if (!body) return;
       const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
       const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
+      const idIndex = restrictionHeaderIndex(headers, "Question ID");
       const questionIndex = restrictionHeaderIndex(headers, "Question");
       if (typeIndex < 0 || questionIndex < 0) return;
       [...body.querySelectorAll("tr")].forEach(row => {
@@ -5648,16 +5651,21 @@
           if (currentText) questionSelect.dataset.previousValue = currentText;
         }
         const refreshQuestionOptions = () => {
-          const current = questionSelect.value || questionSelect.dataset.previousValue || "";
-          const options = ["", ...adminQuestionNamesByType(typeSelect.value)];
+          const questionType = questionTypeFromLabel(typeSelect.value);
+          const idValue = idIndex >= 0 ? adminCellValue(row.children[idIndex]) : "";
+          const currentText = questionSelect.value || questionSelect.dataset.previousValue || "";
+          const current = questionDisplayName(questionType, idValue, currentText);
+          const options = uniqueOptionValues(["", ...adminQuestionNamesByType(typeSelect.value), current]);
           questionSelect.innerHTML = options.map(option => `<option ${option === current ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
-          if (![...questionSelect.options].some(option => option.value === current)) questionSelect.value = "";
           delete questionSelect.dataset.previousValue;
         };
         refreshQuestionOptions();
         if (!questionSelect.dataset.selectBound) {
           questionSelect.dataset.selectBound = "true";
-          questionSelect.addEventListener("change", markAdminDirty);
+          questionSelect.addEventListener("change", () => {
+            if (idIndex >= 0) row.children[idIndex].textContent = questionIdFromName(questionTypeFromLabel(typeSelect.value), questionSelect.value) || row.children[idIndex].textContent;
+            markAdminDirty();
+          });
         }
         if (!typeSelect.dataset.restrictionTypeBound) {
           typeSelect.dataset.restrictionTypeBound = "true";
