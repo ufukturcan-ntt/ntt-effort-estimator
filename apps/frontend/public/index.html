@@ -6715,17 +6715,27 @@
       refreshProjectDefinitionSelects();
     }
 
-    async function loadAdminConfig() {
-      if (!window.EffortApi) return;
-      const config = await window.EffortApi.adminData(currentUser?.id);
-      applyAdminConfig(config);
-      refreshQuestionLists();
-      renderLocalizationControls();
-      renderWorkbookDrivenScreens();
+    function isOfferWorkspaceVisible() {
+      return document.getElementById("appShell")?.classList.contains("work-open");
+    }
+
+    function refreshAfterAdminConfigLoad() {
+      if (isOfferWorkspaceVisible()) {
+        refreshQuestionLists();
+        renderLocalizationControls();
+        renderWorkbookDrivenScreens();
+      }
       adminRenderedSections.clear();
       adminPageDirty = true;
       renderAdminPageIfNeeded();
       markAdminClean();
+    }
+
+    async function loadAdminConfig(options = {}) {
+      if (!window.EffortApi) return;
+      const config = await window.EffortApi.adminData(currentUser?.id);
+      applyAdminConfig(config);
+      if (options.render !== false) refreshAfterAdminConfigLoad();
     }
 
     async function saveAdminConfig(button) {
@@ -8613,22 +8623,25 @@
       try {
         currentUser = await window.EffortApi.me();
         showAuthenticatedApp();
-        try {
-          await loadAdminConfig();
-        } catch (adminError) {
-          console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
-        }
-        await loadOffers();
         const screenId = storedScreenId();
         const offerContext = storedOfferContext();
-        if (offerScreens.has(screenId) && offerContext?.id) {
-          await openExistingWork(offerContext.id, offerContext.accessMode || "edit");
-          if (screenId !== "project") openWork(screenId);
-        } else {
-          openScreen(screenId);
-        }
+        if (!offerScreens.has(screenId)) openScreen(screenId);
         ensureNavigationHistory(screenId);
         applyLanguage();
+        const adminConfigPromise = loadAdminConfig({ render: false })
+          .then(refreshAfterAdminConfigLoad)
+          .catch(adminError => {
+            console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
+          });
+        const offersPromise = loadOffers();
+        await offersPromise;
+        if (offerScreens.has(screenId) && offerContext?.id) {
+          await adminConfigPromise;
+          await openExistingWork(offerContext.id, offerContext.accessMode || "edit");
+          if (screenId !== "project") openWork(screenId);
+        } else if (offerScreens.has(screenId)) {
+          openWork(screenId);
+        }
         wakeTranslationQueue();
         return true;
       } catch (error) {
@@ -8639,6 +8652,20 @@
         showLoginApp();
         return false;
       }
+    }
+
+    function startAdminConfigHydration() {
+      return loadAdminConfig({ render: false })
+        .then(refreshAfterAdminConfigLoad)
+        .catch(adminError => {
+          console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
+        });
+    }
+
+    async function hydrateHomeData() {
+      const adminConfigPromise = startAdminConfigHydration();
+      await loadOffers();
+      return adminConfigPromise;
     }
 
     document.getElementById("showRegisterButton").addEventListener("click", () => {
@@ -8689,12 +8716,7 @@
         openScreen("overview");
         ensureNavigationHistory("overview");
         applyLanguage();
-        try {
-          await loadAdminConfig();
-        } catch (adminError) {
-          console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
-        }
-        await loadOffers();
+        hydrateHomeData().then(() => applyLanguage());
         applyLanguage();
         wakeTranslationQueue();
       } catch (error) {

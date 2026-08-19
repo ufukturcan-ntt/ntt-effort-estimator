@@ -46,8 +46,8 @@ test("large Excel library is lazy-loaded", () => {
 });
 
 test("authenticated header buttons render before heavier data hydration", () => {
-  assert.match(html, /currentUser = await window\.EffortApi\.me\(\);\s*showAuthenticatedApp\(\);\s*try \{\s*await loadAdminConfig\(\);/s);
-  assert.match(html, /currentUser = await window\.EffortApi\.login\(\{[\s\S]*?\}\);\s*showAuthenticatedApp\(\);\s*setWorkMode\(false\);[\s\S]*?await loadAdminConfig\(\);/s);
+  assert.match(html, /currentUser = await window\.EffortApi\.me\(\);\s*showAuthenticatedApp\(\);[\s\S]*?const adminConfigPromise = loadAdminConfig\(\{ render: false \}\)/s);
+  assert.match(html, /currentUser = await window\.EffortApi\.login\(\{[\s\S]*?\}\);\s*showAuthenticatedApp\(\);\s*setWorkMode\(false\);[\s\S]*?hydrateHomeData\(\)\.then\(\(\) => applyLanguage\(\)\);/s);
 });
 
 test("new offer screen opens before heavy panel hydration", () => {

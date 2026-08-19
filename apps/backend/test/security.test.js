@@ -41,3 +41,8 @@ test("offer update SQL uses contiguous parameter numbers", () => {
   assert.match(server, /and user_id = \$16/);
   assert.doesNotMatch(server, /payload\.systemType,\s*null,\s*totalEffort/s);
 });
+
+test("offer list endpoint returns a lightweight project definition summary", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /jsonb_build_object\('version', project_definition->>'version'\) as project_definition/);
+});

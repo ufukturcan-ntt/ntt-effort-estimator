@@ -446,7 +446,9 @@ app.get("/api/offers", requireAuth, async (req, res, next) => {
   try {
     const result = await query(
       `select id, user_id, offer_no, title, customer_name, project_name, industry, implementation_type,
-              system_type, status, total_effort, project_definition, updated_at,
+              system_type, status, total_effort,
+              jsonb_build_object('version', project_definition->>'version') as project_definition,
+              updated_at,
               (user_id = $1) as is_owner
        from offer
        order by updated_at desc
