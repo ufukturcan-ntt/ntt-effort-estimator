@@ -3791,6 +3791,9 @@
     let currentOfferAccessMode = "edit";
     let currentOfferUpdatedAt = "";
     let adminConfigVersions = {};
+    let adminConfigLoaded = false;
+    let adminConfigPromise = null;
+    let adminConfigHydrationTimer = null;
     let cachedOffers = [];
     let offersLoadedAt = 0;
     let offersLoadPromise = null;
@@ -6878,7 +6881,45 @@
       if (!window.EffortApi) return;
       const config = await window.EffortApi.adminData(currentUser?.id);
       applyAdminConfig(config);
+      adminConfigLoaded = true;
       if (options.render !== false) refreshAfterAdminConfigLoad();
+      return config;
+    }
+
+    function markAdminConfigReadyWithoutHeavyRender() {
+      adminRenderedSections.clear();
+      adminPageDirty = true;
+      markAdminClean();
+    }
+
+    function ensureAdminConfigLoaded(options = {}) {
+      if (adminConfigLoaded) return Promise.resolve();
+      if (adminConfigHydrationTimer) {
+        clearTimeout(adminConfigHydrationTimer);
+        adminConfigHydrationTimer = null;
+      }
+      if (!adminConfigPromise) {
+        adminConfigPromise = loadAdminConfig({ render: false })
+          .then(() => {
+            if (options.render) refreshAfterAdminConfigLoad();
+            else markAdminConfigReadyWithoutHeavyRender();
+          })
+          .catch(adminError => {
+            console.warn(currentLanguage === "en" ? "Admin settings could not be loaded; startup data will be used." : "Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
+          })
+          .finally(() => {
+            adminConfigPromise = null;
+          });
+      }
+      return adminConfigPromise;
+    }
+
+    function scheduleDeferredAdminConfigHydration(delay = 2000) {
+      if (adminConfigLoaded || adminConfigPromise || adminConfigHydrationTimer) return;
+      adminConfigHydrationTimer = setTimeout(() => {
+        adminConfigHydrationTimer = null;
+        ensureAdminConfigLoaded({ render: false });
+      }, delay);
     }
 
     async function saveAdminConfig(button) {
@@ -8713,7 +8754,8 @@
       applyOfferReadOnlyState();
     }
 
-    function openNewOffer() {
+    async function openNewOffer() {
+      await ensureAdminConfigLoaded({ render: false });
       currentOfferId = null;
       currentOfferStatus = "DRAFT";
       currentOfferAccessMode = "edit";
@@ -8796,23 +8838,20 @@
         if (!offerScreens.has(screenId)) openScreen(screenId);
         ensureNavigationHistory(screenId);
         applyLanguage();
-        const adminConfigPromise = loadAdminConfig({ render: false })
-          .then(refreshAfterAdminConfigLoad)
-          .catch(adminError => {
-            console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
-          });
         const offersPromise = loadOffers().catch(error => {
           console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error);
         });
         if (offerScreens.has(screenId) && offerContext?.id) {
           await offersPromise;
-          await adminConfigPromise;
+          await ensureAdminConfigLoaded({ render: false });
           await openExistingWork(offerContext.id, offerContext.accessMode || "edit");
           if (screenId !== "project") openWork(screenId);
         } else if (offerScreens.has(screenId)) {
+          await ensureAdminConfigLoaded({ render: false });
           openWork(screenId);
         } else {
           offersPromise.then(() => applyLanguage());
+          scheduleDeferredAdminConfigHydration();
         }
         wakeTranslationQueue();
         return true;
@@ -8827,19 +8866,15 @@
     }
 
     function startAdminConfigHydration() {
-      return loadAdminConfig({ render: false })
-        .then(refreshAfterAdminConfigLoad)
-        .catch(adminError => {
-          console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
-        });
+      return ensureAdminConfigLoaded({ render: false });
     }
 
     async function hydrateHomeData() {
-      const adminConfigPromise = startAdminConfigHydration();
-      loadOffers()
+      const offersPromise = loadOffers()
         .then(() => applyLanguage())
         .catch(error => console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error));
-      return adminConfigPromise;
+      scheduleDeferredAdminConfigHydration();
+      return offersPromise;
     }
 
     document.getElementById("showRegisterButton").addEventListener("click", () => {
@@ -8950,7 +8985,8 @@
       confirmNavigation(openNewOffer);
     });
 
-    document.getElementById("topAdminButton").addEventListener("click", () => {
+    document.getElementById("topAdminButton").addEventListener("click", async () => {
+      await ensureAdminConfigLoaded({ render: false });
       guardedOpenScreen("admin");
     });
 

@@ -45,9 +45,13 @@ test("large Excel library is lazy-loaded", () => {
   assert.match(html, /await ensureXlsxLoaded\(\)/);
 });
 
-test("authenticated header buttons render before heavier data hydration", () => {
-  assert.match(html, /currentUser = await window\.EffortApi\.me\(\);\s*showAuthenticatedApp\(\);[\s\S]*?const adminConfigPromise = loadAdminConfig\(\{ render: false \}\)/s);
-  assert.match(html, /currentUser = await window\.EffortApi\.login\(\{[\s\S]*?\}\);\s*showAuthenticatedApp\(\);\s*setWorkMode\(false\);[\s\S]*?hydrateHomeData\(\)\.then\(\(\) => applyLanguage\(\)\);/s);
+test("authenticated home data loads before deferred admin configuration", () => {
+  assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\)/);
+  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 2000\)/);
+  assert.match(html, /async function hydrateHomeData\(\) \{\s*const offersPromise = loadOffers\(\)/s);
+  assert.match(html, /scheduleDeferredAdminConfigHydration\(\);\s*return offersPromise;/s);
+  assert.match(html, /async function openNewOffer\(\) \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
+  assert.match(html, /topAdminButton"\)\.addEventListener\("click", async \(\) => \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
 });
 
 test("new offer screen opens before heavy panel hydration", () => {
