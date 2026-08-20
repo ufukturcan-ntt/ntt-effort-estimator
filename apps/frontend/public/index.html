@@ -4750,14 +4750,14 @@
         input.addEventListener("change", () => {
           moduleState.get(input.dataset.moduleToggle).selected = input.checked;
           markDirty();
-          renderWorkbookDrivenScreens();
+          scheduleWorkbookDrivenRender();
         });
       });
       target.querySelectorAll("[data-module-team]").forEach(input => {
         input.addEventListener("input", () => {
           moduleState.get(input.dataset.moduleTeam).team = input.value;
           markDirty();
-          renderWorkbookDrivenScreens();
+          scheduleWorkbookDrivenRender();
         });
       });
     }
@@ -4794,7 +4794,7 @@
         select.addEventListener("change", () => {
           setLocalizationCountry(select.dataset.localizationCountry, select.value === "true");
           markDirty();
-          renderWorkbookDrivenScreens();
+          scheduleWorkbookDrivenRender();
         });
       });
     }
@@ -4846,7 +4846,7 @@
           input.addEventListener("change", () => {
             abapFixedEffortIncluded = input.checked;
             markDirty();
-            renderWorkbookDrivenScreens();
+            scheduleWorkbookDrivenRender();
           });
         });
       }
@@ -7114,6 +7114,7 @@
       renderLibraryRows();
       const projectTotal = renderFinalEffort();
       const developmentTotal = renderDevelopmentEfforts();
+      setText("selectedDevelopmentEffort", fmt(developmentTotal));
       const support = renderHypercareRows();
       const supportTotal = support.hypercare + support.golive;
       setText("localizationNavCount", activeLocalizations().length);
@@ -8042,25 +8043,8 @@
 
       const developmentAnswers = Object.entries(questionAnswers.developmentQuestions)
         .filter(([, value]) => value && value !== "Seçiniz" && value !== "Hayır");
-      const developmentScore = (window.developmentQuestions || []).reduce((total, item) => {
-        return total + answerImpact(item, questionAnswers.developmentQuestions[String(item.no)]);
-      }, 0);
       setText("selectedDevelopmentCount", developmentAnswers.length);
       setText("developmentSelectedPill", `${developmentAnswers.length} seçili`);
-      const projectTotal = renderFinalEffort();
-      const developmentTotal = renderDevelopmentEfforts();
-      const localizationTotal = activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
-      const hypercareTotal = hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0);
-      const goliveTotal = hypercareModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0);
-      setText("selectedDevelopmentEffort", fmt(developmentTotal));
-      setText("developmentEffortTotal", fmt(developmentTotal));
-      setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + hypercareTotal + goliveTotal));
-      renderDashboards({
-        projectTotal,
-        developmentTotal,
-        localizationTotal,
-        hypercareTotal: hypercareTotal + goliveTotal
-      });
     }
 
     function collectVisibleAnswers(targetId) {
@@ -8108,16 +8092,7 @@
         `;
       }).join("");
       target.querySelectorAll("input, select").forEach(control => {
-        control.addEventListener("input", () => {
-          const key = control.closest(".question-card")?.dataset.questionKey;
-          if (!key) return;
-          if (control.value) questionAnswers[targetId][key] = control.value;
-          else delete questionAnswers[targetId][key];
-          markDirty();
-          updateQuestionMetrics();
-          scheduleWorkbookDrivenRender();
-        });
-        control.addEventListener("change", () => {
+        const applyQuestionAnswer = () => {
           const key = control.closest(".question-card")?.dataset.questionKey;
           if (!key) return;
           if (control.value && control.value !== "Seçiniz") questionAnswers[targetId][key] = control.value;
@@ -8125,7 +8100,8 @@
           markDirty();
           updateQuestionMetrics();
           scheduleWorkbookDrivenRender();
-        });
+        };
+        control.addEventListener(control.tagName === "SELECT" ? "change" : "input", applyQuestionAnswer);
       });
       const countTarget = targetId === "scopeQuestions" ? "scopeVisibleCount" : "developmentVisibleCount";
       const countEl = document.getElementById(countTarget);
@@ -8949,13 +8925,13 @@
     ["projectIndustry", "projectImplementation", "projectSystem"].forEach(id => {
       document.getElementById(id)?.addEventListener("change", () => {
         refreshQuestionLists();
-        renderWorkbookDrivenScreens();
+        scheduleWorkbookDrivenRender();
       });
     });
     document.getElementById("teamSplitSelect")?.addEventListener("change", () => {
       markDirty();
       renderModuleGroups();
-      renderWorkbookDrivenScreens();
+      scheduleWorkbookDrivenRender();
     });
 
     async function initializeApp() {
@@ -8970,5 +8946,3 @@
   </script>
 </body>
 </html>
-
-

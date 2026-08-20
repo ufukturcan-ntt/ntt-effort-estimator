@@ -91,3 +91,11 @@ test("user menu actions are translated with the selected language", () => {
   assert.match(html, /setTextContent\("#logoutButton", t\("logout"\)\)/);
   assert.match(html, /alert\(t\("passwordChanged"\)\)/);
 });
+
+test("question selections defer heavy effort rendering", () => {
+  const metricsBlock = html.match(/function updateQuestionMetrics\(\) \{([\s\S]*?)\n    \}/)?.[1] || "";
+  assert.doesNotMatch(metricsBlock, /renderFinalEffort\(/);
+  assert.doesNotMatch(metricsBlock, /renderDevelopmentEfforts\(/);
+  assert.match(html, /control\.addEventListener\(control\.tagName === "SELECT" \? "change" : "input", applyQuestionAnswer\)/);
+  assert.doesNotMatch(html, /control\.addEventListener\("input", \(\) => \{[\s\S]*?control\.addEventListener\("change", \(\) => \{/);
+});
