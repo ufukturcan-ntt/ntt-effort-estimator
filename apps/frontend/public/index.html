@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
@@ -3811,6 +3811,14 @@
         loginLead: "NDBS TR yeni projelerine ait teklif ve bütçe çalışmalarını yöneten, kapsam ve eforları tek akışta belirleyen kokpit.",
         email: "Email",
         password: "Şifre",
+        userMenuTitle: "Kullanıcı",
+        changePassword: "Şifre Değiştir",
+        logout: "Çıkış Yap",
+        currentPassword: "Mevcut şifre",
+        newPassword: "Yeni şifre (en az 12 karakter)",
+        passwordMinLength: "Yeni şifre en az 12 karakter olmalı.",
+        passwordChanged: "Şifreniz değiştirildi.",
+        passwordChangeFailed: "Şifre değiştirilemedi",
         language: "Dil",
         loginButton: "Giriş Yap",
         registerButton: "Kayıt Ol",
@@ -3971,6 +3979,14 @@
         loginLead: "A cockpit for NDBS TR new project offers and budget studies, defining scope and efforts in one flow.",
         email: "Email",
         password: "Password",
+        userMenuTitle: "User",
+        changePassword: "Change Password",
+        logout: "Logout",
+        currentPassword: "Current password",
+        newPassword: "New password (at least 12 characters)",
+        passwordMinLength: "New password must be at least 12 characters.",
+        passwordChanged: "Your password has been changed.",
+        passwordChangeFailed: "Password could not be changed",
         language: "Language",
         loginButton: "Sign In",
         registerButton: "Register",
@@ -4444,6 +4460,12 @@
       setLabelText("registerDisplayName", t("registerName"));
       setLabelText("registerEmail", t("email"));
       setLabelText("registerPassword", t("password"));
+      setTextContent("#togglePasswordPanelButton", t("changePassword"));
+      setTextContent("#logoutButton", t("logout"));
+      setTextContent('label[for="currentAdminPassword"]', t("currentPassword"));
+      setTextContent('label[for="newAdminPassword"]', t("newPassword"));
+      setTextContent("#changeAdminPasswordButton", t("save"));
+      document.getElementById("userMenuButton")?.setAttribute("title", t("userMenuTitle"));
       setTextContent("#loginForm .button.primary", t("loginButton"));
       setTextContent("#showRegisterButton", t("registerButton"));
       setTextContent("#registerForm .button.primary", t("sendApproval"));
@@ -6960,16 +6982,16 @@
         passwordButton.addEventListener("click", async () => {
           const currentPassword = document.getElementById("currentAdminPassword")?.value || "";
           const newPassword = document.getElementById("newAdminPassword")?.value || "";
-          if (newPassword.length < 12) return alert("Yeni şifre en az 12 karakter olmalı.");
+          if (newPassword.length < 12) return alert(t("passwordMinLength"));
           passwordButton.disabled = true;
           try {
             await window.EffortApi.changePassword(currentPassword, newPassword);
             document.getElementById("currentAdminPassword").value = "";
             document.getElementById("newAdminPassword").value = "";
             menu?.classList.remove("open");
-            alert("Şifreniz değiştirildi.");
+            alert(t("passwordChanged"));
           } catch (error) {
-            alert(`Şifre değiştirilemedi: ${error.message}`);
+            alert(`${t("passwordChangeFailed")}: ${error.message}`);
           } finally {
             passwordButton.disabled = false;
           }
@@ -8948,4 +8970,5 @@
   </script>
 </body>
 </html>
+
 

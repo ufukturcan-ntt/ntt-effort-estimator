@@ -83,3 +83,11 @@ test("login does not expose demo work as active offer", () => {
   assert.doesNotMatch(html, /<input id="projectName" value="S4 Dönüşüm"/);
   assert.match(html, /loadOffers\(\)\s*\n\s*\.then\(\(\) => applyLanguage\(\)\)/);
 });
+
+test("user menu actions are translated with the selected language", () => {
+  assert.match(html, /changePassword: "Change Password"/);
+  assert.match(html, /logout: "Logout"/);
+  assert.match(html, /setTextContent\("#togglePasswordPanelButton", t\("changePassword"\)\)/);
+  assert.match(html, /setTextContent\("#logoutButton", t\("logout"\)\)/);
+  assert.match(html, /alert\(t\("passwordChanged"\)\)/);
+});
