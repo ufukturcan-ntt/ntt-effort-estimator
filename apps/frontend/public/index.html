@@ -2465,20 +2465,20 @@
             <div class="panel">
               <div class="panel-head"><h3 class="panel-title">Project Definition</h3><span class="pill">Temel bilgiler</span></div>
               <div class="form-grid">
-                <div class="input-field"><label>Müşteri adı</label><input id="projectCustomer" value="Ufuk Enerji AŞ" /></div>
-                <div class="input-field"><label>Proje adı</label><input id="projectName" value="S4 Dönüşüm" /></div>
+                <div class="input-field"><label>Müşteri adı</label><input id="projectCustomer" value="" /></div>
+                <div class="input-field"><label>Proje adı</label><input id="projectName" value="" /></div>
                 <div class="input-field"><label>Endüstri</label><select id="projectIndustry"><option value="">Seçiniz</option><option>Konfeksiyon</option><option>Perakende</option><option>Otomotiv</option><option>FMCG</option><option>Kimya</option><option>İlaç</option><option>Enerji</option><option>Tekstil</option><option>Ambalaj</option><option>Demir & Çelik</option></select></div>
                 <div class="input-field"><label>Implementasyon türü</label><select id="projectImplementation"><option value="">Seçiniz</option><option>Conversion</option><option>Greenfield</option><option>Brownfield Conversion</option><option>Rollout</option><option>Data Migration</option><option>Release Upgrade</option></select></div>
                 <div class="input-field"><label>Sistem türü</label><select id="projectSystem"><option value="">Seçiniz</option><option>SAP S/4HANA Private Cloud</option><option>SAP ECC</option><option>SAP Rise</option><option>SAP S/4HANA Public Cloud</option><option>SAP On-Premise</option><option>SAP DM</option><option>Siemens OPCenter - Dicrete</option><option>Siemens OPCenter - Process Manufacturing</option><option>Siemens OPCenter - Pharma</option></select></div>
-                <div class="input-field"><label>Versiyon</label><input id="projectVersion" value="V1" /></div>
-                <div class="input-field" style="grid-column:1 / -1"><label>Notlar</label><textarea id="projectNotes">Dikkat edilmesi gereken varsayımlar ve satış notları.</textarea></div>
+                <div class="input-field"><label>Versiyon</label><input id="projectVersion" value="" /></div>
+                <div class="input-field" style="grid-column:1 / -1"><label>Notlar</label><textarea id="projectNotes"></textarea></div>
               </div>
             </div>
             <div class="panel">
               <div class="panel-head"><h3 class="panel-title">Teklif özeti</h3><span class="pill">Draft</span></div>
               <div class="phase-list">
-                <div class="metric"><span>Müşteri</span><b id="summaryCustomer" style="font-size:22px">Ufuk Enerji AŞ</b><small id="summaryProject">S4 Dönüşüm</small></div>
-                <div class="metric"><span>Tahmini efor</span><b id="summaryEffort">1160</b><small>gün</small></div>
+                <div class="metric"><span>Müşteri</span><b id="summaryCustomer" style="font-size:22px">-</b><small id="summaryProject">-</small></div>
+                <div class="metric"><span>Tahmini efor</span><b id="summaryEffort">0</b><small>gün</small></div>
               </div>
             </div>
           </section>
@@ -3781,7 +3781,7 @@
         hypercareState.set(item.module, { weeks, daysPerWeek, shifts, locations, goliveDays });
       });
     }
-    let currentOfferMode = "existing";
+    let currentOfferMode = "";
     let hasUnsavedChanges = false;
     let hasAdminUnsavedChanges = false;
     let pendingNavigation = null;
@@ -8633,14 +8633,14 @@
         notes: definition.notes || "",
         effort: offer.total_effort || "0"
       } : {
-        customer: "Ufuk Enerji AŞ",
-        project: "S4 Dönüşüm",
-        industry: "Konfeksiyon",
-        implementation: "Conversion",
-        system: "SAP S/4HANA Private Cloud",
-        version: "V1",
-        notes: "Dikkat edilmesi gereken varsayımlar ve satış notları.",
-        effort: "1160"
+        customer: "",
+        project: "",
+        industry: "",
+        implementation: "",
+        system: "",
+        version: "",
+        notes: "",
+        effort: "0"
       });
       currentOfferMode = "existing";
       resetSelectableState("existing", offer);
@@ -8772,7 +8772,9 @@
 
     async function hydrateHomeData() {
       const adminConfigPromise = startAdminConfigHydration();
-      await loadOffers();
+      loadOffers()
+        .then(() => applyLanguage())
+        .catch(error => console.warn("Teklifler arka planda yüklenemedi.", error));
       return adminConfigPromise;
     }
 

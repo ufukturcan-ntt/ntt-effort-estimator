@@ -76,3 +76,10 @@ test("login language rendering avoids immediate translation churn", () => {
   assert.match(html, /function scheduleLanguageDynamicRefresh\(\)/);
   assert.doesNotMatch(html, /hydrateHomeData\(\)\.then\(\(\) => applyLanguage\(\)\);\s*applyLanguage\(\);\s*wakeTranslationQueue\(\);/);
 });
+
+test("login does not expose demo work as active offer", () => {
+  assert.match(html, /let currentOfferMode = ""/);
+  assert.doesNotMatch(html, /<input id="projectCustomer" value="Ufuk Enerji AŞ"/);
+  assert.doesNotMatch(html, /<input id="projectName" value="S4 Dönüşüm"/);
+  assert.match(html, /loadOffers\(\)\s*\n\s*\.then\(\(\) => applyLanguage\(\)\)/);
+});
