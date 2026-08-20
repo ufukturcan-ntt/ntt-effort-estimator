@@ -61,3 +61,11 @@ test("question restriction rows preserve question values by stable id", () => {
   assert.match(html, /const current = questionDisplayName\(questionType, idValue, currentText\)/);
   assert.match(html, /uniqueOptionValues\(\["", \.\.\.adminQuestionNamesByType\(typeSelect\.value\), current\]\)/);
 });
+
+test("duplicate 3rd party integration scope question is canonicalized", () => {
+  assert.match(html, /fromIds:\s*\["scope-54"\]/);
+  assert.match(html, /fromNames:\s*\["Kaç farklı 3rd party entegrasyon sayısı bulunmaktadır\?"\]/);
+  assert.match(html, /toId:\s*"scope-40"/);
+  assert.match(html, /toName:\s*"3rd Party Entegrasyon Sayısı"/);
+  assert.match(html, /const key = \[questionTypeFromLabel\(row\[1\]\), row\[2\] \|\| normalizeQuestionName\(row\[3\]\)\]/);
+});

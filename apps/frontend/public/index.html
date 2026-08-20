@@ -2933,7 +2933,7 @@
           const devIndex = cleanHeaders.indexOf("Geliştirme Sorusu");
           const implementationIndex = cleanHeaders.indexOf("Implementation Type");
           cleanRow[implementationIndex] = cleanRow[implementationIndex] || "All";
-          cleanRow[scopeIdIndex] = cleanRow[scopeIdIndex] || questionIdFromName("scope", cleanRow[scopeIndex]);
+          cleanRow[scopeIdIndex] = canonicalQuestionId("scope", cleanRow[scopeIdIndex] || questionIdFromName("scope", cleanRow[scopeIndex]), cleanRow[scopeIndex]);
           cleanRow[scopeIndex] = questionDisplayName("scope", cleanRow[scopeIdIndex], cleanRow[scopeIndex]);
           cleanRow[devIdIndex] = cleanRow[devIdIndex] || questionIdFromName("development", cleanRow[devIndex]);
           cleanRow[devIndex] = questionDisplayName("development", cleanRow[devIdIndex], cleanRow[devIndex]);
@@ -5337,18 +5337,42 @@
       const normalized = source.slice(headerIndex + 1).map((row, index) => {
         const oldSizeImpact = row[idx("Size Etki", "Size Impact")] || "";
         if (["hayır", "no", "false"].includes(String(oldSizeImpact).trim().toLocaleLowerCase("tr-TR"))) return null;
+        const questionText = row[idx("Kapsam Sorusu", "Scope Question")] || "";
+        const questionId = canonicalQuestionId("scope", row[idx("Question ID", "Kapsam Soru ID")] || questionIdFromName("scope", questionText), questionText);
+        const questionName = questionDisplayName("scope", questionId, questionText);
         return [
           index + 1,
-          row[idx("Question ID", "Kapsam Soru ID")] || questionIdFromName("scope", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
+          questionId,
           canonicalImplementationList(row[idx("Implementation Type", "İmplementasyon Türü")] || "All"),
           row[idx("System Type", "Sistem Türü")] || "All",
-          questionDisplayName("scope", row[idx("Question ID", "Kapsam Soru ID")] || "", row[idx("Kapsam Sorusu", "Scope Question")] || ""),
+          questionName,
           row[idx("Puan", "Score")] || "",
           row[idx("Katsayı", "Coefficient")] || 1,
           row[idx("Size Etki Tipi", "Size Impact Type")] || ""
         ];
       }).filter(row => row && row[4]);
-      return [scopeImpactHeaders, ...normalized];
+      const deduped = [];
+      const seen = new Map();
+      normalized.forEach(row => {
+        const key = [row[1] || normalizeQuestionName(row[4]), row[2] || "All", row[3] || "All"].join("\u001f");
+        if (!seen.has(key)) {
+          seen.set(key, deduped.length);
+          deduped.push(row);
+          return;
+        }
+        const existing = deduped[seen.get(key)];
+        deduped[seen.get(key)] = [
+          existing[0],
+          existing[1] || row[1],
+          existing[2] || row[2],
+          existing[3] || row[3],
+          existing[4] || row[4],
+          existing[5] || row[5],
+          existing[6] || row[6],
+          existing[7] || row[7]
+        ];
+      });
+      return [scopeImpactHeaders, ...deduped.map((row, index) => [index + 1, ...row.slice(1)])];
     }
 
     function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "", systemOverride = "") {
@@ -5456,7 +5480,7 @@
         const type = row[idx("Variable Type")] || "Kapsam";
         const questionType = questionTypeFromLabel(type);
         const question = row[idx("Question")] || "";
-        const questionId = row[idx("Question ID")] || questionIdFromName(questionType, question);
+        const questionId = canonicalQuestionId(questionType, row[idx("Question ID")] || questionIdFromName(questionType, question), question);
         const displayName = questionDisplayName(questionType, questionId, question);
         return [
           row[idx("No")] || "",
@@ -5471,7 +5495,33 @@
           row[idx("Usage")] || ""
         ];
       }).filter(row => row[2] || row[3]);
-      return [restrictionHeaders, ...normalized];
+      const deduped = [];
+      const seen = new Map();
+      normalized.forEach(row => {
+        const key = [questionTypeFromLabel(row[1]), row[2] || normalizeQuestionName(row[3])].join("\u001f");
+        if (!seen.has(key)) {
+          seen.set(key, deduped.length);
+          deduped.push(row);
+          return;
+        }
+        const existingIndex = seen.get(key);
+        const existing = deduped[existingIndex];
+        const keep = (Number(row[0]) || 0) > (Number(existing[0]) || 0) ? row : existing;
+        const other = keep === row ? existing : row;
+        deduped[existingIndex] = [
+          keep[0],
+          keep[1],
+          keep[2] || other[2],
+          keep[3] || other[3],
+          keep[4] || other[4],
+          canonicalImplementationList(uniqueOptionValues([...(keep[5] || "").split(","), ...(other[5] || "").split(",")]).join(", ") || "All"),
+          keep[6] || other[6],
+          keep[7] || other[7],
+          keep[8] || other[8],
+          keep[9] || other[9]
+        ];
+      });
+      return [restrictionHeaders, ...deduped];
     }
 
     function isRestrictionQuestionHeader(header, headers = []) {
@@ -6223,6 +6273,37 @@
       return String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
     }
 
+    const scopeQuestionAliases = [
+      {
+        fromIds: ["scope-54"],
+        fromNames: ["Kaç farklı 3rd party entegrasyon sayısı bulunmaktadır?"],
+        toId: "scope-40",
+        toName: "3rd Party Entegrasyon Sayısı"
+      }
+    ];
+
+    function questionAlias(type = "scope", id = "", name = "") {
+      if (questionTypeFromLabel(type) !== "scope") return null;
+      const normalizedId = String(id || "").trim();
+      const normalizedName = normalizeQuestionName(name);
+      return scopeQuestionAliases.find(alias =>
+        alias.fromIds.includes(normalizedId)
+        || alias.fromNames.some(value => normalizeQuestionName(value) === normalizedName)
+        || normalizedId === alias.toId
+        || normalizeQuestionName(alias.toName) === normalizedName
+      ) || null;
+    }
+
+    function canonicalQuestionId(type = "scope", id = "", name = "") {
+      const alias = questionAlias(type, id, name);
+      return alias ? alias.toId : String(id || "").trim();
+    }
+
+    function canonicalQuestionName(type = "scope", id = "", name = "") {
+      const alias = questionAlias(type, id, name);
+      return alias ? alias.toName : String(name || "").trim();
+    }
+
     function stableQuestionId(type = "scope", no = "", name = "") {
       const prefix = String(type || "scope").toLocaleLowerCase("tr-TR").includes("geli") ? "dev" : "scope";
       const number = String(no || "").trim();
@@ -6232,7 +6313,8 @@
     }
 
     function questionIdFor(item = {}, type = "scope") {
-      return item.id || item.questionId || stableQuestionId(type, item.no, item.name);
+      return canonicalQuestionId(type, item.id || item.questionId || "", item.name)
+        || stableQuestionId(type, item.no, canonicalQuestionName(type, "", item.name));
     }
 
     function questionTypeFromLabel(type = "") {
@@ -6245,18 +6327,23 @@
     }
 
     function findQuestionByIdOrName(type = "scope", id = "", name = "") {
-      const normalizedName = normalizeQuestionName(name);
-      return questionListByType(type).find(item => questionIdFor(item, type) === id)
+      const canonicalId = canonicalQuestionId(type, id, name);
+      const canonicalName = canonicalQuestionName(type, id, name);
+      const normalizedName = normalizeQuestionName(canonicalName);
+      return questionListByType(type).find(item => questionIdFor(item, type) === canonicalId)
         || questionListByType(type).find(item => normalizeQuestionName(item.name) === normalizedName)
         || null;
     }
 
     function questionDisplayName(type = "scope", id = "", fallback = "") {
       const question = findQuestionByIdOrName(type, id, fallback);
-      return question ? (type === "development" ? canonicalDevelopmentName(question.name) : question.name) : fallback;
+      const canonicalName = canonicalQuestionName(type, id, fallback);
+      return question ? (type === "development" ? canonicalDevelopmentName(question.name) : canonicalQuestionName(type, questionIdFor(question, type), question.name)) : canonicalName;
     }
 
     function questionIdFromName(type = "scope", fallback = "") {
+      const aliasId = canonicalQuestionId(type, "", fallback);
+      if (aliasId) return aliasId;
       const question = findQuestionByIdOrName(type, "", fallback);
       return question ? questionIdFor(question, type) : "";
     }
