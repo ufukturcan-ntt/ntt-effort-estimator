@@ -4292,6 +4292,7 @@
     const pendingTranslations = new Set();
     let translationTimer = null;
     let translationRenderTimer = null;
+    let languageDynamicRenderTimer = null;
 
     function persistTranslationCache() {
       sessionStorage.setItem(translationCacheKey, JSON.stringify(Object.fromEntries(translationCache.entries())));
@@ -4347,17 +4348,19 @@
     function queueRecordTranslation(text) {
       if (!shouldTranslateRecord(text) || translationCache.has(text) || pendingTranslations.has(text)) return;
       pendingTranslations.add(text);
-      if (!translationTimer) translationTimer = setTimeout(flushTranslationQueue, 120);
+      if (!translationTimer) translationTimer = setTimeout(flushTranslationQueue, 1200);
     }
 
     function wakeTranslationQueue() {
       if (currentLanguage !== "en" || !currentUser || !pendingTranslations.size || translationTimer) return;
-      translationTimer = setTimeout(flushTranslationQueue, 80);
+      translationTimer = setTimeout(flushTranslationQueue, 1200);
     }
 
     function displayRecord(value) {
       const text = String(value ?? "");
       if (currentLanguage !== "en" || !text) return text;
+      if (recordTranslations[text]) return recordTranslations[text];
+      if (recordDescriptionTranslations[text]) return recordDescriptionTranslations[text];
       if (translationCache.has(text)) {
         const cached = translationCache.get(text);
         if (cached !== text || !looksTurkishText(text)) return cached;
@@ -4366,6 +4369,21 @@
       }
       queueRecordTranslation(text);
       return text;
+    }
+
+    function scheduleLanguageDynamicRefresh() {
+      if (!currentUser) return;
+      clearTimeout(languageDynamicRenderTimer);
+      languageDynamicRenderTimer = setTimeout(() => {
+        renderAllWorks?.();
+        refreshProjectDefinitionSelects?.();
+        renderModuleGroups?.();
+        renderLocalizationControls?.();
+        refreshQuestionLists?.();
+        renderWorkbookDrivenScreens?.();
+        rerenderScreenNavigation?.();
+        wakeTranslationQueue();
+      }, 0);
     }
 
     function displayPhase(value) {
@@ -4520,16 +4538,7 @@
         if (!button.disabled) button.textContent = t("save");
       });
       setAdminMenuLabels();
-      if (currentUser) {
-        renderAllWorks?.();
-        refreshProjectDefinitionSelects?.();
-        renderModuleGroups?.();
-        renderLocalizationControls?.();
-        refreshQuestionLists?.();
-        renderWorkbookDrivenScreens?.();
-        rerenderScreenNavigation?.();
-        wakeTranslationQueue();
-      }
+      if (currentUser) scheduleLanguageDynamicRefresh();
     }
 
     const phases = [
@@ -8728,14 +8737,18 @@
           .catch(adminError => {
             console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
           });
-        const offersPromise = loadOffers();
-        await offersPromise;
+        const offersPromise = loadOffers().catch(error => {
+          console.warn("Teklifler arka planda yüklenemedi.", error);
+        });
         if (offerScreens.has(screenId) && offerContext?.id) {
+          await offersPromise;
           await adminConfigPromise;
           await openExistingWork(offerContext.id, offerContext.accessMode || "edit");
           if (screenId !== "project") openWork(screenId);
         } else if (offerScreens.has(screenId)) {
           openWork(screenId);
+        } else {
+          offersPromise.then(() => applyLanguage());
         }
         wakeTranslationQueue();
         return true;
@@ -8812,8 +8825,6 @@
         ensureNavigationHistory("overview");
         applyLanguage();
         hydrateHomeData().then(() => applyLanguage());
-        applyLanguage();
-        wakeTranslationQueue();
       } catch (error) {
         console.error(error);
         alert("Giriş yapılamadı. Email/şifre hatalı olabilir veya kullanıcı henüz onaylanmamış olabilir.");

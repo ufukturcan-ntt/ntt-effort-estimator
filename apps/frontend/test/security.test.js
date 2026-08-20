@@ -69,3 +69,10 @@ test("duplicate 3rd party integration scope question is canonicalized", () => {
   assert.match(html, /toName:\s*"3rd Party Entegrasyon Sayısı"/);
   assert.match(html, /const key = \[questionTypeFromLabel\(row\[1\]\), row\[2\] \|\| normalizeQuestionName\(row\[3\]\)\]/);
 });
+
+test("login language rendering avoids immediate translation churn", () => {
+  assert.match(html, /if \(recordTranslations\[text\]\) return recordTranslations\[text\]/);
+  assert.match(html, /setTimeout\(flushTranslationQueue, 1200\)/);
+  assert.match(html, /function scheduleLanguageDynamicRefresh\(\)/);
+  assert.doesNotMatch(html, /hydrateHomeData\(\)\.then\(\(\) => applyLanguage\(\)\);\s*applyLanguage\(\);\s*wakeTranslationQueue\(\);/);
+});
