@@ -3792,6 +3792,9 @@
     let currentOfferUpdatedAt = "";
     let adminConfigVersions = {};
     let cachedOffers = [];
+    let offersLoadedAt = 0;
+    let offersLoadPromise = null;
+    const offerDetailPromises = new Map();
     let cachedPendingApprovals = [];
     let currentLanguage = localStorage.getItem("effortLanguage") || document.getElementById("languageSelect")?.value || "tr";
     const lastScreenKey = "effortLastScreen";
@@ -4249,7 +4252,13 @@
       "Canlı Sistem Ayağa Kaldırma": "Production System Setup",
       "Canlı Anaveri Kontrol": "Production Master Data Check",
       "Canlı Anaveri Aktarım": "Production Master Data Migration",
-      "Canlı Destek": "Go-Live Support"
+      "Canlı Destek": "Go-Live Support",
+      "Tanımsız": "Undefined",
+      "Kayıt yok": "No records",
+      "Yeni teklif": "New offer",
+      "Kopyalanıyor": "Copying",
+      "Hazırlanıyor": "Preparing",
+      "Onaylanıyor": "Approving"
     };
 
     const recordDescriptionTranslations = {
@@ -4371,7 +4380,14 @@
       if (currentLanguage !== "en" || !currentUser || !pendingTranslations.size || translationTimer) return;
       translationTimer = setTimeout(flushTranslationQueue, 1200);
     }
-
+    function phraseTranslatedRecord(text) {
+      if (!text || !looksTurkishText(text)) return text;
+      let translated = String(text);
+      recordPhraseTranslations.forEach(([source, target]) => {
+        translated = translated.split(source).join(target);
+      });
+      return translated;
+    }
     function displayRecord(value) {
       const text = String(value ?? "");
       if (currentLanguage !== "en" || !text) return text;
@@ -4384,7 +4400,8 @@
         persistTranslationCache();
       }
       queueRecordTranslation(text);
-      return text;
+      const phraseTranslation = phraseTranslatedRecord(text);
+      return phraseTranslation !== text ? phraseTranslation : text;
     }
 
     function scheduleLanguageDynamicRefresh() {
@@ -7590,8 +7607,8 @@
       }, new Map());
       const rows = [...counts.entries()]
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "tr"))
-        .map(([label, value]) => [label, value, color]);
-      renderMiniBars(targetId, rows.length ? rows : [["Kayıt yok", 0, color]], "");
+        .map(([label, value]) => [displayRecord(label), value, color]);
+      renderMiniBars(targetId, rows.length ? rows : [[displayRecord("Kayıt yok"), 0, color]], "");
     }
 
     function renderAllWorks() {
@@ -7617,9 +7634,9 @@
       setText("homeTotalWorks", cachedOffers.length);
       setText("homeMonthWorks", currentMonthCount);
       setText("homeReviewWorks", reviewCount);
-      setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} draft, ${reviewCount} review` : t("noActiveRecords"));
+      setText("homeStatusBreakdown", cachedOffers.length ? `${draftCount} ${t("draft").toLocaleLowerCase(currentLanguage === "en" ? "en-US" : "tr-TR")}, ${reviewCount} ${t("review").toLocaleLowerCase(currentLanguage === "en" ? "en-US" : "tr-TR")}` : t("noActiveRecords"));
       setText("quickTotalEffort", fmt(totalEffort));
-      setText("quickTopCategory", topCategory);
+      setText("quickTopCategory", displayRecord(topCategory));
       renderOfferCategoryDashboard("industryDashboard", "industry", "var(--blue)");
       renderOfferCategoryDashboard("implementationDashboard", "implementation_type", "var(--amber)");
       renderOfferCategoryDashboard("systemDashboard", "system_type", "var(--green)");
@@ -7643,13 +7660,13 @@
         target.innerHTML = visibleRows.map(row => `
           <tr>
             <td>${escapeHtml(row.offer_no || "")}</td>
-            <td>${escapeHtml(row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif"))}</td>
-            <td>${escapeHtml(row.customer_name || "")}</td>
-            <td>${escapeHtml(row.industry || "")}</td>
+            <td>${escapeHtml(displayRecord(row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")))}</td>
+            <td>${escapeHtml(displayRecord(row.customer_name || ""))}</td>
+            <td>${escapeHtml(displayRecord(row.industry || ""))}</td>
             <td>${escapeHtml(offerJson(row.project_definition).version || "")}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
             <td><strong>${fmt(row.total_effort || 0)}</strong></td>
-            <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</td>
+            <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</td>
             <td>
               <div class="quick-actions">
                 <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
@@ -7671,11 +7688,11 @@
         recentTarget.innerHTML = cachedOffers.slice(0, 3).map(row => `
           <article class="work-card">
             <span class="status">${statusLabel(row.status)}</span>
-            <h4>${escapeHtml(row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif"))}</h4>
+            <h4>${escapeHtml(displayRecord(row.project_name || row.title || (currentLanguage === "en" ? "New offer" : "Yeni teklif")))}</h4>
             <div class="work-meta">
-              <span><strong>${currentLanguage === "en" ? "Customer" : "Müşteri"}:</strong> ${escapeHtml(row.customer_name || (currentLanguage === "en" ? "Not specified" : "Belirtilmedi"))}</span>
+              <span><strong>${currentLanguage === "en" ? "Customer" : "Müşteri"}:</strong> ${escapeHtml(displayRecord(row.customer_name || (currentLanguage === "en" ? "Not specified" : "Belirtilmedi")))}</span>
               <span>${escapeHtml(row.offer_no || "")}</span>
-              <span>${fmt(row.total_effort || 0)} ${t("days")} · ${escapeHtml(row.implementation_type || "")}</span>
+              <span>${fmt(row.total_effort || 0)} ${t("days")} · ${escapeHtml(displayRecord(row.implementation_type || ""))}</span>
               <span>${currentLanguage === "en" ? "Last update" : "Son güncelleme"}: ${row.updated_at ? new Date(row.updated_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</span>
             </div>
             <div class="work-actions">
@@ -7698,10 +7715,12 @@
           event.stopPropagation();
           const offerId = button.dataset.offerId;
           if (offerId && window.EffortApi) {
-            if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
+            if (!confirm(currentLanguage === "en" ? "Are you sure you want to delete this work?" : "Bu çalışmayı silmek istediğinize emin misiniz?")) return;
             const offer = cachedOffers.find(item => item.id === offerId);
             await window.EffortApi.deleteOffer(offerId, offer?.updated_at || "");
-            await loadOffers();
+            cachedOffers = cachedOffers.filter(item => item.id !== offerId);
+            offersLoadedAt = Date.now();
+            renderAllWorks();
           }
         });
       });
@@ -7712,25 +7731,26 @@
           const offerId = button.dataset.offerId;
           const action = button.dataset.workAction;
           if (action === "view") {
-            confirmAction("Bu çalışmayı görüntülemek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId, "view")));
+            confirmAction(currentLanguage === "en" ? "Are you sure you want to view this work?" : "Bu çalışmayı görüntülemek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId, "view")));
           }
           if (action === "edit") {
-            confirmAction("Bu çalışmayı değiştirmek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId, "edit")));
+            confirmAction(currentLanguage === "en" ? "Are you sure you want to edit this work?" : "Bu çalışmayı değiştirmek istediğinize emin misiniz?", () => confirmNavigation(() => openExistingWork(offerId, "edit")));
           }
           if (action === "copy") {
-            confirmAction("Bu çalışmayı kopyalamak istediğinize emin misiniz?", async () => {
+            confirmAction(currentLanguage === "en" ? "Are you sure you want to copy this work?" : "Bu çalışmayı kopyalamak istediğinize emin misiniz?", async () => {
               button.disabled = true;
               const originalText = button.textContent;
               button.textContent = currentLanguage === "en" ? "Copying" : "Kopyalanıyor";
               try {
-                const offer = await window.EffortApi.getOffer(offerId);
+                const offer = await getOfferDetail(offerId);
                 const copied = await window.EffortApi.saveOffer(copiedOfferPayload(offer));
-                cachedOffers = [copied, ...cachedOffers.filter(item => item.id !== copied.id)];
-                await loadOffers();
-                alert(`${copied.offer_no || ""} kopya teklif oluşturuldu.`);
+                mergeCachedOffer(copied);
+                offersLoadedAt = Date.now();
+                renderAllWorks();
+                alert(currentLanguage === "en" ? `${copied.offer_no || ""} copy offer was created.` : `${copied.offer_no || ""} kopya teklif oluşturuldu.`);
               } catch (error) {
                 console.error(error);
-                alert(`Teklif kopyalanamadı: ${error.message}`);
+                alert(`${currentLanguage === "en" ? "Offer could not be copied" : "Teklif kopyalanamadı"}: ${error.message}`);
               } finally {
                 button.disabled = false;
                 button.textContent = originalText;
@@ -7738,18 +7758,21 @@
             });
           }
           if (action === "delete") {
-            confirmAction("Bu çalışmayı silmek istediğinize emin misiniz?", async () => {
+            confirmAction(currentLanguage === "en" ? "Are you sure you want to delete this work?" : "Bu çalışmayı silmek istediğinize emin misiniz?", async () => {
               const offer = cachedOffers.find(item => item.id === offerId);
               await window.EffortApi.deleteOffer(offerId, offer?.updated_at || "");
-              await loadOffers();
+              cachedOffers = cachedOffers.filter(item => item.id !== offerId);
+              offersLoadedAt = Date.now();
+              renderAllWorks();
             });
           }
           if (action === "submit") {
-            confirmAction("Bu çalışmayı onaya göndermek istediğinize emin misiniz?", async () => {
+            confirmAction(currentLanguage === "en" ? "Are you sure you want to submit this work for approval?" : "Bu çalışmayı onaya göndermek istediğinize emin misiniz?", async () => {
               const submitted = await window.EffortApi.submitOffer(offerId, currentUser?.id);
-              cachedOffers = [submitted, ...cachedOffers.filter(offer => offer.id !== submitted.id)];
-              await loadOffers();
-              alert("Teklif onaya gönderildi.");
+              mergeCachedOffer(submitted);
+              offersLoadedAt = Date.now();
+              renderAllWorks();
+              alert(currentLanguage === "en" ? "Offer sent for approval." : "Teklif onaya gönderildi.");
             });
           }
           if (action === "print") {
@@ -7763,7 +7786,7 @@
             const originalText = button.textContent;
             button.textContent = t("pdfPreparingButton");
             try {
-              const offer = await window.EffortApi.getOffer(offerId);
+              const offer = await getOfferDetail(offerId);
               printOfferPdf(offer, printWindow);
             } catch (error) {
               console.error(error);
@@ -7777,16 +7800,17 @@
           if (action === "recalculate") {
             const summary = cachedOffers.find(offer => offer.id === offerId);
             if (String(summary?.status || "").toUpperCase() === "APPROVED") return;
-            confirmAction("Bu çalışmanın eforunu yeniden hesaplamak istediğinize emin misiniz?", async () => {
+            confirmAction(currentLanguage === "en" ? "Are you sure you want to recalculate this work effort?" : "Bu çalışmanın eforunu yeniden hesaplamak istediğinize emin misiniz?", async () => {
               button.disabled = true;
               const originalText = button.textContent;
               button.textContent = t("calculating");
               try {
-                const offer = await window.EffortApi.getOffer(offerId);
+                const offer = await getOfferDetail(offerId);
                 const saved = await window.EffortApi.updateOffer(offerId, recalculatedOfferPayload(offer));
-                cachedOffers = [saved, ...cachedOffers.filter(item => item.id !== saved.id)];
-                await loadOffers();
-                alert(`Efor yeniden hesaplandı. Yeni toplam: ${fmt(saved.total_effort || 0)} gün`);
+                mergeCachedOffer(saved);
+                offersLoadedAt = Date.now();
+                renderAllWorks();
+                alert(currentLanguage === "en" ? `Effort recalculated. New total: ${fmt(saved.total_effort || 0)} days` : `Efor yeniden hesaplandı. Yeni toplam: ${fmt(saved.total_effort || 0)} gün`);
               } finally {
                 button.disabled = false;
                 button.textContent = originalText;
@@ -7798,13 +7822,13 @@
             if (String(summary?.status || "").toUpperCase() !== "APPROVED") return;
             button.disabled = true;
             const originalText = button.textContent;
-            button.textContent = "Hazırlanıyor";
+            button.textContent = t("pdfPreparing");
             try {
-              const offer = await window.EffortApi.getOffer(offerId);
+              const offer = await getOfferDetail(offerId);
               await exportBacklogWorkbook(offer);
             } catch (error) {
               console.error(error);
-              alert(`Backlog Excel oluşturulamadı: ${error.message}`);
+              alert(`${currentLanguage === "en" ? "Backlog Excel could not be created" : "Backlog Excel oluşturulamadı"}: ${error.message}`);
             } finally {
               button.disabled = false;
               button.textContent = originalText;
@@ -7814,19 +7838,61 @@
       });
     }
 
-    async function loadOffers() {
+    function mergeCachedOffer(offer) {
+      if (!offer?.id) return offer;
+      cachedOffers = [offer, ...cachedOffers.filter(item => item.id !== offer.id)];
+      return offer;
+    }
+
+    function offerHasDetails(offer) {
+      return Boolean(offer && typeof offer.module_selection !== "undefined" && typeof offer.scope_answers !== "undefined");
+    }
+
+    async function getOfferDetail(offerId) {
+      const cached = cachedOffers.find(item => item.id === offerId);
+      if (offerHasDetails(cached)) return cached;
+      if (offerDetailPromises.has(offerId)) return offerDetailPromises.get(offerId);
+      const promise = window.EffortApi.getOffer(offerId)
+        .then(offer => mergeCachedOffer(offer))
+        .finally(() => offerDetailPromises.delete(offerId));
+      offerDetailPromises.set(offerId, promise);
+      return promise;
+    }
+
+    async function loadOffers(options = {}) {
+      const force = options.force === true;
+      const maxAge = Number(options.maxAge ?? 60000);
       if (!window.EffortApi || !currentUser?.id) {
         cachedOffers = [];
+        offersLoadedAt = 0;
         renderAllWorks();
-        return;
+        return cachedOffers;
       }
-      try {
-        cachedOffers = await window.EffortApi.listOffers();
+      const fresh = cachedOffers.length && offersLoadedAt && (Date.now() - offersLoadedAt) < maxAge;
+      if (!force && fresh) {
         renderAllWorks();
-      } catch (error) {
-        console.error(error);
-        alert("Kayıt listesi backend'den alınamadı. Railway Variables ve DATABASE_URL ayarlarını kontrol edin.");
+        return cachedOffers;
       }
+      if (!force && offersLoadPromise) return offersLoadPromise;
+      offersLoadPromise = window.EffortApi.listOffers()
+        .then(offers => {
+          const details = new Map(cachedOffers.filter(offerHasDetails).map(offer => [offer.id, offer]));
+          cachedOffers = offers.map(offer => details.has(offer.id) ? { ...offer, ...details.get(offer.id) } : offer);
+          offersLoadedAt = Date.now();
+          renderAllWorks();
+          return cachedOffers;
+        })
+        .catch(error => {
+          console.error(error);
+          alert(currentLanguage === "en"
+            ? "The record list could not be loaded from the backend. Check Railway Variables and DATABASE_URL settings."
+            : "Kayıt listesi backend'den alınamadı. Railway Variables ve DATABASE_URL ayarlarını kontrol edin.");
+          return cachedOffers;
+        })
+        .finally(() => {
+          offersLoadPromise = null;
+        });
+      return offersLoadPromise;
     }
 
     function renderPendingApprovals() {
@@ -7836,26 +7902,26 @@
       target.innerHTML = cachedPendingApprovals.map(offer => `
         <tr>
           <td>${escapeHtml(offer.offer_no || "")}</td>
-          <td>${escapeHtml(offer.project_name || offer.title || "Yeni teklif")}</td>
-          <td>${escapeHtml(offer.customer_name || "")}</td>
-          <td>${escapeHtml(offer.industry || "")}</td>
+          <td>${escapeHtml(displayRecord(offer.project_name || offer.title || "Yeni teklif"))}</td>
+          <td>${escapeHtml(displayRecord(offer.customer_name || ""))}</td>
+          <td>${escapeHtml(displayRecord(offer.industry || ""))}</td>
           <td>${escapeHtml(offer.submitted_by_name || offer.submitted_by_email || "-")}</td>
           <td>${fmt(offer.total_effort || 0)}g</td>
-          <td>${offer.submitted_at ? new Date(offer.submitted_at).toLocaleDateString("tr-TR") : ""}</td>
+          <td>${offer.submitted_at ? new Date(offer.submitted_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</td>
           <td>
             <div class="quick-actions">
-              <button class="button" data-view-pending-offer="${offer.id}" type="button">Görüntüle</button>
-              <button class="button primary" data-approve-offer="${offer.id}" type="button">Onayla</button>
+              <button class="button" data-view-pending-offer="${offer.id}" type="button">${t("view")}</button>
+              <button class="button primary" data-approve-offer="${offer.id}" type="button">${currentLanguage === "en" ? "Approve" : "Onayla"}</button>
             </div>
           </td>
         </tr>
-      `).join("") || `<tr><td colspan="8">Onay bekleyen teklif bulunmuyor.</td></tr>`;
+      `).join("") || `<tr><td colspan="8">${currentLanguage === "en" ? "No offers are waiting for approval." : "Onay bekleyen teklif bulunmuyor."}</td></tr>`;
       target.querySelectorAll("[data-view-pending-offer]").forEach(button => {
         button.addEventListener("click", () => {
           confirmNavigation(() => {
-            Promise.resolve(window.EffortApi.getOffer(button.dataset.viewPendingOffer))
+            Promise.resolve(getOfferDetail(button.dataset.viewPendingOffer))
               .then(offer => {
-                cachedOffers = [offer, ...cachedOffers.filter(item => item.id !== offer.id)];
+                mergeCachedOffer(offer);
                 openExistingWork(offer.id, "view");
               })
               .catch(error => {
@@ -7867,13 +7933,13 @@
       });
       target.querySelectorAll("[data-approve-offer]").forEach(button => {
         button.addEventListener("click", () => {
-          confirmAction("Bu teklifi onaylamak istediğinize emin misiniz?", async () => {
+          confirmAction(currentLanguage === "en" ? "Are you sure you want to approve this offer?" : "Bu teklifi onaylamak istediğinize emin misiniz?", async () => {
             button.disabled = true;
-            button.textContent = "Onaylanıyor";
+            button.textContent = currentLanguage === "en" ? "Approving" : "Onaylanıyor";
             const approved = await window.EffortApi.approveOffer(button.dataset.approveOffer, currentUser.id);
             cachedPendingApprovals = cachedPendingApprovals.filter(offer => offer.id !== approved.id);
             renderPendingApprovals();
-            alert("Teklif onaylandı.");
+            alert(currentLanguage === "en" ? "Offer approved." : "Teklif onaylandı.");
           });
         });
       });
@@ -8128,7 +8194,7 @@
       }
       const customer = document.getElementById("projectCustomer")?.value.trim();
       const project = document.getElementById("projectName")?.value.trim();
-      const workName = [customer, project].filter(Boolean).join(" / ");
+      const workName = [customer, project].filter(Boolean).map(displayRecord).join(" / ");
       if (!workName) {
         return currentLanguage === "en"
           ? "Offer details and input steps"
@@ -8239,14 +8305,14 @@
       currentOfferUpdatedAt = saved.updated_at || currentOfferUpdatedAt || "";
       currentOfferMode = "existing";
       sessionStorage.setItem(lastOfferKey, JSON.stringify({ id: currentOfferId, accessMode: currentOfferAccessMode || "edit" }));
-      cachedOffers = [saved, ...cachedOffers.filter(offer => offer.id !== saved.id)];
+      mergeCachedOffer(saved);
+      offersLoadedAt = Date.now();
       renderAllWorks();
       markClean();
       if (button) {
-        button.textContent = saved.offer_no ? `Kaydedildi ${saved.offer_no}` : "API Kaydedildi";
-        setTimeout(() => { button.textContent = "Kaydet"; }, 1200);
+        button.textContent = saved.offer_no ? `${t("saved")} ${saved.offer_no}` : t("saved");
+        setTimeout(() => { button.textContent = t("save"); }, 1200);
       }
-      await loadOffers();
       applyOfferReadOnlyState();
       return saved;
     }
@@ -8256,7 +8322,7 @@
       const originalText = button?.textContent;
       if (button) {
         button.disabled = true;
-        button.textContent = "Onaya gönderiliyor";
+        button.textContent = currentLanguage === "en" ? "Submitting" : "Onaya gönderiliyor";
       }
       try {
         const saved = await saveCurrentOffer();
@@ -8264,15 +8330,16 @@
         currentOfferId = submitted.id;
         currentOfferStatus = submitted.status || "SUBMITTED";
         currentOfferUpdatedAt = submitted.updated_at || currentOfferUpdatedAt || "";
-        cachedOffers = [submitted, ...cachedOffers.filter(offer => offer.id !== submitted.id)];
+        mergeCachedOffer(submitted);
+        offersLoadedAt = Date.now();
         renderAllWorks();
         markClean();
         applyOfferReadOnlyState();
-        alert("Teklif onaya gönderildi. Onaylayacak kişiye mail bildirimi tetiklendi.");
+        alert(currentLanguage === "en" ? "Offer sent for approval. An email notification was triggered for the approver." : "Teklif onaya gönderildi. Onaylayacak kişiye mail bildirimi tetiklendi.");
       } finally {
         if (button) {
           button.disabled = false;
-          button.textContent = originalText || "Onaya Gönder";
+          button.textContent = originalText || t("submit");
         }
       }
     }
@@ -8334,7 +8401,7 @@
           <td>
             <div class="quick-actions">
               <button class="button primary" data-save-user-role="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>Kaydet</button>
-              ${row.status === "PENDING" ? `<button class="button" data-approve-user="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>Onayla</button>` : ""}
+              ${row.status === "PENDING" ? `<button class="button" data-approve-user="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>${currentLanguage === "en" ? "Approve" : "Onayla"}</button>` : ""}
             </div>
           </td>
         </tr>
@@ -8604,8 +8671,7 @@
       let offer = cachedOffers.find(item => item.id === offerId);
       try {
         if (!offer || typeof offer.module_selection === "undefined") {
-          offer = await window.EffortApi.getOffer(offerId);
-          cachedOffers = [offer, ...cachedOffers.filter(item => item.id !== offer.id)];
+          offer = await getOfferDetail(offerId);
         }
       } catch (error) {
         console.error(error);
@@ -8736,7 +8802,7 @@
             console.warn("Admin ayarları yüklenemedi, başlangıç datası kullanılacak.", adminError);
           });
         const offersPromise = loadOffers().catch(error => {
-          console.warn("Teklifler arka planda yüklenemedi.", error);
+          console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error);
         });
         if (offerScreens.has(screenId) && offerContext?.id) {
           await offersPromise;
@@ -8772,7 +8838,7 @@
       const adminConfigPromise = startAdminConfigHydration();
       loadOffers()
         .then(() => applyLanguage())
-        .catch(error => console.warn("Teklifler arka planda yüklenemedi.", error));
+        .catch(error => console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error));
       return adminConfigPromise;
     }
 
@@ -8851,13 +8917,15 @@
         event.stopPropagation();
         const offerId = button.dataset.offerId;
         if (offerId && window.EffortApi) {
-          if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
+          if (!confirm(currentLanguage === "en" ? "Are you sure you want to delete this work?" : "Bu çalışmayı silmek istediğinize emin misiniz?")) return;
           const offer = cachedOffers.find(item => item.id === offerId);
           await window.EffortApi.deleteOffer(offerId, offer?.updated_at || "");
-          await loadOffers();
+          cachedOffers = cachedOffers.filter(item => item.id !== offerId);
+          offersLoadedAt = Date.now();
+          renderAllWorks();
           return;
         }
-        if (!confirm("Bu çalışmayı silmek istediğinize emin misiniz?")) return;
+        if (!confirm(currentLanguage === "en" ? "Are you sure you want to delete this work?" : "Bu çalışmayı silmek istediğinize emin misiniz?")) return;
         const card = button.closest(".work-card");
         if (card) card.remove();
       });
@@ -8868,8 +8936,9 @@
     });
 
     document.getElementById("allWorksButton").addEventListener("click", async () => {
-      await loadOffers();
+      renderAllWorks();
       guardedOpenScreen("allworks");
+      loadOffers({ maxAge: 60000 }).then(() => applyLanguage()).catch(error => console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error));
     });
 
     document.getElementById("pendingApprovalsButton").addEventListener("click", async () => {

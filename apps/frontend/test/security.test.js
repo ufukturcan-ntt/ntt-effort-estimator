@@ -20,8 +20,8 @@ test("offer actions distinguish owners from viewers", () => {
 });
 
 test("stored offer text is HTML escaped", () => {
-  assert.match(html, /escapeHtml\(row\.customer_name/);
-  assert.match(html, /escapeHtml\(offer\.customer_name/);
+  assert.match(html, /escapeHtml\(displayRecord\(row\.customer_name/);
+  assert.match(html, /escapeHtml\(displayRecord\(offer\.customer_name/);
   assert.match(html, /contenteditable="true">\$\{escapeHtml/);
 });
 
@@ -98,4 +98,22 @@ test("question selections defer heavy effort rendering", () => {
   assert.doesNotMatch(metricsBlock, /renderDevelopmentEfforts\(/);
   assert.match(html, /control\.addEventListener\(control\.tagName === "SELECT" \? "change" : "input", applyQuestionAnswer\)/);
   assert.doesNotMatch(html, /control\.addEventListener\("input", \(\) => \{[\s\S]*?control\.addEventListener\("change", \(\) => \{/);
+});
+
+test("offer list and detail rendering avoid repeated backend reloads", () => {
+  assert.match(html, /let offersLoadPromise = null/);
+  assert.match(html, /const offerDetailPromises = new Map\(\)/);
+  assert.match(html, /function getOfferDetail\(offerId\)/);
+  assert.match(html, /const fresh = cachedOffers\.length && offersLoadedAt/);
+  assert.match(html, /if \(!force && offersLoadPromise\) return offersLoadPromise/);
+  assert.match(html, /const offer = await getOfferDetail\(offerId\)/);
+});
+
+test("offer records use translation display helpers in English mode", () => {
+  assert.match(html, /function phraseTranslatedRecord\(text\)/);
+  assert.match(html, /return phraseTranslation !== text \? phraseTranslation : text/);
+  assert.match(html, /displayRecord\(row\.industry \|\| ""\)/);
+  assert.match(html, /displayRecord\(row\.implementation_type \|\| ""\)/);
+  assert.match(html, /displayRecord\(offer\.industry \|\| ""\)/);
+  assert.match(html, /map\(displayRecord\)\.join\(" \/ "\)/);
 });
