@@ -174,7 +174,7 @@ test("seeded question labels do not render mixed Turkish in English mode", () =>
   const recordTranslations = extractConst("recordTranslations");
   const recordDescriptionTranslations = extractConst("recordDescriptionTranslations");
   const badTurkish = /[çğıöşüÇĞİÖŞÜ]|\b(organizasyon|kapsam|soru|tanım|açıklama|dönüşüm|olacak|mıdır|adet|sayı|bulunmaktadır|olacaktır|scopeda|warehouselar|companyler)\b/i;
-  const display = value => recordTranslations[String(value ?? "")] || recordDescriptionTranslations[String(value ?? "")] || String(value ?? "");
+  const display = value => recordTranslations[String(value ?? "")] || recordDescriptionTranslations[String(value ?? "")] || "Translation pending...";
   const rows = [];
   for (const type of ["scopeQuestions", "developmentQuestions"]) {
     for (const question of context.window[type] || []) {
