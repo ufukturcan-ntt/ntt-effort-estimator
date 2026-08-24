@@ -168,8 +168,10 @@ test("conversion scope questions have immediate English labels", () => {
 });
 test("seeded question labels do not render mixed Turkish in English mode", () => {
   const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
   const context = { window: {} };
   vm.runInNewContext(questionsJs, context);
+  vm.runInNewContext(adminDataJs, context);
   const extractConst = name => Function(`return (${html.match(new RegExp(`const ${name} = ([\\s\\S]*?);\\n\\s*(?:const|function)`, "m"))[1]})`)();
   const recordTranslations = extractConst("recordTranslations");
   const recordDescriptionTranslations = extractConst("recordDescriptionTranslations");
@@ -185,7 +187,18 @@ test("seeded question labels do not render mixed Turkish in English mode", () =>
       }
     }
   }
-  assert.deepEqual(rows, []);
+  for (const tableName of ["scope", "development"]) {
+    const table = context.window.adminSeedData?.[tableName] || [];
+    const headerIndex = table.findIndex(row => row?.[0] === "No");
+    if (headerIndex < 0) continue;
+    for (const row of table.slice(headerIndex + 1)) {
+      for (const value of [row?.[1], row?.[2]]) {
+        if (!value) continue;
+        const rendered = display(value);
+        if (badTurkish.test(rendered)) rows.push(`admin-${tableName}:${row?.[0]}:${rendered}`);
+      }
+    }
+  }  assert.deepEqual(rows, []);
   assert.match(html, /"Benzer işi-süreci olan depolar göz önüne alındığında kaç farklı yapıda depo yapısı bulunmaktadır\.": "Considering warehouses with similar business processes, how many different warehouse structures are there\?"/);
   assert.match(html, /"Teslimat planı kullanımı ihtiyacı bulunmakta mıdır\?": "Is scheduling agreement usage required\?"/);
 });
