@@ -3807,6 +3807,7 @@
     let adminPageDirty = true;
     const adminRenderedSections = new Set();
     let workbookRenderTimer = null;
+    let questionListRenderTimer = null;
     let adminUsersLoading = false;
     let adminUsersLoaded = false;
 
@@ -3860,6 +3861,10 @@
         portfolio: "Portföy analizi",
         quickAnalysis: "Hızlı analiz",
         month: "Bu ay",
+        offer: "Teklif",
+        industryDistribution: "Endüstri dağılımı",
+        implementationDistribution: "İmplementasyon dağılımı",
+        systemDistribution: "Sistem dağılımı",
         totalPotentialEffort: "Toplam potansiyel efor",
         days: "gün",
         topCategory: "En yoğun kategori",
@@ -4028,6 +4033,10 @@
         portfolio: "Portfolio analysis",
         quickAnalysis: "Quick analysis",
         month: "This month",
+        offer: "Offer",
+        industryDistribution: "Industry distribution",
+        implementationDistribution: "Implementation distribution",
+        systemDistribution: "System distribution",
         totalPotentialEffort: "Total potential effort",
         days: "days",
         topCategory: "Top category",
@@ -4160,6 +4169,7 @@
       "Ülke": "Country",
       "Geliştirme": "Development",
       "Kapsam": "Scope",
+      "Kategori": "Category",
       "Sabit Efor": "Fixed Effort",
       "Standart efor": "Standard effort",
       "Geliştirme eforu": "Development effort",
@@ -4175,6 +4185,12 @@
       "Tekstil": "Textile",
       "Ambalaj": "Packaging",
       "Demir & Çelik": "Iron & Steel",
+      "Hizmet": "Service",
+      "Lojistik": "Logistics",
+      "Sağlık": "Healthcare",
+      "Kamu": "Public Sector",
+      "Gıda": "Food",
+      "Ticaret": "Trade",
       "Zorunlu Modüller": "Mandatory Modules",
       "Farklı Şirket Yapısı": "Different Company Structure",
       "Şirket Kodu": "Company Code",
@@ -4270,7 +4286,10 @@
       "Farklı şirket kodu sayısı": "Number of different company codes",
       "Farklı üretim yeri sayısı": "Number of different plants",
       "Kaç adet EDI bulunmaktadır.": "How many EDI integrations are there?",
-      "Var? Yok?": "Exists? Not exists?"
+      "Var? Yok?": "Exists? Not exists?",
+      "Evet / Hayır": "Yes / No",
+      "Sayı": "Number",
+      "Adet": "Count"
     };
 
     const recordPhraseTranslations = [
@@ -4312,7 +4331,23 @@
       ["süreç", "process"],
       ["Süreç", "Process"],
       ["yönetimi", "management"],
-      ["Yönetimi", "Management"]
+      ["Yönetimi", "Management"],
+      ["hizmet", "service"],
+      ["Hizmet", "Service"],
+      ["kategori", "category"],
+      ["Kategori", "Category"],
+      ["tanım", "definition"],
+      ["Tanım", "Definition"],
+      ["açıklama", "description"],
+      ["Açıklama", "Description"],
+      ["işlem", "operation"],
+      ["İşlem", "Operation"],
+      ["sistem", "system"],
+      ["Sistem", "System"],
+      ["müşteri", "customer"],
+      ["Müşteri", "Customer"],
+      ["proje", "project"],
+      ["Proje", "Project"]
     ];
 
     const translationCacheKey = "effortTranslationCache:v2";
@@ -4328,7 +4363,7 @@
 
     function looksTurkishText(text) {
       return /[çğıöşüÇĞİÖŞÜ]/.test(String(text || ""))
-        || /\b(ve|veya|ile|için|kapsam|soru|dönüşüm|karmaşıklığı|olacak|mı|modül|ana|veri|yaratma|aktarımı)\b/i.test(String(text || ""));
+        || /\b(ve|veya|ile|için|kapsam|kategori|soru|tanım|açıklama|hizmet|dönüşüm|karmaşıklığı|olacak|mı|modül|ana|veri|yaratma|aktarımı|sistem|müşteri|proje|işlem|adet|sayı)\b/i.test(String(text || ""));
     }
 
     function shouldTranslateRecord(text) {
@@ -4370,18 +4405,18 @@
       } catch (error) {
         console.warn("Çeviri servisi kullanılamadı.", error);
       }
-      if (pendingTranslations.size) translationTimer = setTimeout(flushTranslationQueue, 150);
+      if (pendingTranslations.size) translationTimer = setTimeout(flushTranslationQueue, 250);
     }
 
     function queueRecordTranslation(text) {
       if (!shouldTranslateRecord(text) || translationCache.has(text) || pendingTranslations.has(text)) return;
       pendingTranslations.add(text);
-      if (!translationTimer) translationTimer = setTimeout(flushTranslationQueue, 1200);
+      if (!translationTimer) translationTimer = setTimeout(flushTranslationQueue, 250);
     }
 
     function wakeTranslationQueue() {
       if (currentLanguage !== "en" || !currentUser || !pendingTranslations.size || translationTimer) return;
-      translationTimer = setTimeout(flushTranslationQueue, 1200);
+      translationTimer = setTimeout(flushTranslationQueue, 250);
     }
     function phraseTranslatedRecord(text) {
       if (!text || !looksTurkishText(text)) return text;
@@ -4549,8 +4584,8 @@
       setTextContent("#overview > .panel .panel-title", t("recentWorks"));
       const empty = document.querySelector("#recentWorkGrid .empty-state");
       if (empty) empty.textContent = cachedOffers.length ? "" : t("loadingRecords");
-      setTexts(".home-only .panel-title", [t("portfolio"), t("quickAnalysis")]);
-      setTextContent(".home-only .pill", t("month"));
+      setTexts(".home-only .panel-title", [t("portfolio"), t("quickAnalysis"), t("industryDistribution"), t("implementationDistribution"), t("systemDistribution")]);
+      setTexts(".home-only .pill", [t("month"), t("offer"), t("offer"), t("offer")]);
       setTexts(".home-only .metric span", [t("totalPotentialEffort"), t("topCategory")]);
       setTexts(".home-only .metric small", [t("days"), t("activeOffers")]);
       setTextContent("#allworks .panel-title", t("allWorks"));
@@ -6931,7 +6966,7 @@
       return adminConfigPromise;
     }
 
-    function scheduleDeferredAdminConfigHydration(delay = 2000) {
+    function scheduleDeferredAdminConfigHydration(delay = 8000) {
       if (adminConfigLoaded || adminConfigPromise || adminConfigHydrationTimer) return;
       adminConfigHydrationTimer = setTimeout(() => {
         adminConfigHydrationTimer = null;
@@ -8238,6 +8273,15 @@
       renderQuestionList("developmentQuestions", window.developmentQuestions || [], options);
     }
 
+    function scheduleQuestionListRefresh(options = {}, delay = 40) {
+      clearTimeout(questionListRenderTimer);
+      questionListRenderTimer = setTimeout(() => {
+        questionListRenderTimer = null;
+        refreshQuestionLists(options);
+        wakeTranslationQueue();
+      }, delay);
+    }
+
     function filterRows() {
       const q = document.getElementById("search")?.value.trim().toLocaleLowerCase("tr-TR") || "";
       let rows = modules.filter(x => x.module.toLocaleLowerCase("tr-TR").includes(q));
@@ -9043,8 +9087,8 @@
     document.getElementById("search")?.addEventListener("input", filterRows);
     ["projectIndustry", "projectImplementation", "projectSystem"].forEach(id => {
       document.getElementById(id)?.addEventListener("change", () => {
-        refreshQuestionLists();
-        scheduleWorkbookDrivenRender();
+        scheduleQuestionListRefresh();
+        scheduleWorkbookDrivenRender(90);
       });
     });
     document.getElementById("teamSplitSelect")?.addEventListener("change", () => {

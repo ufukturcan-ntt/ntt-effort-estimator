@@ -47,7 +47,7 @@ test("large Excel library is lazy-loaded", () => {
 
 test("authenticated home data loads before deferred admin configuration", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\)/);
-  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 2000\)/);
+  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\)/);
   assert.match(html, /async function hydrateHomeData\(\) \{\s*const offersPromise = loadOffers\(\)/s);
   assert.match(html, /scheduleDeferredAdminConfigHydration\(\);\s*return offersPromise;/s);
   assert.match(html, /async function openNewOffer\(\) \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
@@ -76,7 +76,7 @@ test("duplicate 3rd party integration scope question is canonicalized", () => {
 
 test("login language rendering avoids immediate translation churn", () => {
   assert.match(html, /if \(recordTranslations\[text\]\) return recordTranslations\[text\]/);
-  assert.match(html, /setTimeout\(flushTranslationQueue, 1200\)/);
+  assert.match(html, /setTimeout\(flushTranslationQueue, 250\)/);
   assert.match(html, /function scheduleLanguageDynamicRefresh\(\)/);
   assert.doesNotMatch(html, /hydrateHomeData\(\)\.then\(\(\) => applyLanguage\(\)\);\s*applyLanguage\(\);\s*wakeTranslationQueue\(\);/);
 });
@@ -132,4 +132,28 @@ test("welcome header uses the authenticated user identity", () => {
   assert.match(html, /setTextContent\("\.top-brand-text strong", currentWelcomeText\(\)\)/);
   assert.match(html, /setTextContent\("aside \.brand span", currentWelcomeText\(\)\)/);
   assert.match(html, /subtitle\.textContent = app\?\.classList\.contains\("work-open"\) \? currentWorkSubtitle\(\) : currentWelcomeText\(\)/);
+});
+
+test("home dashboard distribution panels are translated", () => {
+  assert.match(html, /industryDistribution: "Industry distribution"/);
+  assert.match(html, /implementationDistribution: "Implementation distribution"/);
+  assert.match(html, /systemDistribution: "System distribution"/);
+  assert.match(html, /setTexts\("\.home-only \.panel-title", \[t\("portfolio"\), t\("quickAnalysis"\), t\("industryDistribution"\), t\("implementationDistribution"\), t\("systemDistribution"\)\]\)/);
+  assert.match(html, /setTexts\("\.home-only \.pill", \[t\("month"\), t\("offer"\), t\("offer"\), t\("offer"\)\]\)/);
+});
+
+test("project filter changes defer question list rendering", () => {
+  assert.match(html, /let questionListRenderTimer = null/);
+  assert.match(html, /function scheduleQuestionListRefresh\(options = \{\}, delay = 40\)/);
+  assert.match(html, /scheduleQuestionListRefresh\(\);\s*scheduleWorkbookDrivenRender\(90\);/);
+  assert.doesNotMatch(html, /document\.getElementById\(id\)\?\.addEventListener\("change", \(\) => \{\s*refreshQuestionLists\(\);\s*scheduleWorkbookDrivenRender\(\);/);
+});
+
+test("common Turkish admin records have immediate English translations", () => {
+  assert.match(html, /"Hizmet": "Service"/);
+  assert.match(html, /"Kategori": "Category"/);
+  assert.match(html, /"Sayı": "Number"/);
+  assert.match(html, /looksTurkishText[\s\S]*hizmet/);
+  assert.match(html, /looksTurkishText[\s\S]*sayı/);
+  assert.match(html, /setTimeout\(flushTranslationQueue, 250\)/);
 });
