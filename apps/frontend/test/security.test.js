@@ -121,3 +121,15 @@ test("offer records use translation display helpers in English mode", () => {
   assert.match(html, /displayRecord\(offer\.industry \|\| ""\)/);
   assert.match(html, /map\(displayRecord\)\.join\(" \/ "\)/);
 });
+
+test("welcome header uses the authenticated user identity", () => {
+  assert.doesNotMatch(html, /welcome: "Welcome Ufuk Turcan"/);
+  assert.doesNotMatch(html, /welcome: "Hoş geldin Ufuk Turcan"/);
+  assert.doesNotMatch(html, />Hoş geldin Ufuk Turcan</);
+  assert.match(html, /function currentUserDisplayName\(\)/);
+  assert.match(html, /function currentWelcomeText\(\)/);
+  assert.match(html, /function updateUserIdentity\(\)/);
+  assert.match(html, /setTextContent\("\.top-brand-text strong", currentWelcomeText\(\)\)/);
+  assert.match(html, /setTextContent\("aside \.brand span", currentWelcomeText\(\)\)/);
+  assert.match(html, /subtitle\.textContent = app\?\.classList\.contains\("work-open"\) \? currentWorkSubtitle\(\) : currentWelcomeText\(\)/);
+});

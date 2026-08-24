@@ -2145,7 +2145,7 @@
           <div class="top-brand">
             <div class="top-brand-logo"><img src="assets/ntt-data-logo.png" alt="NTT DATA" /></div>
             <div class="top-brand-text">
-              <strong>Hoş geldin Ufuk Turcan</strong>
+              <strong>Hoş geldin Kullanıcı</strong>
               <span>NDBS TR</span>
             </div>
           </div>
@@ -2157,7 +2157,7 @@
             <button class="button home-action approver-only" id="pendingApprovalsButton" type="button" style="display:none">Onay Bekleyenler</button>
             <button class="button home-action admin-only" id="topAdminButton" type="button" style="display:none">Admin</button>
           </div>
-          <p class="subtitle" id="headerSubtitle">Hoş geldin Ufuk Turcan</p>
+          <p class="subtitle" id="headerSubtitle">Hoş geldin Kullanıcı</p>
         </div>
         <div class="actions">
           <button class="user-menu-button" id="userMenuButton" type="button" title="Kullanıcı">U</button>
@@ -2188,7 +2188,7 @@
             <div class="mark logo-mark"><img src="assets/ntt-data-logo.png" alt="NTT DATA" /></div>
             <div>
               <h1>NDBS TR</h1>
-              <span>Hoş geldin Ufuk Turcan</span>
+              <span>Hoş geldin Kullanıcı</span>
             </div>
           </div>
 
@@ -3845,7 +3845,7 @@
         admin: "Admin",
         searchOpen: "Modül veya faz ara",
         searchHome: "Çalışma, müşteri veya teklif ara",
-        welcome: "Hoş geldin Ufuk Turcan",
+        welcome: "Hoş geldin",
         activeWork: "Aktif çalışma",
         overviewLead: "Daha önce açtığın müşteri ve teklif çalışmalarını buradan takip edebilir, yeni teklif akışını başlatabilirsin.",
         totalWork: "Toplam çalışma",
@@ -4013,7 +4013,7 @@
         admin: "Admin",
         searchOpen: "Search module or phase",
         searchHome: "Search work, customer or offer",
-        welcome: "Welcome Ufuk Turcan",
+        welcome: "Welcome",
         activeWork: "Active work",
         overviewLead: "Track your previous customer and offer works here, and start a new offer flow.",
         totalWork: "Total works",
@@ -4431,6 +4431,24 @@
       if (el) el.textContent = value;
     }
 
+    function currentUserDisplayName() {
+      return currentUser?.display_name || currentUser?.email || (currentLanguage === "en" ? "User" : "Kullanıcı");
+    }
+
+    function currentWelcomeText() {
+      return `${t("welcome")} ${currentUserDisplayName()}`;
+    }
+
+    function updateUserIdentity() {
+      const name = currentUserDisplayName();
+      setTextContent(".top-brand-text strong", currentWelcomeText());
+      setTextContent("aside .brand span", currentWelcomeText());
+      const menuName = document.getElementById("userMenuName");
+      if (menuName) menuName.textContent = name;
+      const menuButton = document.getElementById("userMenuButton");
+      if (menuButton) menuButton.textContent = String(name).trim().slice(0, 1).toLocaleUpperCase(currentLanguage === "en" ? "en-US" : "tr-TR") || "U";
+    }
+
     function setTexts(selector, values) {
       document.querySelectorAll(selector).forEach((el, index) => {
         if (values[index] !== undefined) el.textContent = values[index];
@@ -4493,8 +4511,7 @@
       setTextContent(".login-visual h2", t("visualTitle"));
       setTexts(".secure-item strong", [t("secureTitle"), t("roleTitle"), t("flowTitle")]);
       setTexts(".secure-item span", [t("secureText"), t("roleText"), t("flowText")]);
-      setTextContent(".top-brand-text strong", t("welcome"));
-      setTextContent("aside .brand span", t("welcome"));
+      updateUserIdentity();
       setTextContent("#dashboardButton", t("dashboard"));
       setTextContent("#allWorksButton", t("allWorks"));
       setTextContent("#newOfferButton", t("newOffer"));
@@ -8254,7 +8271,7 @@
         subtitle.textContent = t("admin");
         return;
       }
-      subtitle.textContent = app?.classList.contains("work-open") ? currentWorkSubtitle() : t("welcome");
+      subtitle.textContent = app?.classList.contains("work-open") ? currentWorkSubtitle() : currentWelcomeText();
     }
 
     function setWorkMode(isOpen) {
@@ -8786,11 +8803,8 @@
       renderRows("moduleRows", modules.slice(0, 12));
       renderPhases();
       renderScreenNavigation();
-      const name = currentUser?.display_name || currentUser?.email || "Kullanıcı";
-      const menuName = document.getElementById("userMenuName");
-      if (menuName) menuName.textContent = name;
-      const menuButton = document.getElementById("userMenuButton");
-      if (menuButton) menuButton.textContent = String(name).trim().slice(0, 1).toLocaleUpperCase("tr-TR") || "U";
+      updateUserIdentity();
+      updateWorkSubtitle();
     }
 
     function showLoginApp() {
