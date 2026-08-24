@@ -4277,7 +4277,43 @@
       "Yeni teklif": "New offer",
       "Kopyalanıyor": "Copying",
       "Hazırlanıyor": "Preparing",
-      "Onaylanıyor": "Approving"
+      "Onaylanıyor": "Approving",
+      "A. Organizasyon & Kapsam": "A. Organization & Scope",
+      "A. Organizasyon & Scope": "A. Organization & Scope",
+      "B. Fonksiyonel Dönüşüm": "B. Functional Transformation",
+      "C. Modül Halefi Geçişleri": "C. Module Successor Transitions",
+      "D. Teknik / Custom Code": "D. Technical / Custom Code",
+      "E. Entegrasyon": "E. Integration",
+      "F. Veri & Altyapı": "F. Data & Infrastructure",
+      "G. Carve-out / Ayrıştırma": "G. Carve-out / Separation",
+      "Lokalizasyon / Ülke Versiyonu": "Localization / Country Version",
+      "Industry Solution Kullanımı": "Industry Solution Usage",
+      "CVI / BP Dönüşümü": "CVI / BP Conversion",
+      "Document Splitting Aktivasyonu": "Document Splitting Activation",
+      "Simplification Item Etkisi": "Simplification Item Impact",
+      "WM → EWM Geçişi": "WM → EWM Transition",
+      "HCM → SuccessFactors / H4S4": "HCM → SuccessFactors / H4S4",
+      "LE-TRA → SAP TM Geçişi": "LE-TRA → SAP TM Transition",
+      "DSD → SAP Direct Distribution / LMD": "DSD → SAP Direct Distribution / LMD",
+      "Custom Obje Hacmi": "Custom Object Volume",
+      "ATC S/4HANA Bulgu Yoğunluğu": "ATC S/4HANA Finding Density",
+      "Output Management / Form Dönüşümü": "Output Management / Form Conversion",
+      "Fiori ve Custom UI Kapsamı": "Fiori and Custom UI Scope",
+      "Yetki ve Rol Redesign": "Authorization and Role Redesign",
+      "Unicode Dönüşümü": "Unicode Conversion",
+      "3rd Party Entegrasyon Sayısı": "Number of 3rd Party Integrations",
+      "Middleware Dönüşümü": "Middleware Conversion",
+      "Add-On / Partner Ürün": "Add-On / Partner Product",
+      "E-Document / Yasal Entegrasyon": "E-Document / Legal Integration",
+      "Veritabanı Boyutu": "Database Size",
+      "Downtime Optimizasyonu İhtiyacı": "Downtime Optimization Requirement",
+      "Deployment Değişimi (RISE)": "Deployment Change (RISE)",
+      "Veri Migrasyon Obje Sayısı": "Number of Data Migration Objects",
+      "Kaynak Sistem Sayısı": "Number of Source Systems",
+      "Organizasyon Ayrıştırma Kapsamı": "Organization Separation Scope",
+      "Shared Master Data Ayrıştırma": "Shared Master Data Separation",
+      "SLO / TDMS Araç İhtiyacı": "SLO / TDMS Tool Requirement",
+      "TSA / Paralel İşletim": "TSA / Parallel Run"
     };
 
     const recordDescriptionTranslations = {
@@ -4289,7 +4325,14 @@
       "Var? Yok?": "Exists? Not exists?",
       "Evet / Hayır": "Yes / No",
       "Sayı": "Number",
-      "Adet": "Count"
+      "Adet": "Count",
+      "ISU, IS-Retail, DIMP, IS-Oil vb. sektör çözümü kullanılmakta mıdır?": "Is an industry solution such as ISU, IS-Retail, DIMP, IS-Oil etc. being used?",
+      "Aktif ülke versiyonu ve yasal raporlama kapsamı (TR e-fatura/e-defter dahil). ▸ Adet = ülke sayısı": "Active country version and legal reporting scope (including TR e-invoice/e-ledger). ▸ Count = number of countries",
+      "Customer/Vendor → Business Partner dönüşümü, duplicate kayıt temizliği ve senkronizasyon ihtiyacı var mıdır?": "Is Customer/Vendor → Business Partner conversion, duplicate record cleanup and synchronization required?",
+      "Doküman ayrıştırma aktivasyonu gerekiyor mu? Şirket / segment ayrıştırması ve kâr merkezi bazlı bilanço için kritik": "Is document splitting activation required? Critical for company/segment split and profit-center-based balance sheet.",
+      "FI-AR-CR → FSCM Credit Management geçişi kapsamda mıdır?": "Is the FI-AR-CR → FSCM Credit Management transition in scope?",
+      "SI Check sonucunda çıkan relevant / blocking item sayısı. ▸ Adet = relevant item sayısı (örn. 35 item → 35 yazın)": "Number of relevant / blocking items from the SI Check. ▸ Count = number of relevant items (e.g. 35 items → enter 35)",
+      "Ayrıştırılacak şirket kodu / üretim yeri / satış organizasyonu sayısı. ▸ Adet = ayrıştırılacak org birimi sayısı": "Number of company codes / plants / sales organizations to be separated. ▸ Count = number of org units to be separated"
     };
 
     const recordPhraseTranslations = [
@@ -4347,7 +4390,24 @@
       ["müşteri", "customer"],
       ["Müşteri", "Customer"],
       ["proje", "project"],
-      ["Proje", "Project"]
+      ["Proje", "Project"],
+      ["Organizasyon", "Organization"],
+      ["organizasyon", "organization"],
+      ["Kullanımı", "Usage"],
+      ["kullanımı", "usage"],
+      ["kullanılmakta mıdır?", "is being used?"],
+      ["sektör çözümü", "industry solution"],
+      ["vb.", "etc."],
+      ["Ayrıştırma", "Separation"],
+      ["ayrıştırma", "separation"],
+      ["Geçişi", "Transition"],
+      ["geçişi", "transition"],
+      ["İhtiyacı", "Requirement"],
+      ["ihtiyacı", "requirement"],
+      ["Sayısı", "Number"],
+      ["sayısı", "number"],
+      ["Karmaşıklığı", "Complexity"],
+      ["karmaşıklığı", "complexity"]
     ];
 
     const translationCacheKey = "effortTranslationCache:v2";
@@ -4363,7 +4423,7 @@
 
     function looksTurkishText(text) {
       return /[çğıöşüÇĞİÖŞÜ]/.test(String(text || ""))
-        || /\b(ve|veya|ile|için|kapsam|kategori|soru|tanım|açıklama|hizmet|dönüşüm|karmaşıklığı|olacak|mı|modül|ana|veri|yaratma|aktarımı|sistem|müşteri|proje|işlem|adet|sayı)\b/i.test(String(text || ""));
+        || /\b(ve|veya|ile|için|organizasyon|kapsam|kategori|soru|tanım|açıklama|hizmet|dönüşüm|karmaşıklığı|olacak|mı|modül|ana|veri|yaratma|aktarımı|sistem|müşteri|proje|işlem|adet|sayı|kullanımı|kullanılmakta|ayrıştırma|geçişi|ihtiyacı)\b/i.test(String(text || ""));
     }
 
     function shouldTranslateRecord(text) {

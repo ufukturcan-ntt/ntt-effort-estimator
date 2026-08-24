@@ -157,3 +157,11 @@ test("common Turkish admin records have immediate English translations", () => {
   assert.match(html, /looksTurkishText[\s\S]*sayı/);
   assert.match(html, /setTimeout\(flushTranslationQueue, 250\)/);
 });
+
+test("conversion scope questions have immediate English labels", () => {
+  assert.match(html, /"A\. Organizasyon & Kapsam": "A\. Organization & Scope"/);
+  assert.match(html, /"Industry Solution Kullanımı": "Industry Solution Usage"/);
+  assert.match(html, /"ISU, IS-Retail, DIMP, IS-Oil vb\. sektör çözümü kullanılmakta mıdır\?": "Is an industry solution such as ISU, IS-Retail, DIMP, IS-Oil etc\. being used\?"/);
+  assert.match(html, /"Organizasyon Ayrıştırma Kapsamı": "Organization Separation Scope"/);
+  assert.match(html, /organizasyon\|kapsam\|kategori/);
+});
