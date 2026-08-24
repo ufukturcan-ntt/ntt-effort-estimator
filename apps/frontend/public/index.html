@@ -4167,7 +4167,12 @@
       "Ülke": "Country",
       "Geliştirme": "Development",
       "Kapsam": "Scope",
+      "Kapsamda": "In Scope",
       "Kategori": "Category",
+      "Geliştirme Tanımı": "Development Definition",
+      "Geliştirme Açıklaması": "Development Description",
+      "Açıklama": "Description",
+      "İşlem": "Action",
       "Sabit Efor": "Fixed Effort",
       "Standart efor": "Standard effort",
       "Geliştirme eforu": "Development effort",
@@ -4818,6 +4823,8 @@
       setTexts("#developments .metric span", [t("selectedDevelopment"), t("extraEffort")]);
       setTexts("#developments .metric small", [t("answeredDevelopment"), t("potentialImpact")]);
       setTextContent("#library .panel-title", t("library"));
+      setTextContent("#library .pill", `${document.getElementById("libraryScopeCount")?.textContent || "0"} ${displayRecord("Kapsamda")}`);
+      setTexts("#library thead th", [displayRecord("Geliştirme Tanımı"), displayRecord("Açıklama"), displayRecord("Modül"), displayRecord("Kapsamda")]);
       setTextContent("#fixedefforts .panel:nth-child(1) .panel-title", t("fixedEfforts"));
       setTextContent("#fixedefforts .panel:nth-child(1) .pill", t("addedToAnalysisEffort"));
       setTextContent("#fixedefforts thead th:nth-child(1)", t("modules"));
@@ -5922,7 +5929,7 @@
       });
       const headers = rows[Math.max(headerIndex, 0)];
       const dataRows = rows.slice(Math.max(headerIndex, 0) + 1);
-      if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${(bodyId === "adminLibraryRows" && value === "ID") || isHiddenAdminColumn(value) ? "hidden" : ""}>${escapeHtml(value)}</th>`).join("")}<th>İşlem</th></tr>`;
+      if (head) head.innerHTML = `<tr>${headers.map(value => `<th ${(bodyId === "adminLibraryRows" && value === "ID") || isHiddenAdminColumn(value) ? "hidden" : ""}>${escapeHtml(displayRecord(value))}</th>`).join("")}<th>${escapeHtml(displayRecord("İşlem"))}</th></tr>`;
       body.dataset.matrixHeaders = JSON.stringify(headers);
       body.innerHTML = dataRows.map(row => `<tr>${adminMatrixCells(bodyId, headers, row)}<td>${adminMatrixActionButtons(bodyId)}</td></tr>`).join("");
       bindAdminEditable(body);

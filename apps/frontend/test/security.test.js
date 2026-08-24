@@ -35,6 +35,14 @@ test("library records use background UUID values", () => {
   assert.match(html, /headers\.indexOf\("ID"\)/);
 });
 
+test("library headers are translated in English mode", () => {
+  assert.match(html, /"Geliştirme Tanımı": "Development Definition"/);
+  assert.match(html, /"Geliştirme Açıklaması": "Development Description"/);
+  assert.match(html, /"Kapsamda": "In Scope"/);
+  assert.match(html, /setTexts\("#library thead th", \[displayRecord\("Geliştirme Tanımı"\), displayRecord\("Açıklama"\), displayRecord\("Modül"\), displayRecord\("Kapsamda"\)\]\)/);
+  assert.match(html, /<th>\$\{escapeHtml\(displayRecord\("İşlem"\)\)\}<\/th>/);
+});
+
 test("admin configuration is saved in one request", () => {
   assert.match(html, /EffortApi\.saveAdminConfig\(config\)/);
   assert.doesNotMatch(html, /Promise\.all\(Object\.entries\(config\)/);
