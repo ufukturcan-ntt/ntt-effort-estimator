@@ -4190,6 +4190,18 @@
       "Gıda": "Food",
       "Ticaret": "Trade",
       "Zorunlu Modüller": "Mandatory Modules",
+      "NTT Own IP": "NTT Own IP",
+      "Advanced Solution": "Advanced Solutions",
+      "E-Fatura/Arşiv": "E-Invoice / E-Archive",
+      "E-İrsaliye": "E-Delivery Note",
+      "E-Defter": "E-Ledger",
+      "E-Hesap Özeti": "E-Account Statement",
+      "E-Ödeme": "E-Payment",
+      "E-Mutabakat": "E-Reconciliation",
+      "E-Beyanname": "E-Declaration",
+      "Gelen Fatura Otomasyon": "Incoming Invoice Automation",
+      "Dış Ticaret Çözümü": "Foreign Trade Solution",
+      "Seyahat ve Masraf Yönetimi": "Travel and Expense Management",
       "Farklı Şirket Yapısı": "Different Company Structure",
       "Şirket Kodu": "Company Code",
       "Ürün Tipi": "Product Type",
@@ -5781,13 +5793,17 @@
         const question = row[idx("Question")] || "";
         const questionId = canonicalQuestionId(questionType, row[idx("Question ID")] || questionIdFromName(questionType, question), question);
         const displayName = questionDisplayName(questionType, questionId, question);
+        const rawImplementationTypes = row[idx("Allowed Implementation Types")] || "All";
+        const implementationTypes = displayName.includes("TSA / Paralel İşletim") && String(rawImplementationTypes || "").trim() === "All"
+          ? "Carve-out"
+          : canonicalImplementationList(rawImplementationTypes);
         return [
           row[idx("No")] || "",
           type,
           questionId,
           displayName,
           row[idx("Allowed Industries")] || "All",
-          canonicalImplementationList(row[idx("Allowed Implementation Types")] || "All"),
+          implementationTypes,
           row[idx("Allowed System Types")] || "All",
           row[idx("Active?")] || "Yes",
           row[idx("Notes")] || "",
@@ -8451,6 +8467,13 @@
       return answers;
     }
 
+    function questionCategoryLabel(item = {}, targetId = "") {
+      if (item.category) return item.category;
+      if (targetId === "scopeQuestions") return item.group && item.group !== "Kapsam" ? item.group : "Kapsam";
+      if (targetId === "developmentQuestions") return item.group && item.group !== "Geliştirme" ? item.group : "Geliştirme";
+      return item.group || "";
+    }
+
     function renderQuestionList(targetId, questions, options = {}) {
       const target = document.getElementById(targetId);
       if (!target) return;
@@ -8469,13 +8492,14 @@
       target.innerHTML = applicable.map((item, index) => {
         const key = String(item.no);
         const storedValue = questionAnswers[targetId][key] || "";
+        const category = questionCategoryLabel(item, targetId);
         const control = item.answerType === "number"
-          ? `<input type="number" placeholder="${currentLanguage === "en" ? "Enter number" : "Sayı girin"}" value="${storedValue}" />`
+          ? `<input type="number" min="0" step="1" inputmode="numeric" placeholder="${currentLanguage === "en" ? "Enter number" : "Sayı girin"}" value="${storedValue}" />`
           : `<select><option value="Seçiniz" ${storedValue === "" ? "selected" : ""}>${currentLanguage === "en" ? "Select" : "Seçiniz"}</option><option value="Evet" ${storedValue === "Evet" ? "selected" : ""}>${t("yes")}</option><option value="Hayır" ${storedValue === "Hayır" ? "selected" : ""}>${t("no")}</option></select>`;
         return `
           <div class="question-card" data-question-key="${key}">
             <div>
-              ${item.category ? `<small>${escapeHtml(displayQuestionRecord(item.category))}</small>` : ""}
+              ${category ? `<small>${escapeHtml(displayQuestionRecord(category))}</small>` : ""}
               <strong>${index + 1}. ${escapeHtml(displayQuestionRecord(item.name))}</strong>
               <small>${escapeHtml(displayQuestionRecord(item.description, "Description translation pending..."))}</small>
             </div>
@@ -8487,12 +8511,18 @@
         const applyQuestionAnswer = () => {
           const key = control.closest(".question-card")?.dataset.questionKey;
           if (!key) return;
+          if (control.type === "number" && Number(control.value) < 0) control.value = "0";
           if (control.value && control.value !== "Seçiniz") questionAnswers[targetId][key] = control.value;
           else delete questionAnswers[targetId][key];
           markDirty();
           updateQuestionMetrics();
           scheduleWorkbookDrivenRender();
         };
+        if (control.type === "number") {
+          control.addEventListener("keydown", event => {
+            if (["-", "e", "E", "+"].includes(event.key)) event.preventDefault();
+          });
+        }
         control.addEventListener(control.tagName === "SELECT" ? "change" : "input", applyQuestionAnswer);
       });
       const countTarget = targetId === "scopeQuestions" ? "scopeVisibleCount" : "developmentVisibleCount";
@@ -9052,7 +9082,9 @@
     }
 
     async function openNewOffer() {
+      refreshProjectDefinitionSelects();
       await ensureAdminConfigLoaded({ render: false });
+      refreshProjectDefinitionSelects();
       currentOfferId = null;
       currentOfferStatus = "DRAFT";
       currentOfferAccessMode = "edit";
@@ -9315,6 +9347,7 @@
     document.getElementById("search")?.addEventListener("input", filterRows);
     ["projectIndustry", "projectImplementation", "projectSystem"].forEach(id => {
       document.getElementById(id)?.addEventListener("change", () => {
+        markDirty();
         scheduleQuestionListRefresh();
         scheduleWorkbookDrivenRender(90);
       });

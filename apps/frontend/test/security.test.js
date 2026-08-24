@@ -51,7 +51,7 @@ test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser\?\.is_admin/s);
   assert.match(html, /async function hydrateHomeData\(\) \{\s*scheduleDeferredAdminConfigHydration\(\);\s*return Promise\.resolve\(\);\s*\}/s);
   assert.match(html, /if \(screenId === "overview" \|\| screenId === "allworks"\) \{\s*renderAllWorks\(\);\s*loadOffers\(\{ maxAge: 60000 \}\)/s);
-  assert.match(html, /async function openNewOffer\(\) \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
+  assert.match(html, /async function openNewOffer\(\) \{\s*refreshProjectDefinitionSelects\(\);\s*await ensureAdminConfigLoaded\(\{ render: false \}\);\s*refreshProjectDefinitionSelects\(\);/s);
   assert.match(html, /topAdminButton"\)\.addEventListener\("click", async \(\) => \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
   assert.doesNotMatch(html, /const offersPromise = loadOffers\(\)/);
 });
@@ -74,6 +74,20 @@ test("duplicate 3rd party integration scope question is canonicalized", () => {
   assert.match(html, /toId:\s*"scope-40"/);
   assert.match(html, /toName:\s*"3rd Party Entegrasyon Sayısı"/);
   assert.match(html, /const key = \[questionTypeFromLabel\(row\[1\]\), row\[2\] \|\| normalizeQuestionName\(row\[3\]\)\]/);
+});
+
+test("scope restrictions and numeric answers are guarded in the offer flow", () => {
+  assert.match(html, /const implementationTypes = displayName\.includes\("TSA \/ Paralel İşletim"\)[\s\S]*?\? "Carve-out"[\s\S]*?: canonicalImplementationList\(rawImplementationTypes\)/s);
+  assert.match(html, /function questionCategoryLabel\(item = \{\}, targetId = ""\)/);
+  assert.match(html, /<input type="number" min="0" step="1" inputmode="numeric"/);
+  assert.match(html, /if \(control\.type === "number" && Number\(control\.value\) < 0\) control\.value = "0"/);
+  assert.match(html, /if \(\["-", "e", "E", "\+"\]\.includes\(event\.key\)\) event\.preventDefault\(\)/);
+});
+
+test("NTT own IP records have immediate English labels", () => {
+  assert.match(html, /"NTT Own IP": "NTT Own IP"/);
+  assert.match(html, /"E-Fatura\/Arşiv": "E-Invoice \/ E-Archive"/);
+  assert.match(html, /"Dış Ticaret Çözümü": "Foreign Trade Solution"/);
 });
 
 test("login applies selected language before showing the app", () => {

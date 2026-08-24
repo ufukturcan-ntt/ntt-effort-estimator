@@ -953,7 +953,7 @@ window.scopeQuestions = [
     "answerType": "yesno",
     "score": 0,
     "industries": "All",
-    "implementationTypes": "All",
+    "implementationTypes": "Carve-out",
     "systemTypes": "All",
     "active": true
   }
