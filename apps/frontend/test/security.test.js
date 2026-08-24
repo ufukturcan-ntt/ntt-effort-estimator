@@ -202,3 +202,28 @@ test("seeded question labels do not render mixed Turkish in English mode", () =>
   assert.match(html, /"Benzer işi-süreci olan depolar göz önüne alındığında kaç farklı yapıda depo yapısı bulunmaktadır\.": "Considering warehouses with similar business processes, how many different warehouse structures are there\?"/);
   assert.match(html, /"Teslimat planı kullanımı ihtiyacı bulunmakta mıdır\?": "Is scheduling agreement usage required\?"/);
 });
+test("admin question seed stays synchronized with bundled questions", () => {
+  const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(questionsJs, context);
+  vm.runInNewContext(adminDataJs, context);
+  const adminQuestions = tableName => {
+    const table = context.window.adminSeedData?.[tableName] || [];
+    const headerIndex = table.findIndex(row => row?.[0] === "No");
+    return table.slice(headerIndex + 1).filter(row => row?.[0]).map(row => ({
+      no: Number(row[0]),
+      name: String(row[1] || ""),
+      description: String(row[2] || ""),
+      answerType: String(row[3] || "")
+    }));
+  };
+  const questionRows = key => (context.window[key] || []).map(question => ({
+    no: Number(question.no),
+    name: String(question.name || ""),
+    description: String(question.description || ""),
+    answerType: String(question.variableType || (question.answerType === "number" ? "Sayı" : question.answerType === "yesno" ? "Evet / Hayır" : question.answerType || "")).replace("Evet/Hayır", "Evet / Hayır")
+  }));
+  assert.deepEqual(adminQuestions("scope"), questionRows("scopeQuestions"));
+  assert.deepEqual(adminQuestions("development"), questionRows("developmentQuestions"));
+});

@@ -3639,6 +3639,7 @@
     window.scopeQuestions = enrichQuestionsFromExcel("scope", window.scopeQuestions, "Kapsam");
     window.developmentQuestions = enrichQuestionsFromExcel("development", window.developmentQuestions, "Geliştirme");
     const bundledScopeQuestions = (window.scopeQuestions || []).map(item => ({ ...item }));
+    const bundledDevelopmentQuestions = (window.developmentQuestions || []).map(item => ({ ...item }));
 
     const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP", "MES Development"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
@@ -6680,9 +6681,44 @@
       return config;
     }
 
+    function syncConfiguredQuestionsWithBundle(config = {}) {
+      const syncList = (configKey, bundledQuestions, defaultGroup) => {
+        const existing = Array.isArray(config[configKey]) ? config[configKey] : [];
+        const byId = new Map(existing.map(item => [questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development"), item]));
+        const byNo = new Map(existing.map(item => [String(item.no || ""), item]));
+        const byName = new Map(existing.map(item => [normalizeQuestionName(item.name), item]));
+        const merged = bundledQuestions.map(seed => {
+          const id = questionIdFor(seed, defaultGroup === "Kapsam" ? "scope" : "development");
+          const current = byId.get(id) || byNo.get(String(seed.no || "")) || byName.get(normalizeQuestionName(seed.name)) || {};
+          return {
+            ...current,
+            ...seed,
+            id: seed.id || current.id || id,
+            no: seed.no,
+            name: seed.name,
+            description: seed.description,
+            category: seed.category || current.category || "",
+            group: seed.group || current.group || defaultGroup,
+            variableType: seed.variableType || current.variableType || (seed.answerType === "number" ? "Sayı" : "Evet/Hayır"),
+            answerType: seed.answerType || current.answerType || "yesno"
+          };
+        });
+        const bundledIds = new Set(merged.map(item => questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development")));
+        const extras = existing.filter(item => !bundledIds.has(questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development")));
+        config[configKey] = [...merged, ...extras];
+      };
+      syncList("scopeQuestions", bundledScopeQuestions, "Kapsam");
+      syncList("developmentQuestions", bundledDevelopmentQuestions, "Geliştirme");
+      config.questionFieldOptions = config.questionFieldOptions || {};
+      config.questionFieldOptions.scopeCategories = uniqueOptionValues([
+        ...(config.questionFieldOptions.scopeCategories || []),
+        ...bundledScopeQuestions.map(item => item.category)
+      ]);
+      return config;
+    }
+
     function ensureBundledScopeMaintenanceRows(config = {}) {
       config.questionFieldOptions = config.questionFieldOptions || {};
-      if (config.questionFieldOptions.conversionScopeQuestionsImported) return config;
       const bundledConversionQuestions = bundledScopeQuestions.filter(item => item.category);
       if (!bundledConversionQuestions.length) return config;
       const existingQuestions = new Set((config.scopeQuestions || []).map(item => normalizeQuestionName(item.name)));
@@ -7052,6 +7088,7 @@
 
     function applyAdminConfig(config = {}) {
       normalizeImplementationTypeReferences(config);
+      syncConfiguredQuestionsWithBundle(config);
       ensureBundledScopeMaintenanceRows(config);
       ensureScoredScopeImpactRows(config);
       ensureConversionImplementationTypes(config);
