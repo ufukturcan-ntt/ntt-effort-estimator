@@ -43,6 +43,19 @@ test("library headers are translated in English mode", () => {
   assert.match(html, /<th>\$\{escapeHtml\(displayRecord\("İşlem"\)\)\}<\/th>/);
 });
 
+test("effort analysis summaries and dashboards are translated in English mode", () => {
+  assert.match(html, /effortDistribution: "Effort distribution"/);
+  assert.match(html, /solutionGroupEfforts: "Solution group efforts"/);
+  assert.match(html, /fixedEffort: "Fixed effort"/);
+  assert.match(html, /localizationEffortSummary: "Localization effort"/);
+  assert.match(html, /hypercareGoliveEffort: "Hypercare \+ Go-Live effort"/);
+  assert.match(html, /setTexts\("#effort > \.effort-stack > \.panel > \.panel-head \.panel-title", \[t\("projectEfforts"\), t\("localizationEfforts"\), t\("developmentEfforts"\), t\("finalSummary"\)\]\)/);
+  assert.match(html, /setTexts\("#effort \.summary-grid \.metric span", \[t\("standardProjectEffort"\), t\("fixedEffort"\), t\("developmentEffort"\), t\("localizationEffortSummary"\), t\("hypercareGoliveEffort"\), t\("totalEffortSummary"\)\]\)/);
+  assert.match(html, /setTexts\("#effort \.dashboard-grid \.panel-title", \[t\("effortDistribution"\), t\("solutionGroupEfforts"\)\]\)/);
+  assert.match(html, /\[displayRecord\("Hypercare \+ Go-Live eforu"\), hypercareTotal/);
+  assert.match(html, /<strong>\$\{escapeHtml\(displayRecord\(label\)\)\}<\/strong>/);
+});
+
 test("admin configuration is saved in one request", () => {
   assert.match(html, /EffortApi\.saveAdminConfig\(config\)/);
   assert.doesNotMatch(html, /Promise\.all\(Object\.entries\(config\)/);

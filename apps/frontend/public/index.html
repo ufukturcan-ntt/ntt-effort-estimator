@@ -3897,7 +3897,22 @@
         localizationEfforts: "Lokalizasyon Eforları",
         developmentEfforts: "Geliştirme Eforları",
         finalSummary: "Final Özet",
+        effortDistribution: "Efor dağılımı",
+        solutionGroupEfforts: "Çözüm grubu eforları",
+        category: "Kategori",
+        moduleCountryPhase: "Modül x Ülke x Faz",
+        developmentModule: "Geliştirme x Modül",
+        selectedModules: "seçili modüller",
+        separateColumn: "ayrı sütun",
+        developmentMatrix: "geliştirme matrisi",
+        selectedCountries: "seçili ülkeler",
+        supportPlanShort: "destek planı",
+        allEffortItems: "tüm efor kalemleri",
         standardProjectEffort: "Standart proje eforu",
+        fixedEffort: "Sabit efor",
+        localizationEffortSummary: "Lokalizasyon eforu",
+        hypercareGoliveEffort: "Hypercare + Go-Live eforu",
+        totalEffortSummary: "Toplam efor",
         developmentEffort: "Geliştirme eforu",
         noProjectEffort: "Proje eforu bulunmuyor.",
         noLocalizationEffort: "Lokalizasyon eforu bulunmuyor.",
@@ -4069,7 +4084,22 @@
         localizationEfforts: "Localization Efforts",
         developmentEfforts: "Development Efforts",
         finalSummary: "Final Summary",
+        effortDistribution: "Effort distribution",
+        solutionGroupEfforts: "Solution group efforts",
+        category: "Category",
+        moduleCountryPhase: "Module x Country x Phase",
+        developmentModule: "Development x Module",
+        selectedModules: "selected modules",
+        separateColumn: "separate column",
+        developmentMatrix: "development matrix",
+        selectedCountries: "selected countries",
+        supportPlanShort: "support plan",
+        allEffortItems: "all effort items",
         standardProjectEffort: "Standard project effort",
+        fixedEffort: "Fixed effort",
+        localizationEffortSummary: "Localization effort",
+        hypercareGoliveEffort: "Hypercare + Go-Live effort",
+        totalEffortSummary: "Total effort",
         developmentEffort: "Development effort",
         noProjectEffort: "No project effort found.",
         noLocalizationEffort: "No localization effort found.",
@@ -4179,6 +4209,19 @@
       "Lokalizasyon eforu": "Localization effort",
       "Toplam efor": "Total effort",
       "Hypercare + Go-Live eforu": "Hypercare + Go-Live effort",
+      "Proje eforları": "Project Efforts",
+      "Lokalizasyon eforları": "Localization Efforts",
+      "Geliştirme eforları": "Development Efforts",
+      "Final özet": "Final Summary",
+      "Efor dağılımı": "Effort distribution",
+      "Çözüm grubu eforları": "Solution group efforts",
+      "Kategori": "Category",
+      "seçili modüller": "selected modules",
+      "ayrı sütun": "separate column",
+      "geliştirme matrisi": "development matrix",
+      "seçili ülkeler": "selected countries",
+      "destek planı": "support plan",
+      "tüm efor kalemleri": "all effort items",
       "Konfeksiyon": "Apparel",
       "Perakende": "Retail",
       "Otomotiv": "Automotive",
@@ -4840,6 +4883,12 @@
       setTextContent("#localization .grid > .panel:nth-child(2) .panel-title", t("localizationEffort"));
       setTextContent("#hypercare .panel-title", "Hypercare & Go-live Support");
       setTextContent("#hypercare .pill", t("supportPlan"));
+      setTexts("#effort > .effort-stack > .panel > .panel-head .panel-title", [t("projectEfforts"), t("localizationEfforts"), t("developmentEfforts"), t("finalSummary")]);
+      setTexts("#effort > .effort-stack > .panel > .panel-head .pill", ["Final Effort", t("moduleCountryPhase"), t("developmentModule"), `${document.getElementById("finalGrandTotal")?.textContent || "0"}g`]);
+      setTexts("#effort .summary-grid .metric span", [t("standardProjectEffort"), t("fixedEffort"), t("developmentEffort"), t("localizationEffortSummary"), t("hypercareGoliveEffort"), t("totalEffortSummary")]);
+      setTexts("#effort .summary-grid .metric small", [t("selectedModules"), t("separateColumn"), t("developmentMatrix"), t("selectedCountries"), t("supportPlanShort"), t("allEffortItems")]);
+      setTexts("#effort .dashboard-grid .panel-title", [t("effortDistribution"), t("solutionGroupEfforts")]);
+      setTexts("#effort .dashboard-grid .pill", [t("category"), "Core / IP / Advanced"]);
       const search = document.getElementById("search");
       if (search) search.placeholder = document.getElementById("appShell")?.classList.contains("work-open") ? t("searchOpen") : t("searchHome");
       updateWorkSubtitle();
@@ -5432,7 +5481,7 @@
       const mix = [
         [displayRecord("Standart efor"), projectTotal, "var(--blue)"],
         [displayRecord("Geliştirme eforu"), developmentTotal, "var(--amber)"],
-        ["Hypercare + Go-Live eforu", hypercareTotal, "var(--green)"],
+        [displayRecord("Hypercare + Go-Live eforu"), hypercareTotal, "var(--green)"],
         [displayRecord("Lokalizasyon eforu"), localizationTotal, "#6658d3"],
         [displayRecord("Toplam efor"), grandTotal, "var(--ink)"]
       ];
@@ -5445,7 +5494,7 @@
       renderMiniBars("solutionGroupDashboard", [
         ["S4Core", groupTotals.S4Core, "var(--blue)"],
         ["NTT Own IP", groupTotals["NTT Own IP"], "var(--green)"],
-        ["Advanced Solution", groupTotals["Advanced Solution"], "var(--amber)"]
+        [displayRecord("Advanced Solution"), groupTotals["Advanced Solution"], "var(--amber)"]
       ]);
     }
 
@@ -5455,7 +5504,7 @@
       const max = Math.max(...rows.map(row => row[1]), 1);
       target.innerHTML = rows.map(([label, value, color]) => `
         <div class="mini-bar">
-          <strong>${escapeHtml(label)}</strong>
+          <strong>${escapeHtml(displayRecord(label))}</strong>
           <div class="mini-bar-track"><i style="--w:${Math.max(2, value / max * 100)}%;--c:${color}"></i></div>
           <span>${fmt(value)}${suffix}</span>
         </div>
