@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import vm from "node:vm";
 
 const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 const apiClient = fs.readFileSync(new URL("../public/assets/api-client.js", import.meta.url), "utf8");
@@ -164,4 +165,27 @@ test("conversion scope questions have immediate English labels", () => {
   assert.match(html, /"ISU, IS-Retail, DIMP, IS-Oil vb\. sektör çözümü kullanılmakta mıdır\?": "Is an industry solution such as ISU, IS-Retail, DIMP, IS-Oil etc\. being used\?"/);
   assert.match(html, /"Organizasyon Ayrıştırma Kapsamı": "Organization Separation Scope"/);
   assert.match(html, /organizasyon\|kapsam\|kategori/);
+});
+test("seeded question labels do not render mixed Turkish in English mode", () => {
+  const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(questionsJs, context);
+  const extractConst = name => Function(`return (${html.match(new RegExp(`const ${name} = ([\\s\\S]*?);\\n\\s*(?:const|function)`, "m"))[1]})`)();
+  const recordTranslations = extractConst("recordTranslations");
+  const recordDescriptionTranslations = extractConst("recordDescriptionTranslations");
+  const badTurkish = /[çğıöşüÇĞİÖŞÜ]|\b(organizasyon|kapsam|soru|tanım|açıklama|dönüşüm|olacak|mıdır|adet|sayı|bulunmaktadır|olacaktır|scopeda|warehouselar|companyler)\b/i;
+  const display = value => recordTranslations[String(value ?? "")] || recordDescriptionTranslations[String(value ?? "")] || String(value ?? "");
+  const rows = [];
+  for (const type of ["scopeQuestions", "developmentQuestions"]) {
+    for (const question of context.window[type] || []) {
+      for (const field of ["category", "name", "description"]) {
+        if (!question[field]) continue;
+        const rendered = display(question[field]);
+        if (badTurkish.test(rendered)) rows.push(`${type}:${question.no}:${field}:${rendered}`);
+      }
+    }
+  }
+  assert.deepEqual(rows, []);
+  assert.match(html, /"Benzer işi-süreci olan depolar göz önüne alındığında kaç farklı yapıda depo yapısı bulunmaktadır\.": "Considering warehouses with similar business processes, how many different warehouse structures are there\?"/);
+  assert.match(html, /"Teslimat planı kullanımı ihtiyacı bulunmakta mıdır\?": "Is scheduling agreement usage required\?"/);
 });
