@@ -46,13 +46,14 @@ test("large Excel library is lazy-loaded", () => {
   assert.match(html, /await ensureXlsxLoaded\(\)/);
 });
 
-test("authenticated home data loads before deferred admin configuration", () => {
-  assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\)/);
-  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\)/);
-  assert.match(html, /async function hydrateHomeData\(\) \{\s*const offersPromise = loadOffers\(\)/s);
-  assert.match(html, /scheduleDeferredAdminConfigHydration\(\);\s*return offersPromise;/s);
+test("screen data is loaded lazily after authentication", () => {
+  assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\?\.is_admin\) return Promise\.resolve\(\)/s);
+  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser\?\.is_admin/s);
+  assert.match(html, /async function hydrateHomeData\(\) \{\s*scheduleDeferredAdminConfigHydration\(\);\s*return Promise\.resolve\(\);\s*\}/s);
+  assert.match(html, /if \(screenId === "overview" \|\| screenId === "allworks"\) \{\s*renderAllWorks\(\);\s*loadOffers\(\{ maxAge: 60000 \}\)/s);
   assert.match(html, /async function openNewOffer\(\) \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
   assert.match(html, /topAdminButton"\)\.addEventListener\("click", async \(\) => \{\s*await ensureAdminConfigLoaded\(\{ render: false \}\)/s);
+  assert.doesNotMatch(html, /const offersPromise = loadOffers\(\)/);
 });
 
 test("new offer screen opens before heavy panel hydration", () => {
@@ -75,6 +76,11 @@ test("duplicate 3rd party integration scope question is canonicalized", () => {
   assert.match(html, /const key = \[questionTypeFromLabel\(row\[1\]\), row\[2\] \|\| normalizeQuestionName\(row\[3\]\)\]/);
 });
 
+test("login applies selected language before showing the app", () => {
+  assert.match(html, /currentLanguage = document\.getElementById\("languageSelect"\)\?\.value \|\| currentLanguage \|\| "tr"/);
+  assert.match(html, /function showAuthenticatedApp\(\) \{\s*applyUserPermissions\(\);\s*applyLanguage\(\);\s*document\.getElementById\("loginShell"\)\?\.classList\.add\("is-hidden"\)/s);
+});
+
 test("login language rendering avoids immediate translation churn", () => {
   assert.match(html, /if \(recordTranslations\[text\]\) return recordTranslations\[text\]/);
   assert.match(html, /setTimeout\(flushTranslationQueue, 250\)/);
@@ -82,11 +88,14 @@ test("login language rendering avoids immediate translation churn", () => {
   assert.doesNotMatch(html, /hydrateHomeData\(\)\.then\(\(\) => applyLanguage\(\)\);\s*applyLanguage\(\);\s*wakeTranslationQueue\(\);/);
 });
 
-test("login does not expose demo work as active offer", () => {
+test("login does not expose demo data or default credentials", () => {
   assert.match(html, /let currentOfferMode = ""/);
   assert.doesNotMatch(html, /<input id="projectCustomer" value="Ufuk Enerji AŞ"/);
   assert.doesNotMatch(html, /<input id="projectName" value="S4 Dönüşüm"/);
-  assert.match(html, /loadOffers\(\)\s*\n\s*\.then\(\(\) => applyLanguage\(\)\)/);
+  assert.doesNotMatch(html, /value="ufuk\.turcan@nttdata\.com"/);
+  assert.doesNotMatch(html, /value="admin123"/);
+  assert.doesNotMatch(html, /EffortApi\.login\([\s\S]*admin123/);
+  assert.match(html, /throw new Error\(currentLanguage === "en" \? "Authentication required" : "Oturum gerekli"\)/);
 });
 
 test("user menu actions are translated with the selected language", () => {

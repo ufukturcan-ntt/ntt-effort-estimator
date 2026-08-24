@@ -183,6 +183,13 @@ async function isOfferApprover(userId) {
   return configuredApproverEmails(configured).includes(normalizeEmail(user.email));
 }
 
+async function canViewOffer(user, offer) {
+  if (!user || !offer) return false;
+  if (offer.user_id === user.id) return true;
+  if (await isOfferApprover(user.id)) return ["SUBMITTED", "APPROVED"].includes(String(offer.status || "").toUpperCase());
+  return false;
+}
+
 async function sendApprovalMail(user) {
   const settings = await approvalSettings();
   const approverEmail = settings.userApproverEmail || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL;
@@ -451,6 +458,7 @@ app.get("/api/offers", requireAuth, async (req, res, next) => {
               updated_at,
               (user_id = $1) as is_owner
        from offer
+       where user_id = $1
        order by updated_at desc
        limit 200`,
       [req.user.id]
@@ -486,6 +494,7 @@ app.get("/api/offers/:id", requireAuth, async (req, res, next) => {
   try {
     const result = await query(`select *, (user_id = $2) as is_owner from offer where id = $1`, [req.params.id, req.user.id]);
     if (!result.rowCount) return res.status(404).json({ error: "Offer not found" });
+    if (!(await canViewOffer(req.user, result.rows[0]))) return res.status(403).json({ error: "Offer access denied" });
     res.json(result.rows[0]);
   } catch (error) {
     next(error);

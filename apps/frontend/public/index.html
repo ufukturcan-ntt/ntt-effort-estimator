@@ -2090,10 +2090,10 @@
       </div>
       <form class="login-form" id="loginForm">
         <label>Email
-          <input id="loginEmail" type="email" value="ufuk.turcan@nttdata.com" autocomplete="email" />
+          <input id="loginEmail" type="email" autocomplete="email" />
         </label>
         <label>Şifre
-          <input id="loginPassword" type="password" value="admin123" autocomplete="current-password" />
+          <input id="loginPassword" type="password" autocomplete="current-password" />
         </label>
         <label>Dil
           <select id="languageSelect">
@@ -7177,6 +7177,7 @@
     }
 
     function ensureAdminConfigLoaded(options = {}) {
+      if (!currentUser?.is_admin) return Promise.resolve();
       if (adminConfigLoaded) return Promise.resolve();
       if (adminConfigHydrationTimer) {
         clearTimeout(adminConfigHydrationTimer);
@@ -7199,7 +7200,7 @@
     }
 
     function scheduleDeferredAdminConfigHydration(delay = 8000) {
-      if (adminConfigLoaded || adminConfigPromise || adminConfigHydrationTimer) return;
+      if (!currentUser?.is_admin || adminConfigLoaded || adminConfigPromise || adminConfigHydrationTimer) return;
       adminConfigHydrationTimer = setTimeout(() => {
         adminConfigHydrationTimer = null;
         ensureAdminConfigLoaded({ render: false });
@@ -8624,10 +8625,7 @@
     async function saveCurrentOffer(button) {
       if (!window.EffortApi) throw new Error("API client bulunamadı.");
       if (!currentUser) {
-        currentUser = await window.EffortApi.login({
-          email: document.getElementById("loginEmail")?.value || "ufuk.turcan@nttdata.com",
-          password: document.getElementById("loginPassword")?.value || "admin123"
-        });
+        throw new Error(currentLanguage === "en" ? "Authentication required" : "Oturum gerekli");
       }
       const payload = collectOfferPayload();
       if (currentOfferId && currentOfferUpdatedAt) payload.expectedUpdatedAt = currentOfferUpdatedAt;
@@ -8893,6 +8891,12 @@
         const activeSection = document.querySelector(".admin-tree-item.active")?.dataset.adminSection || "users";
         openAdminSection(activeSection);
       }
+      if (screenId === "overview" || screenId === "allworks") {
+        renderAllWorks();
+        loadOffers({ maxAge: 60000 })
+          .then(() => applyLanguage())
+          .catch(error => console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error));
+      }
       window.scrollTo({ top: 0, behavior: "auto" });
     }
 
@@ -9074,6 +9078,7 @@
 
     function showAuthenticatedApp() {
       applyUserPermissions();
+      applyLanguage();
       document.getElementById("loginShell")?.classList.add("is-hidden");
       document.getElementById("appShell")?.classList.remove("is-locked");
       renderRows("moduleRows", modules.slice(0, 12));
@@ -9127,12 +9132,7 @@
         const offerContext = storedOfferContext();
         if (!offerScreens.has(screenId)) openScreen(screenId);
         ensureNavigationHistory(screenId);
-        applyLanguage();
-        const offersPromise = loadOffers().catch(error => {
-          console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error);
-        });
         if (offerScreens.has(screenId) && offerContext?.id) {
-          await offersPromise;
           await ensureAdminConfigLoaded({ render: false });
           await openExistingWork(offerContext.id, offerContext.accessMode || "edit");
           if (screenId !== "project") openWork(screenId);
@@ -9140,7 +9140,6 @@
           await ensureAdminConfigLoaded({ render: false });
           openWork(screenId);
         } else {
-          offersPromise.then(() => applyLanguage());
           scheduleDeferredAdminConfigHydration();
         }
         wakeTranslationQueue();
@@ -9160,11 +9159,8 @@
     }
 
     async function hydrateHomeData() {
-      const offersPromise = loadOffers()
-        .then(() => applyLanguage())
-        .catch(error => console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error));
       scheduleDeferredAdminConfigHydration();
-      return offersPromise;
+      return Promise.resolve();
     }
 
     document.getElementById("showRegisterButton").addEventListener("click", () => {
@@ -9206,6 +9202,9 @@
     document.getElementById("loginForm").addEventListener("submit", async event => {
       event.preventDefault();
       try {
+        currentLanguage = document.getElementById("languageSelect")?.value || currentLanguage || "tr";
+        localStorage.setItem("effortLanguage", currentLanguage);
+        applyLanguage();
         currentUser = await window.EffortApi.login({
           email: document.getElementById("loginEmail").value,
           password: document.getElementById("loginPassword").value
@@ -9214,8 +9213,7 @@
         setWorkMode(false);
         openScreen("overview");
         ensureNavigationHistory("overview");
-        applyLanguage();
-        hydrateHomeData().then(() => applyLanguage());
+        hydrateHomeData();
       } catch (error) {
         console.error(error);
         alert("Giriş yapılamadı. Email/şifre hatalı olabilir veya kullanıcı henüz onaylanmamış olabilir.");
@@ -9261,9 +9259,7 @@
     });
 
     document.getElementById("allWorksButton").addEventListener("click", async () => {
-      renderAllWorks();
       guardedOpenScreen("allworks");
-      loadOffers({ maxAge: 60000 }).then(() => applyLanguage()).catch(error => console.warn(currentLanguage === "en" ? "Offers could not be loaded in the background." : "Teklifler arka planda yüklenemedi.", error));
     });
 
     document.getElementById("pendingApprovalsButton").addEventListener("click", async () => {

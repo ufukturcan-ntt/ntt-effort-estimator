@@ -46,3 +46,16 @@ test("offer list endpoint returns a lightweight project definition summary", () 
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /jsonb_build_object\('version', project_definition->>'version'\) as project_definition/);
 });
+
+
+test("offer list endpoint is scoped to the authenticated user", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /app\.get\("\/api\/offers", requireAuth/);
+  assert.match(server, /from offer\s+where user_id = \$1\s+order by updated_at desc/s);
+});
+
+test("offer detail endpoint rejects unauthorized viewers", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /async function canViewOffer\(user, offer\)/);
+  assert.match(server, /if \(!\(await canViewOffer\(req\.user, result\.rows\[0\]\)\)\) return res\.status\(403\)\.json\(\{ error: "Offer access denied" \}\)/);
+});
