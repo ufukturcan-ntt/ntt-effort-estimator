@@ -200,6 +200,34 @@ test("project filter changes defer question list rendering", () => {
   assert.doesNotMatch(html, /document\.getElementById\(id\)\?\.addEventListener\("change", \(\) => \{\s*refreshQuestionLists\(\);\s*scheduleWorkbookDrivenRender\(\);/);
 });
 
+test("workbook rendering is scoped to the active screen", () => {
+  assert.ok(html.includes("function activeScreenId()"));
+  assert.ok(html.includes("function calculateProjectEffortTotal()"));
+  assert.ok(html.includes("function calculateDevelopmentEffortTotal()"));
+  assert.ok(html.includes("function currentEffortTotals()"));
+  assert.ok(html.includes("const screenId = activeScreenId()"));
+  assert.ok(html.includes('if (screenId === "localization") renderLocalizationControls()'));
+  assert.ok(html.includes('if (screenId === "library") renderLibraryRows()'));
+  assert.ok(html.includes('if (screenId === "effort") {'));
+  assert.ok(html.includes("localizationTotal = renderLocalizationEfforts()"));
+  assert.ok(html.includes("projectTotal = renderFinalEffort()"));
+  assert.ok(html.includes("developmentTotal = renderDevelopmentEfforts()"));
+  assert.ok(html.includes('if (screenId === "effort") renderDashboards'));
+});
+
+test("language translation refresh is scoped to the active screen", () => {
+  const translatedStart = html.indexOf("function scheduleTranslatedViewRefresh()");
+  const languageStart = html.indexOf("function scheduleLanguageDynamicRefresh()");
+  const languageEnd = html.indexOf("function displayPhase", languageStart);
+  const translatedRefresh = html.slice(translatedStart, languageStart);
+  const languageRefresh = html.slice(languageStart, languageEnd);
+  assert.ok(translatedRefresh.includes("const screenId = activeScreenId()"));
+  assert.ok(translatedRefresh.includes('["scope", "developments"].includes(screenId)'));
+  assert.ok(languageRefresh.includes("const screenId = activeScreenId()"));
+  assert.ok(languageRefresh.includes('if (screenId === "admin") renderAdminPageIfNeeded?.(true)'));
+  assert.ok(languageRefresh.includes('["fixedefforts", "localization", "hypercare", "effort"].includes(screenId)'));
+});
+
 test("common Turkish admin records have immediate English translations", () => {
   assert.match(html, /"Hizmet": "Service"/);
   assert.match(html, /"Kategori": "Category"/);

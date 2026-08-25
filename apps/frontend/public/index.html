@@ -4612,16 +4612,25 @@
       return true;
     }
 
+    function activeScreenId() {
+      return document.querySelector(".screen.active")?.id || "";
+    }
+
+    function isScreenActive(screenId) {
+      return activeScreenId() === screenId;
+    }
+
     function scheduleTranslatedViewRefresh() {
       clearTimeout(translationRenderTimer);
       translationRenderTimer = setTimeout(() => {
-        refreshProjectDefinitionSelects?.();
-        renderModuleGroups?.();
-        renderLocalizationControls?.();
-        refreshQuestionLists?.();
-        scheduleWorkbookDrivenRender?.();
-        if (document.getElementById("overview")?.classList.contains("active") || document.getElementById("allworks")?.classList.contains("active")) renderAllWorks?.();
-        if (document.getElementById("admin")?.classList.contains("active")) renderAdminPageIfNeeded?.(true);
+        const screenId = activeScreenId();
+        if (["project", "modules"].includes(screenId)) refreshProjectDefinitionSelects?.();
+        if (screenId === "modules") renderModuleGroups?.();
+        if (screenId === "localization") renderLocalizationControls?.();
+        if (["scope", "developments"].includes(screenId)) refreshQuestionLists?.();
+        if (["fixedefforts", "localization", "hypercare", "effort"].includes(screenId)) scheduleWorkbookDrivenRender?.();
+        if (["overview", "allworks"].includes(screenId)) renderAllWorks?.();
+        if (screenId === "admin") renderAdminPageIfNeeded?.(true);
       }, 120);
     }
 
@@ -4702,12 +4711,14 @@
       if (!currentUser) return;
       clearTimeout(languageDynamicRenderTimer);
       languageDynamicRenderTimer = setTimeout(() => {
-        renderAllWorks?.();
-        refreshProjectDefinitionSelects?.();
-        renderModuleGroups?.();
-        renderLocalizationControls?.();
-        refreshQuestionLists?.();
-        renderWorkbookDrivenScreens?.();
+        const screenId = activeScreenId();
+        if (["overview", "allworks"].includes(screenId)) renderAllWorks?.();
+        if (["project", "modules"].includes(screenId)) refreshProjectDefinitionSelects?.();
+        if (screenId === "modules") renderModuleGroups?.();
+        if (screenId === "localization") renderLocalizationControls?.();
+        if (["scope", "developments"].includes(screenId)) refreshQuestionLists?.();
+        if (["fixedefforts", "localization", "hypercare", "effort"].includes(screenId)) renderWorkbookDrivenScreens?.();
+        if (screenId === "admin") renderAdminPageIfNeeded?.(true);
         rerenderScreenNavigation?.();
         wakeTranslationQueue();
       }, 0);
@@ -5328,6 +5339,10 @@
       });
     }
 
+    function calculateProjectEffortTotal() {
+      return finalRowsForSelectedModules().reduce((sum, row) => sum + row.total, 0);
+    }
+
     function renderFinalEffort() {
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
@@ -5364,12 +5379,8 @@
       return total;
     }
 
-    function renderDevelopmentEfforts() {
-      const head = document.getElementById("developmentMatrixHead");
-      const body = document.getElementById("developmentMatrixRows");
-      if (!body) return 0;
+    function developmentEffortSummary() {
       const moduleNames = developmentModuleNames();
-      if (head) head.innerHTML = `<tr><th>${displayRecord("Geliştirme")}</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
       const moduleSet = new Set(moduleNames);
       const grouped = new Map();
       const selectedDevelopments = selectedDevelopmentMultipliers(
@@ -5391,6 +5402,26 @@
       const coverage = applyAbapFixedEffortCoverage(grouped, moduleNames);
       const displayGrouped = coverage.grouped;
       const colTotals = Object.fromEntries(moduleNames.map(module => [module, 0]));
+      [...displayGrouped.values()].forEach(values => {
+        moduleNames.forEach(module => {
+          colTotals[module] += values[module] || 0;
+        });
+      });
+      const total = Object.values(colTotals).reduce((sum, value) => sum + value, 0);
+      return { moduleNames, grouped, displayGrouped, colTotals, coverage, total };
+    }
+
+    function calculateDevelopmentEffortTotal() {
+      return developmentEffortSummary().total;
+    }
+
+    function renderDevelopmentEfforts() {
+      const head = document.getElementById("developmentMatrixHead");
+      const body = document.getElementById("developmentMatrixRows");
+      if (!body) return 0;
+      const { moduleNames, grouped, displayGrouped, colTotals, coverage, total } = developmentEffortSummary();
+      if (head) head.innerHTML = `<tr><th>${displayRecord("Geliştirme")}</th>${moduleNames.map(name => `<th>${name}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
+      Object.keys(colTotals).forEach(module => colTotals[module] = 0);
       const rowHtml = [...displayGrouped.entries()].map(([name, values]) => {
         const rowTotal = moduleNames.reduce((sum, module) => {
           colTotals[module] += values[module] || 0;
@@ -5398,7 +5429,6 @@
         }, 0);
         return `<tr><td><strong>${escapeHtml(displayRecord(name))}</strong></td>${moduleNames.map(module => `<td>${values[module] ? fmt(values[module]) : ""}</td>`).join("")}<td><strong>${fmt(rowTotal)}</strong></td></tr>`;
       }).join("");
-      const total = Object.values(colTotals).reduce((sum, value) => sum + value, 0);
       const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${moduleNames.map(module => `<td><strong>${fmt(colTotals[module])}</strong></td>`).join("")}<td><strong>${fmt(total)}</strong></td></tr>`;
       const emptyRow = `<tr><td colspan="${moduleNames.length + 2}">${currentLanguage === "en" ? "Selection is pending for development effort." : "Geliştirme eforu için seçim bekleniyor."}</td></tr>`;
       const coverageRow = coverage.coveredAbapTotal > 0
@@ -7515,28 +7545,82 @@
       }
     }
 
+    function calculateLocalizationEffortTotal() {
+      return activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
+    }
+
+    function currentEffortTotals() {
+      const projectTotal = calculateProjectEffortTotal();
+      const developmentTotal = calculateDevelopmentEffortTotal();
+      const localizationTotal = calculateLocalizationEffortTotal();
+      const support = updateHypercareTotals();
+      const supportTotal = support.hypercare + support.golive;
+      return {
+        projectTotal,
+        developmentTotal,
+        localizationTotal,
+        support,
+        supportTotal,
+        grandTotal: projectTotal + developmentTotal + localizationTotal + supportTotal
+      };
+    }
+
+    function syncEffortSummaryTexts(totals = currentEffortTotals()) {
+      setText("projectEffortTotal", fmt(totals.projectTotal));
+      setText("developmentEffortTotal", fmt(totals.developmentTotal));
+      setText("selectedDevelopmentEffort", fmt(totals.developmentTotal));
+      setText("localizationTotal", fmt(totals.localizationTotal));
+      setText("finalLocalizationTotal", fmt(totals.localizationTotal));
+      setText("localizationNavCount", activeLocalizations().length);
+      setText("hypercareNavCount", `${fmt(totals.support.hypercare)}g`);
+      setText("finalHypercareTotal", fmt(totals.supportTotal));
+      setText("finalGrandTotal", fmt(totals.grandTotal));
+      setText("finalSummaryTotal", fmt(totals.grandTotal));
+      setText("finalFixedEffortTotal", fmt(effectiveFixedEffortTotal()));
+    }
+
     function renderWorkbookDrivenScreens() {
       if (workbookRenderTimer) {
         clearTimeout(workbookRenderTimer);
         workbookRenderTimer = null;
       }
+      const screenId = activeScreenId();
       const selectedCount = selectedModuleNames().length;
       setText("selectedModuleCount", selectedCount);
       setText("moduleNavCount", selectedCount);
-      renderLocalizationControls();
-      const fixedEffortTotalValue = renderFixedEfforts();
-      const localizationTotal = renderLocalizationEfforts();
-      renderLibraryRows();
-      const projectTotal = renderFinalEffort();
-      const developmentTotal = renderDevelopmentEfforts();
-      setText("selectedDevelopmentEffort", fmt(developmentTotal));
-      const support = renderHypercareRows();
+      const fixedEffortTotal = effectiveFixedEffortTotal();
+      setText("fixedEffortTotal", fmt(fixedEffortTotal));
+      setText("fixedEffortNavCount", `${fmt(fixedEffortTotal)}g`);
+
+      if (screenId === "localization") renderLocalizationControls();
+      if (screenId === "fixedefforts") renderFixedEfforts();
+      if (screenId === "library") renderLibraryRows();
+
+      let projectTotal;
+      let developmentTotal;
+      let localizationTotal;
+      if (screenId === "effort") {
+        localizationTotal = renderLocalizationEfforts();
+        projectTotal = renderFinalEffort();
+        developmentTotal = renderDevelopmentEfforts();
+      } else {
+        projectTotal = calculateProjectEffortTotal();
+        developmentTotal = calculateDevelopmentEffortTotal();
+        localizationTotal = calculateLocalizationEffortTotal();
+      }
+
+      const support = screenId === "hypercare" ? renderHypercareRows() : updateHypercareTotals();
       const supportTotal = support.hypercare + support.golive;
-      setText("localizationNavCount", activeLocalizations().length);
-      setText("hypercareNavCount", `${fmt(support.hypercare)}g`);
-      setText("finalHypercareTotal", fmt(supportTotal));
-      setText("finalGrandTotal", fmt(localizationTotal + projectTotal + developmentTotal + supportTotal));
-      renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
+      const totals = {
+        projectTotal,
+        developmentTotal,
+        localizationTotal,
+        support,
+        supportTotal,
+        grandTotal: projectTotal + developmentTotal + localizationTotal + supportTotal
+      };
+      syncEffortSummaryTexts(totals);
+      if (screenId === "effort") renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
     }
 
     function scheduleWorkbookDrivenRender(delay = 50) {
@@ -8668,6 +8752,7 @@
         .map(country => [country, localizationCountrySelected(country)]));
       const fixedEfforts = fixedEffortValues();
       const hypercareInputs = Object.fromEntries([...hypercareState.entries()]);
+      const effortTotals = currentEffortTotals();
       return {
         userId: currentUser?.id,
         title: projectName || customerName || "Yeni Teklif",
@@ -8677,7 +8762,7 @@
         implementationType,
         systemType: document.getElementById("projectSystem")?.value || "",
         status: currentOfferStatus || "DRAFT",
-        totalEffort: numericText("finalGrandTotal"),
+        totalEffort: effortTotals.grandTotal,
         projectDefinition: {
           customer: customerName,
           project: projectName,
@@ -8693,17 +8778,17 @@
         localizationSelection,
         hypercareInputs,
         finalEffort: {
-          projectTotal: numericText("projectEffortTotal"),
-          developmentTotal: numericText("developmentEffortTotal"),
-          localizationTotal: activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0),
+          projectTotal: effortTotals.projectTotal,
+          developmentTotal: effortTotals.developmentTotal,
+          localizationTotal: effortTotals.localizationTotal,
           fixedEfforts,
           fixedEffortTotal: effectiveFixedEffortTotal(),
           librarySelections: [...librarySelections],
           fixedEffortInclusion: fixedEffortInclusionPayload(),
           abapFixedEffortIncluded,
-          hypercareTotal: hypercareModuleNames().reduce((sum, name) => sum + hypercareValue(name), 0),
-          goliveTotal: hypercareModuleNames().reduce((sum, name) => sum + (Number(hypercareState.get(name)?.goliveDays) || 0), 0),
-          grandTotal: numericText("finalGrandTotal")
+          hypercareTotal: effortTotals.support.hypercare,
+          goliveTotal: effortTotals.support.golive,
+          grandTotal: effortTotals.grandTotal
         }
       };
     }
