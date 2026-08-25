@@ -82,6 +82,12 @@ test("new offer screen opens before heavy panel hydration", () => {
   assert.match(html, /setProjectForm\(\{[\s\S]*?\}, \{ preserveAnswers: false, renderQuestions: false \}\);\s*resetSelectableState\("new", null, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateNewOfferScreens\(\);/s);
 });
 
+test("new offer always starts with an empty module selection", () => {
+  assert.doesNotMatch(html, /selected:true/);
+  assert.match(html, /function clearModuleSelectionState\(\) \{[\s\S]*?state\.selected = false;[\s\S]*?state\.team = "";/s);
+  assert.match(html, /resetSelectableState\("new", null, \{ render: false \}\);\s*clearModuleSelectionState\(\);/s);
+});
+
 test("question restriction rows preserve question values by stable id", () => {
   assert.match(html, /const displayName = questionDisplayName\(questionType, questionId, question\)/);
   assert.match(html, /\.filter\(row => row\[2\] \|\| row\[3\]\)/);

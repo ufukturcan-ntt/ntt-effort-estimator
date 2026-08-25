@@ -2820,40 +2820,40 @@
     ];
 
     const moduleCatalog = [
-      {module:"FI", group:"S4Core", selected:true, team:""},
-      {module:"CO", group:"S4Core", selected:true, team:""},
-      {module:"TRM", group:"Advanced Solution", selected:true, team:""},
-      {module:"CM", group:"Advanced Solution", selected:true, team:""},
-      {module:"FM", group:"Advanced Solution", selected:true, team:""},
-      {module:"RM", group:"Advanced Solution", selected:true, team:""},
-      {module:"RE/FX", group:"Advanced Solution", selected:true, team:""},
-      {module:"MM", group:"S4Core", selected:true, team:""},
-      {module:"PP", group:"S4Core", selected:true, team:""},
-      {module:"SD", group:"S4Core", selected:true, team:""},
-      {module:"QM", group:"S4Core", selected:true, team:""},
-      {module:"PM", group:"S4Core", selected:true, team:""},
-      {module:"PS", group:"S4Core", selected:true, team:""},
-      {module:"MII/DM", group:"Advanced Solution", selected:true, team:""},
-      {module:"PM Mobility", group:"NTT Own IP", selected:true, team:""},
-      {module:"Basic EWM", group:"Advanced Solution", selected:true, team:""},
-      {module:"Advanced EWM", group:"Advanced Solution", selected:true, team:""},
-      {module:"TM", group:"Advanced Solution", selected:true, team:""},
-      {module:"PPDS", group:"Advanced Solution", selected:true, team:""},
-      {module:"ABAP", group:"Advanced Solution", selected:true, team:""},
-      {module:"BASIS", group:"Advanced Solution", selected:true, team:""},
-      {module:"E-Fatura/Arşiv", group:"NTT Own IP", selected:true, team:""},
-      {module:"E-İrsaliye", group:"NTT Own IP", selected:true, team:""},
-      {module:"E-Defter", group:"NTT Own IP", selected:true, team:""},
-      {module:"E-Hesap Özeti", group:"NTT Own IP", selected:true, team:""},
-      {module:"E-Ödeme", group:"NTT Own IP", selected:true, team:""},
-      {module:"E-Mutabakat", group:"NTT Own IP", selected:true, team:""},
-      {module:"E-Beyanname", group:"NTT Own IP", selected:true, team:""},
-      {module:"Gelen Fatura Otomasyon", group:"NTT Own IP", selected:true, team:""},
-      {module:"GLASSWING", group:"NTT Own IP", selected:true, team:""},
+      {module:"FI", group:"S4Core", selected:false, team:""},
+      {module:"CO", group:"S4Core", selected:false, team:""},
+      {module:"TRM", group:"Advanced Solution", selected:false, team:""},
+      {module:"CM", group:"Advanced Solution", selected:false, team:""},
+      {module:"FM", group:"Advanced Solution", selected:false, team:""},
+      {module:"RM", group:"Advanced Solution", selected:false, team:""},
+      {module:"RE/FX", group:"Advanced Solution", selected:false, team:""},
+      {module:"MM", group:"S4Core", selected:false, team:""},
+      {module:"PP", group:"S4Core", selected:false, team:""},
+      {module:"SD", group:"S4Core", selected:false, team:""},
+      {module:"QM", group:"S4Core", selected:false, team:""},
+      {module:"PM", group:"S4Core", selected:false, team:""},
+      {module:"PS", group:"S4Core", selected:false, team:""},
+      {module:"MII/DM", group:"Advanced Solution", selected:false, team:""},
+      {module:"PM Mobility", group:"NTT Own IP", selected:false, team:""},
+      {module:"Basic EWM", group:"Advanced Solution", selected:false, team:""},
+      {module:"Advanced EWM", group:"Advanced Solution", selected:false, team:""},
+      {module:"TM", group:"Advanced Solution", selected:false, team:""},
+      {module:"PPDS", group:"Advanced Solution", selected:false, team:""},
+      {module:"ABAP", group:"Advanced Solution", selected:false, team:""},
+      {module:"BASIS", group:"Advanced Solution", selected:false, team:""},
+      {module:"E-Fatura/Arşiv", group:"NTT Own IP", selected:false, team:""},
+      {module:"E-İrsaliye", group:"NTT Own IP", selected:false, team:""},
+      {module:"E-Defter", group:"NTT Own IP", selected:false, team:""},
+      {module:"E-Hesap Özeti", group:"NTT Own IP", selected:false, team:""},
+      {module:"E-Ödeme", group:"NTT Own IP", selected:false, team:""},
+      {module:"E-Mutabakat", group:"NTT Own IP", selected:false, team:""},
+      {module:"E-Beyanname", group:"NTT Own IP", selected:false, team:""},
+      {module:"Gelen Fatura Otomasyon", group:"NTT Own IP", selected:false, team:""},
+      {module:"GLASSWING", group:"NTT Own IP", selected:false, team:""},
       {module:"COMMODITY", group:"NTT Own IP", selected:false, team:""},
-      {module:"Dış Ticaret Çözümü", group:"NTT Own IP", selected:true, team:""},
-      {module:"Seyahat ve Masraf Yönetimi", group:"NTT Own IP", selected:true, team:""},
-      {module:"NTT Data POS", group:"NTT Own IP", selected:true, team:""}
+      {module:"Dış Ticaret Çözümü", group:"NTT Own IP", selected:false, team:""},
+      {module:"Seyahat ve Masraf Yönetimi", group:"NTT Own IP", selected:false, team:""},
+      {module:"NTT Data POS", group:"NTT Own IP", selected:false, team:""}
     ];
 
     const defaultModuleGroups = ["S4Core", "NTT Own IP", "Advanced Solution", "Zorunlu Modüller"];
@@ -8849,6 +8849,15 @@
       });
     }
 
+    function clearModuleSelectionState() {
+      moduleCatalog.forEach(item => {
+        const state = moduleState.get(item.module);
+        if (!state) return;
+        state.selected = false;
+        state.team = "";
+      });
+    }
+
     function resetSelectableState(mode, offer = null, options = {}) {
       const savedModules = offerJson(offer?.module_selection);
       const savedLocalizations = offerJson(offer?.localization_selection);
@@ -9158,6 +9167,7 @@
         effort: "0"
       }, { preserveAnswers: false, renderQuestions: false });
       resetSelectableState("new", null, { render: false });
+      clearModuleSelectionState();
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
