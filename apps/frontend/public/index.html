@@ -7324,7 +7324,7 @@
         button.textContent = "Kaydediliyor";
       }
       try {
-        renderAdminPage({ all: true });
+        renderUnrenderedAdminSections();
         const config = collectAdminConfig();
         config.__meta = { versions: adminConfigVersions };
         const savedConfig = await window.EffortApi.saveAdminConfig(config);
@@ -7492,6 +7492,12 @@
         renderEditableMatrix("adminVmpHead", "adminVmpRows", normalizeVariableModulePhaseRows(data.variableModulePhase || []));
       }
       adminRenderedSections.add(section);
+    }
+
+    function renderUnrenderedAdminSections() {
+      adminSectionOrder.forEach(section => {
+        if (!adminRenderedSections.has(section)) renderAdminSection(section);
+      });
     }
 
     function renderAdminPage(options = {}) {

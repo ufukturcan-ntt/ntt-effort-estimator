@@ -61,6 +61,12 @@ test("admin configuration is saved in one request", () => {
   assert.doesNotMatch(html, /Promise\.all\(Object\.entries\(config\)/);
 });
 
+test("admin save preserves in-progress restriction edits", () => {
+  assert.match(html, /function renderUnrenderedAdminSections\(\)/);
+  assert.match(html, /renderUnrenderedAdminSections\(\);\s*const config = collectAdminConfig\(\)/);
+  assert.doesNotMatch(html, /renderAdminPage\(\{ all: true \}\);\s*const config = collectAdminConfig\(\)/);
+});
+
 test("large Excel library is lazy-loaded", () => {
   assert.doesNotMatch(html, /<script src="assets\/xlsx\.full\.min\.js"><\/script>/);
   assert.match(html, /function ensureXlsxLoaded\(\)/);
