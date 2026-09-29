@@ -106,6 +106,12 @@ test("question restriction rows preserve question values by stable id", () => {
   assert.match(html, /uniqueOptionValues\(\["", \.\.\.adminQuestionNamesByType\(typeSelect\.value\), current\]\)/);
 });
 
+test("question restrictions omit notes and usage columns", () => {
+  assert.match(html, /const restrictionHeaders = \["No", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active\?"\];/);
+  assert.doesNotMatch(html, /row\[idx\("Notes"\)\]/);
+  assert.doesNotMatch(html, /row\[idx\("Usage"\)\]/);
+});
+
 test("duplicate 3rd party integration scope question is canonicalized", () => {
   assert.match(html, /fromIds:\s*\["scope-54"\]/);
   assert.match(html, /fromNames:\s*\["Kaç farklı 3rd party entegrasyon sayısı bulunmaktadır\?"\]/);
@@ -315,4 +321,33 @@ test("admin question seed stays synchronized with bundled questions", () => {
   }));
   assert.deepEqual(adminQuestions("scope"), questionRows("scopeQuestions"));
   assert.deepEqual(adminQuestions("development"), questionRows("developmentQuestions"));
+});
+
+test("requested retail scope questions are bundled and seeded", () => {
+  const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(questionsJs, context);
+  vm.runInNewContext(adminDataJs, context);
+  const expected = [
+    "OKC kullanımı", "EFT POS kullanılıyor mu?", "Click and Collect süreci",
+    "Mağaza teslim alım süreci kullanılacak mı? (C&C)", "Müşteri teslim et süreci kullanılacak mı? (C&C)",
+    "Kaç dil için ekran kullanımı olacaktır?", "E-çözümler süreci ile POS entegrasyonu var mı?",
+    "Lokalizasyon", "Tax free satış", "Vergi istisnai satış", "Değişim süreci",
+    "Satış sonrası hizmet süreci", "Garanti süreci", "Kasa kapanışı günlük yapılıyor mu?",
+    "Merkez kasa/yönetim kasası yönetimi", "CRM entegrasyonları", "Loyalty", "Kupon kullanımı",
+    "Gift Card kullanımı var mı?", "Kampanya hesaplaması kasa üzerinde mi yapılacak?",
+    "Marketing kampanyaları ya da tarihli kampanyalar kasada tutulacak mı?", "Kampanya tipleri ve sayısı",
+    "Dış sistem entegrasyonları", "Localization Selection"
+  ];
+  const bundled = new Set(context.window.scopeQuestions.map(item => item.name));
+  const scopeTable = context.window.adminSeedData.scope;
+  const headerIndex = scopeTable.findIndex(row => row?.[0] === "No");
+  const seeded = new Set(scopeTable.slice(headerIndex + 1).map(row => row?.[1]));
+  expected.forEach(name => {
+    assert.ok(bundled.has(name), `Bundled scope question missing: ${name}`);
+    assert.ok(seeded.has(name), `Seeded scope question missing: ${name}`);
+  });
+  assert.equal(context.window.scopeQuestions.length, 101);
+  assert.ok(context.window.scopeQuestions.filter(item => Number(item.no) >= 78).every(item => item.sizeImpact === false));
 });

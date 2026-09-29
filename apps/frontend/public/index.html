@@ -4302,6 +4302,29 @@
       "Çıkış Kantar": "Outbound Weighbridge",
       "El terminali (giriş, nakil, çekme, mal çıkış)": "Handheld terminal (goods receipt, transfer, picking, goods issue)",
       "CRM entegrasyonları": "CRM Integrations",
+      "OKC kullanımı": "Cash Register Device Usage",
+      "EFT POS kullanılıyor mu?": "Is EFT POS Used?",
+      "Click and Collect süreci": "Click and Collect Process",
+      "Mağaza teslim alım süreci kullanılacak mı? (C&C)": "Will the Store Pickup Process Be Used? (C&C)",
+      "Müşteri teslim et süreci kullanılacak mı? (C&C)": "Will the Customer Handover Process Be Used? (C&C)",
+      "Kaç dil için ekran kullanımı olacaktır?": "How Many Screen Languages Will Be Used?",
+      "E-çözümler süreci ile POS entegrasyonu var mı?": "Is There POS Integration with E-Solutions?",
+      "Lokalizasyon": "Localization",
+      "Tax free satış": "Tax-Free Sales",
+      "Vergi istisnai satış": "Tax-Exempt Sales",
+      "Değişim süreci": "Exchange Process",
+      "Satış sonrası hizmet süreci": "After-Sales Service Process",
+      "Garanti süreci": "Warranty Process",
+      "Kasa kapanışı günlük yapılıyor mu?": "Is Daily Cash Register Closing Performed?",
+      "Merkez kasa/yönetim kasası yönetimi": "Central Cash Office Management",
+      "Loyalty": "Loyalty",
+      "Kupon kullanımı": "Coupon Usage",
+      "Gift Card kullanımı var mı?": "Are Gift Cards Used?",
+      "Kampanya hesaplaması kasa üzerinde mi yapılacak?": "Will Promotion Calculation Run on the POS?",
+      "Marketing kampanyaları ya da tarihli kampanyalar kasada tutulacak mı?": "Will Marketing or Date-Based Promotions Be Stored on the POS?",
+      "Kampanya tipleri ve sayısı": "Promotion Types and Count",
+      "Dış sistem entegrasyonları": "External System Integrations",
+      "Localization Selection": "Localization Selection",
       "Dış sistem sipariş entegrasyonları": "External System Order Integrations",
       "Teklif maliyetlendirme ekranı": "Quotation Costing Screen",
       "it.foreign trade & Gümrük ve diğer 3rd parti entegrasyonlar": "it.foreign trade, Customs and other 3rd party integrations",
@@ -4437,6 +4460,30 @@
       "Testler kapsamında performans testi yapılacak mı?": "Will performance testing be performed within the testing scope?",
       "Testler kapsamında stres testi yapılacak mı?": "Will stress testing be performed within the testing scope?",
       "Testler kapsamında saha testi yapılacak mı?": "Will field testing be performed within the testing scope?",
+      "Kaç tip ÖKC cihaz kullanılıyor?": "How many types of cash register devices are used?",
+      "EFT POS muafiyeti var mı, kullanılıyor mu?": "Is there an EFT POS exemption, or is EFT POS used?",
+      "Click and Collect süreci var mı?": "Is there a Click and Collect process?",
+      "Mağaza teslim alım süreci": "Store pickup process",
+      "Müşteri teslim et süreci": "Customer handover process",
+      "ABAP, Fiori ekran çevirim gereksinimleri olacak mı?": "Will ABAP or Fiori screen translations be required?",
+      "Kasada e-fatura/e-arşiv entegrasyonu olacak mı?": "Will e-Invoice/e-Archive integration be available at the POS?",
+      "Ülkeye göre değişkenlik gösterebilir.": "May vary by country.",
+      "Global Blue entegrasyonu var mı?": "Is there a Global Blue integration?",
+      "Diplomat veya hayır kurumlarına vergi istisnalı satış yapılmakta mıdır?": "Are tax-exempt sales made to diplomats or charitable organizations?",
+      "Değişim, birebir değişim süreçleri var mı?": "Are exchange and like-for-like exchange processes available?",
+      "Satış sonrası hizmet": "After-sales service",
+      "Garanti süreci": "Warranty process",
+      "Kasa kapanışı ve muhasebeye aktarım var mı?": "Are cash register closing and accounting transfer processes available?",
+      "Günsonu ve banka transfer işlemleri yapılıyor mu?": "Are end-of-day and bank transfer transactions performed?",
+      "CRM entegrasyonu var mı?": "Is there a CRM integration?",
+      "Sadakat süreci ve kasada puan kullanımı var mı?": "Is there a loyalty process with point redemption at the POS?",
+      "Sonradan faturalandırılan kupon süreci var mı?": "Is there a subsequently invoiced coupon process?",
+      "Gift Card satış ve kullanımı": "Gift Card sales and redemption",
+      "Kampanya hesaplaması kasa üzerinde mi yapılacak, CAR varsa OPP Engine olacak mı?": "Will promotion calculation run on the POS, or on the OPP Engine when SAP CAR is used?",
+      "Kampanyaların tutulması": "Promotion maintenance",
+      "Kampanya tipleri": "Promotion types",
+      "Kasanın entegre olduğu başka sistemler var mı?": "Are there other systems integrated with the POS?",
+      "Ülke": "Country",
       "Termin kısıtları vb. gibi sebepler ile ekip ayrıştırma ihtiyacı bulunmakta mıdır?": "Is team separation required due to schedule constraints or similar reasons?",
       "Ambalaj bazlı örneklendirme süreci bulunmakta mıdır?": "Is there a packaging-based sampling process?",
       "Kaç şirket arasında olacak?": "How many companies will be involved?",
@@ -5865,7 +5912,7 @@
       return headers.findIndex(item => String(item || "").trim() === normalizedTarget);
     }
 
-    const restrictionHeaders = ["No", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?", "Notes", "Usage"];
+    const restrictionHeaders = ["No", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"];
 
     function normalizeRestrictionRows(rows = window.adminSeedData?.restrictions || []) {
       const source = Array.isArray(rows) && rows.length ? rows : [restrictionHeaders];
@@ -5891,9 +5938,7 @@
           row[idx("Allowed Industries")] || "All",
           implementationTypes,
           row[idx("Allowed System Types")] || "All",
-          row[idx("Active?")] || "Yes",
-          row[idx("Notes")] || "",
-          row[idx("Usage")] || ""
+          row[idx("Active?")] || "Yes"
         ];
       }).filter(row => row[2] || row[3]);
       const deduped = [];
@@ -5917,9 +5962,7 @@
           keep[4] || other[4],
           canonicalImplementationList(uniqueOptionValues([...(keep[5] || "").split(","), ...(other[5] || "").split(",")]).join(", ") || "All"),
           keep[6] || other[6],
-          keep[7] || other[7],
-          keep[8] || other[8],
-          keep[9] || other[9]
+          keep[7] || other[7]
         ];
       });
       return [restrictionHeaders, ...deduped];
@@ -6834,7 +6877,7 @@
       const impactRows = normalizeScopeImpactRows(Array.isArray(config.scopeSizeImpacts) && config.scopeSizeImpacts.length ? config.scopeSizeImpacts : [scopeImpactHeaders]);
       const impactIds = new Set(impactRows.slice(1).map(row => row[1]).filter(Boolean));
       const impactNames = new Set(impactRows.slice(1).map(row => normalizeQuestionName(row[4])));
-      bundledConversionQuestions.forEach(item => {
+      bundledConversionQuestions.filter(item => item.sizeImpact !== false).forEach(item => {
         const id = questionIdFor(item, "scope");
         if (impactIds.has(id) || impactNames.has(normalizeQuestionName(item.name))) return;
         impactRows.push([impactRows.length, id, "All", "All", item.name, "", 1, ""]);
@@ -6851,7 +6894,7 @@
         const id = questionIdFor(item, "scope");
         if (restrictionIds.has(id) || restrictionNames.has(normalizeQuestionName(item.name))) return;
         nextNo += 1;
-        restrictionRows.push([nextNo, "Kapsam", id, item.name, "All", "All", "All", "Yes", "", ""]);
+        restrictionRows.push([nextNo, "Kapsam", id, item.name, "All", "All", "All", "Yes"]);
         restrictionIds.add(id);
         restrictionNames.add(normalizeQuestionName(item.name));
       });
@@ -7012,9 +7055,6 @@
         config.restrictions = rows;
         return config;
       }
-      const template = rows.slice(1).find(row => row[8] || row[9]) || [];
-      const defaultNotes = template[8] || "All = tüm seçeneklerde göster; birden fazla değer için virgül kullanın.";
-      const defaultUsage = template[9] || "Scope/Development Applicable? filtresi TRUE seçiliyken sadece uygun sorular gösterilir.";
       const rowIndexByKey = new Map(rows.slice(1).map((row, index) => [
         `${questionTypeFromLabel(row[1])}\u001f${normalizeQuestionName(row[3])}`,
         index + 1
@@ -7035,9 +7075,7 @@
           "All",
           allowed,
           "All",
-          "Yes",
-          existingIndex ? (rows[existingIndex][8] || defaultNotes) : defaultNotes,
-          existingIndex ? (rows[existingIndex][9] || defaultUsage) : defaultUsage
+          "Yes"
         ];
         if (existingIndex) rows[existingIndex] = row;
         else {
