@@ -6830,11 +6830,9 @@
       const syncList = (configKey, bundledQuestions, defaultGroup) => {
         const existing = Array.isArray(config[configKey]) ? config[configKey] : [];
         const byId = new Map(existing.map(item => [questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development"), item]));
-        const byNo = new Map(existing.map(item => [String(item.no || ""), item]));
-        const byName = new Map(existing.map(item => [normalizeQuestionName(item.name), item]));
         const merged = bundledQuestions.map(seed => {
           const id = questionIdFor(seed, defaultGroup === "Kapsam" ? "scope" : "development");
-          const current = byId.get(id) || byNo.get(String(seed.no || "")) || byName.get(normalizeQuestionName(seed.name)) || {};
+          const current = byId.get(id) || {};
           return {
             ...current,
             ...seed,
@@ -6861,6 +6859,20 @@
         ...(config.questionFieldOptions.scopeCategories || []),
         ...bundledScopeQuestions.map(item => item.category)
       ]);
+      return config;
+    }
+
+    function normalizeConfiguredQuestionIds(config = {}) {
+      [
+        ["scopeQuestions", "scope"],
+        ["developmentQuestions", "development"]
+      ].forEach(([key, type]) => {
+        if (!Array.isArray(config[key])) return;
+        config[key] = config[key].map(item => ({
+          ...item,
+          id: questionIdFor(item, type)
+        })).sort((a, b) => (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER));
+      });
       return config;
     }
 
@@ -7228,17 +7240,20 @@
       return config;
     }
 
-    function applyAdminConfig(config = {}) {
+    function applyAdminConfig(config = {}, options = {}) {
       normalizeImplementationTypeReferences(config);
-      syncConfiguredQuestionsWithBundle(config);
-      ensureBundledScopeMaintenanceRows(config);
-      ensureScoredScopeImpactRows(config);
-      ensureConversionImplementationTypes(config);
-      ensureConversionScopeImpactRows(config);
-      ensureV18ImplementationTypes(config);
-      ensureV18TipPuanRestrictionRows(config);
-      ensureV18EffortPhaseRows(config);
-      ensureV18FixedDaysRows(config);
+      normalizeConfiguredQuestionIds(config);
+      if (options.source !== "live") {
+        syncConfiguredQuestionsWithBundle(config);
+        ensureBundledScopeMaintenanceRows(config);
+        ensureScoredScopeImpactRows(config);
+        ensureConversionImplementationTypes(config);
+        ensureConversionScopeImpactRows(config);
+        ensureV18ImplementationTypes(config);
+        ensureV18TipPuanRestrictionRows(config);
+        ensureV18EffortPhaseRows(config);
+        ensureV18FixedDaysRows(config);
+      }
       if (config.__meta?.versions) adminConfigVersions = { ...config.__meta.versions };
       ["scopeQuestions", "developmentQuestions"].forEach(key => {
         if (!config[key]) return;
@@ -7305,8 +7320,10 @@
 
     async function loadAdminConfig(options = {}) {
       if (!window.EffortApi) return;
-      const config = await window.EffortApi.adminData(currentUser?.id);
-      applyAdminConfig(config);
+      const config = currentUser?.is_admin
+        ? await window.EffortApi.adminData()
+        : await window.EffortApi.configData();
+      applyAdminConfig(config, { source: "live" });
       adminConfigLoaded = true;
       if (options.render !== false) refreshAfterAdminConfigLoad();
       return config;
@@ -7319,7 +7336,7 @@
     }
 
     function ensureAdminConfigLoaded(options = {}) {
-      if (!currentUser?.is_admin) return Promise.resolve();
+      if (!currentUser) return Promise.resolve();
       if (adminConfigLoaded) return Promise.resolve();
       if (adminConfigHydrationTimer) {
         clearTimeout(adminConfigHydrationTimer);
@@ -7342,7 +7359,7 @@
     }
 
     function scheduleDeferredAdminConfigHydration(delay = 8000) {
-      if (!currentUser?.is_admin || adminConfigLoaded || adminConfigPromise || adminConfigHydrationTimer) return;
+      if (!currentUser || adminConfigLoaded || adminConfigPromise || adminConfigHydrationTimer) return;
       adminConfigHydrationTimer = setTimeout(() => {
         adminConfigHydrationTimer = null;
         ensureAdminConfigLoaded({ render: false });
@@ -7368,7 +7385,7 @@
         const config = collectAdminConfig();
         config.__meta = { versions: adminConfigVersions };
         const savedConfig = await window.EffortApi.saveAdminConfig(config);
-        applyAdminConfig(savedConfig || config);
+        applyAdminConfig(savedConfig || config, { source: "live" });
         renderLocalizationControls();
         renderWorkbookDrivenScreens();
         adminRenderedSections.clear();

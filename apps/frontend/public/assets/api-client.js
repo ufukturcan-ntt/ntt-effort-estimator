@@ -108,6 +108,9 @@ window.EffortApi = {
   adminData() {
     return this.request("/api/admin");
   },
+  configData() {
+    return this.request("/api/config");
+  },
   saveAdminEntity(entity, payload, expectedUpdatedAt = "") {
     return this.request(`/api/admin/${encodeURIComponent(entity)}`, {
       method: "PUT",

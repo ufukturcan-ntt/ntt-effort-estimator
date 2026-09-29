@@ -74,8 +74,9 @@ test("large Excel library is lazy-loaded", () => {
 });
 
 test("screen data is loaded lazily after authentication", () => {
-  assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\?\.is_admin\) return Promise\.resolve\(\)/s);
-  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser\?\.is_admin/s);
+  assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
+  assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);
+  assert.match(html, /currentUser\?\.is_admin\s*\? await window\.EffortApi\.adminData\(\)\s*: await window\.EffortApi\.configData\(\)/s);
   assert.match(html, /async function hydrateHomeData\(\) \{\s*scheduleDeferredAdminConfigHydration\(\);\s*return Promise\.resolve\(\);\s*\}/s);
   assert.match(html, /if \(screenId === "overview" \|\| screenId === "allworks"\) \{\s*renderAllWorks\(\);\s*loadOffers\(\{ maxAge: 60000 \}\)/s);
   assert.match(html, /async function openNewOffer\(\) \{\s*refreshProjectDefinitionSelects\(\);\s*await ensureAdminConfigLoaded\(\{ render: false \}\);\s*refreshProjectDefinitionSelects\(\);/s);

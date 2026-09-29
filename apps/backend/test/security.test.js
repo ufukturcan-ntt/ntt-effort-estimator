@@ -34,6 +34,29 @@ test("admin bulk save uses a database transaction", () => {
   assert.match(server, /client\.query\("rollback"\)/);
 });
 
+test("authenticated users can read public live configuration without private approval settings", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /app\.get\("\/api\/config", requireAuth/);
+  assert.match(server, /app\.get\("\/api\/admin", requireAuth, requireAdmin/);
+  assert.match(server, /includePrivate \? \[\.\.\.readableAdminEntities, "approvalSettings"\] : readableAdminEntities/);
+});
+
+test("question relationships are migrated to stable ids without overwriting existing questions", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /await migrateQuestionIds\(\)/);
+  assert.match(server, /if \(scopeByName\.has\(key\)\) continue/);
+  assert.match(server, /idHeader: "Question ID"[\s\S]*?nameHeader: "Question"/);
+  assert.match(server, /idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu"/);
+  assert.match(server, /idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu"/);
+});
+
+test("local seed only initializes an empty admin configuration", () => {
+  const seed = fs.readFileSync(new URL("../scripts/seed-admin-data.js", import.meta.url), "utf8");
+  assert.match(seed, /if \(count\) \{/);
+  assert.match(seed, /Yerel seed uygulanmadı/);
+  assert.match(seed, /insert into admin_config/);
+});
+
 test("offer update SQL uses contiguous parameter numbers", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /total_effort = coalesce\(\$8::numeric, total_effort\)/);

@@ -6,6 +6,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
+import { requiredScopeQuestions } from "./scope-question-migrations.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -693,10 +694,23 @@ app.delete("/api/offers/:id", requireAuth, async (req, res, next) => {
   }
 });
 
-app.get("/api/admin", requireAuth, requireAdmin, async (req, res, next) => {
-  try {
-    const result = await query(`select entity, payload, updated_at from admin_config order by entity`);
-    const config = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+const readableAdminEntities = [
+  "projectDefinitions", "moduleCatalog", "scopeQuestions", "developmentQuestions",
+  "libraryItems", "questionFieldOptions", "restrictions", "fixedDays",
+  "sizeRanges", "scopeSizeImpacts", "effortPhases", "localizationEfforts", "variableModulePhase"
+];
+
+async function readAdminConfig(includePrivate = false) {
+  const entities = includePrivate ? [...readableAdminEntities, "approvalSettings"] : readableAdminEntities;
+  const result = await query(
+    `select entity, payload, updated_at
+     from admin_config
+     where entity = any($1::text[])
+     order by entity`,
+    [entities]
+  );
+  const config = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+  if (includePrivate) {
     config.__meta = {
       versions: Object.fromEntries(result.rows.map(row => [row.entity, normalizedVersion(row.updated_at)]))
     };
@@ -704,7 +718,21 @@ app.get("/api/admin", requireAuth, requireAdmin, async (req, res, next) => {
       userApproverEmail: config.approvalSettings?.userApproverEmail || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL || "",
       offerApproverEmail: config.approvalSettings?.offerApproverEmail || process.env.OFFER_APPROVER_EMAIL || process.env.APPROVER_EMAIL || process.env.ADMIN_EMAIL || ""
     };
-    res.json(config);
+  }
+  return config;
+}
+
+app.get("/api/config", requireAuth, async (_req, res, next) => {
+  try {
+    res.json(await readAdminConfig(false));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/admin", requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    res.json(await readAdminConfig(true));
   } catch (error) {
     next(error);
   }
@@ -804,12 +832,161 @@ app.use((error, _req, res, _next) => {
   res.status(error.statusCode || 500).json({ error: error.message || "Unexpected error" });
 });
 
+function normalizedQuestionKey(value = "") {
+  return String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
+}
+
+function permanentQuestionId(item = {}, type = "scope", fallbackIndex = 0) {
+  const existing = String(item.id || item.questionId || "").trim();
+  if (existing) return existing;
+  const number = String(item.no || "").trim();
+  return `${type === "development" ? "dev" : "scope"}-${number || fallbackIndex + 1}`;
+}
+
+function attachQuestionIds(questions = [], type = "scope") {
+  return (Array.isArray(questions) ? questions : []).map((item, index) => ({
+    ...item,
+    id: permanentQuestionId(item, type, index)
+  }));
+}
+
+function ensureMatrixColumn(matrix, header, beforeHeader) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  if (headers.includes(header)) return matrix;
+  const beforeIndex = headers.indexOf(beforeHeader);
+  const insertIndex = beforeIndex >= 0 ? beforeIndex : headers.length;
+  return matrix.map((row, index) => {
+    if (!Array.isArray(row)) return row;
+    const next = [...row];
+    next.splice(insertIndex, 0, index === 0 ? header : "");
+    return next;
+  });
+}
+
+function setQuestionReferenceIds(matrix, definitions) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const next = matrix.map(row => Array.isArray(row) ? [...row] : row);
+  let changed = false;
+  for (const definition of definitions) {
+    const idIndex = headers.indexOf(definition.idHeader);
+    const nameIndex = headers.indexOf(definition.nameHeader);
+    if (idIndex < 0 || nameIndex < 0) continue;
+    for (let index = 1; index < next.length; index += 1) {
+      const row = next[index];
+      if (!Array.isArray(row)) continue;
+      const question = definition.resolve
+        ? definition.resolve(row, headers)
+        : definition.byName.get(normalizedQuestionKey(row[nameIndex]));
+      if (!question || row[idIndex] === question.id) continue;
+      row[idIndex] = question.id;
+      changed = true;
+    }
+  }
+  return changed ? next : matrix;
+}
+
+function ensureRequiredRestrictionRows(matrix, questionsByName) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const typeIndex = headers.indexOf("Question Type");
+  const idIndex = headers.indexOf("Question ID");
+  const questionIndex = headers.indexOf("Question");
+  if (typeIndex < 0 || idIndex < 0 || questionIndex < 0) return matrix;
+  const next = matrix.map(row => Array.isArray(row) ? [...row] : row);
+  const existingIds = new Set(next.slice(1).map(row => String(row?.[idIndex] || "").trim()).filter(Boolean));
+  for (const question of requiredScopeQuestions) {
+    const stored = questionsByName.get(normalizedQuestionKey(question.name));
+    if (!stored || existingIds.has(stored.id)) continue;
+    const row = Array(headers.length).fill("");
+    row[typeIndex] = "Kapsam";
+    row[idIndex] = stored.id;
+    row[questionIndex] = stored.name;
+    [["Allowed Industries", "All"], ["Allowed Implementation Types", "All"], ["Allowed System Types", "All"], ["Aktif", "Yes"]]
+      .forEach(([header, value]) => {
+        const index = headers.indexOf(header);
+        if (index >= 0) row[index] = value;
+      });
+    next.push(row);
+    existingIds.add(stored.id);
+  }
+  return next;
+}
+
+async function migrateQuestionIds() {
+  const entities = ["scopeQuestions", "developmentQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"];
+  const result = await query(`select entity, payload from admin_config where entity = any($1::text[])`, [entities]);
+  const original = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+  const next = { ...original };
+  next.scopeQuestions = attachQuestionIds(original.scopeQuestions, "scope");
+  next.developmentQuestions = attachQuestionIds(original.developmentQuestions, "development");
+
+  const scopeByName = new Map(next.scopeQuestions.map(item => [normalizedQuestionKey(item.name), item]));
+  for (const required of requiredScopeQuestions) {
+    const key = normalizedQuestionKey(required.name);
+    if (scopeByName.has(key)) continue;
+    const item = { ...required };
+    next.scopeQuestions.push(item);
+    scopeByName.set(key, item);
+  }
+  next.scopeQuestions.sort((a, b) => (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER));
+  const developmentByName = new Map(next.developmentQuestions.map(item => [normalizedQuestionKey(item.name), item]));
+
+  next.restrictions = ensureMatrixColumn(original.restrictions, "Question ID", "Question");
+  next.restrictions = setQuestionReferenceIds(next.restrictions, [
+    {
+      idHeader: "Question ID",
+      nameHeader: "Question",
+      resolve: (row, headers) => {
+        const type = normalizedQuestionKey(row[headers.indexOf("Question Type")]);
+        const name = normalizedQuestionKey(row[headers.indexOf("Question")]);
+        return type.includes("geli") || type.includes("develop") ? developmentByName.get(name) : scopeByName.get(name);
+      }
+    }
+  ]);
+  next.restrictions = ensureRequiredRestrictionRows(next.restrictions, scopeByName);
+  next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
+  next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
+    { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }
+  ]);
+  next.variableModulePhase = ensureMatrixColumn(original.variableModulePhase, "Kapsam Soru ID", "Kapsam Sorusu");
+  next.variableModulePhase = ensureMatrixColumn(next.variableModulePhase, "Geliştirme Soru ID", "Geliştirme Sorusu");
+  next.variableModulePhase = setQuestionReferenceIds(next.variableModulePhase, [
+    { idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu", byName: scopeByName },
+    { idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu", byName: developmentByName }
+  ]);
+
+  const changedEntries = Object.entries(next).filter(([entity, payload]) =>
+    payload !== undefined && JSON.stringify(payload) !== JSON.stringify(original[entity])
+  );
+  if (!changedEntries.length) return;
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    for (const [entity, payload] of changedEntries) {
+      await client.query(
+        `insert into admin_config (entity, payload) values ($1, $2::jsonb)
+         on conflict (entity) do update set payload = excluded.payload, updated_at = now()`,
+        [entity, JSON.stringify(payload)]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
   await query(schema);
   await ensureBootstrapAdmin();
   await migrateLibraryItemIds();
+  await migrateQuestionIds();
 }
 
 async function ensureBootstrapAdmin() {
