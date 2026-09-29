@@ -6,7 +6,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
-import { requiredScopeQuestions } from "./scope-question-migrations.js";
+import { requiredScopeQuestions, retailRestrictionQuestionNames } from "./scope-question-migrations.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -890,7 +890,7 @@ function setQuestionReferenceIds(matrix, definitions) {
 function ensureRequiredRestrictionRows(matrix, questionsByName) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
-  const typeIndex = headers.indexOf("Question Type");
+  const typeIndex = headers.indexOf("Question Type") >= 0 ? headers.indexOf("Question Type") : headers.indexOf("Variable Type");
   const idIndex = headers.indexOf("Question ID");
   const questionIndex = headers.indexOf("Question");
   if (typeIndex < 0 || idIndex < 0 || questionIndex < 0) return matrix;
@@ -903,13 +903,54 @@ function ensureRequiredRestrictionRows(matrix, questionsByName) {
     row[typeIndex] = "Kapsam";
     row[idIndex] = stored.id;
     row[questionIndex] = stored.name;
-    [["Allowed Industries", "All"], ["Allowed Implementation Types", "All"], ["Allowed System Types", "All"], ["Aktif", "Yes"]]
+    [["Allowed Industries", "All"], ["Allowed Implementation Types", "All"], ["Allowed System Types", "All"], [headers.includes("Active?") ? "Active?" : "Aktif", "Yes"]]
       .forEach(([header, value]) => {
         const index = headers.indexOf(header);
         if (index >= 0) row[index] = value;
       });
     next.push(row);
     existingIds.add(stored.id);
+  }
+  return next;
+}
+
+function ensureRetailRestrictionRows(matrix, questionsByName) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const indexOf = (...names) => names.map(name => headers.indexOf(name)).find(index => index >= 0) ?? -1;
+  const indexes = {
+    no: indexOf("No"),
+    type: indexOf("Question Type", "Variable Type"),
+    id: indexOf("Question ID"),
+    question: indexOf("Question"),
+    industries: indexOf("Allowed Industries"),
+    implementations: indexOf("Allowed Implementation Types"),
+    systems: indexOf("Allowed System Types"),
+    active: indexOf("Active?", "Aktif")
+  };
+  if ([indexes.type, indexes.id, indexes.question, indexes.industries, indexes.implementations, indexes.systems].some(index => index < 0)) return matrix;
+  const next = matrix.map(row => Array.isArray(row) ? [...row] : row);
+  const byId = new Map(next.slice(1).filter(Array.isArray).map(row => [String(row[indexes.id] || "").trim(), row]));
+  const byName = new Map(next.slice(1).filter(Array.isArray).map(row => [normalizedQuestionKey(row[indexes.question]), row]));
+  let nextNumber = Math.max(0, ...next.slice(1).map(row => Number(row?.[indexes.no]) || 0)) + 1;
+  for (const name of retailRestrictionQuestionNames) {
+    const question = questionsByName.get(normalizedQuestionKey(name));
+    if (!question) continue;
+    let row = byId.get(question.id) || byName.get(normalizedQuestionKey(question.name));
+    if (!row) {
+      row = Array(headers.length).fill("");
+      if (indexes.no >= 0) row[indexes.no] = nextNumber++;
+      next.push(row);
+    }
+    row[indexes.type] = "Kapsam";
+    row[indexes.id] = question.id;
+    row[indexes.question] = question.name;
+    row[indexes.industries] = "Perakende";
+    row[indexes.implementations] = "Greenfield";
+    row[indexes.systems] = "NTT POS on CAR, NTT POS on S4, Offline POS";
+    if (indexes.active >= 0) row[indexes.active] = "Yes";
+    byId.set(question.id, row);
+    byName.set(normalizedQuestionKey(question.name), row);
   }
   return next;
 }
@@ -939,13 +980,15 @@ async function migrateQuestionIds() {
       idHeader: "Question ID",
       nameHeader: "Question",
       resolve: (row, headers) => {
-        const type = normalizedQuestionKey(row[headers.indexOf("Question Type")]);
+        const typeIndex = headers.indexOf("Question Type") >= 0 ? headers.indexOf("Question Type") : headers.indexOf("Variable Type");
+        const type = normalizedQuestionKey(row[typeIndex]);
         const name = normalizedQuestionKey(row[headers.indexOf("Question")]);
         return type.includes("geli") || type.includes("develop") ? developmentByName.get(name) : scopeByName.get(name);
       }
     }
   ]);
   next.restrictions = ensureRequiredRestrictionRows(next.restrictions, scopeByName);
+  next.restrictions = ensureRetailRestrictionRows(next.restrictions, scopeByName);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
     { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }

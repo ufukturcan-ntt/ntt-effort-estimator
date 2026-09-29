@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "../src/auth.js";
 import fs from "node:fs";
+import { retailRestrictionQuestionNames } from "../src/scope-question-migrations.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -48,6 +49,15 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /idHeader: "Question ID"[\s\S]*?nameHeader: "Question"/);
   assert.match(server, /idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu"/);
   assert.match(server, /idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu"/);
+});
+
+test("retail POS scope restrictions are maintained for every requested question", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.equal(retailRestrictionQuestionNames.length, 37);
+  assert.equal(new Set(retailRestrictionQuestionNames).size, 37);
+  assert.match(server, /row\[indexes\.industries\] = "Perakende"/);
+  assert.match(server, /row\[indexes\.implementations\] = "Greenfield"/);
+  assert.match(server, /row\[indexes\.systems\] = "NTT POS on CAR, NTT POS on S4, Offline POS"/);
 });
 
 test("local seed only initializes an empty admin configuration", () => {

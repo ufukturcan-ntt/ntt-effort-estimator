@@ -384,3 +384,43 @@ export const requiredScopeQuestions = [
     "id": "scope-108"
   }
 ];
+
+export const retailRestrictionQuestionNames = [
+  "Şirket Kodu",
+  "Üretim Yeri",
+  "Entegrasyon Testi Tekrar Sayısı",
+  "Entegrasyon Testi Sayısı (Her ŞK/ÜY için ayrı mı)",
+  "Birim Test Sayısı",
+  "Dokümantasyon Dili",
+  "Sistem Dili",
+  "Anahtar Kullanıcı Eğitimi olacak mı?",
+  "Son Kullanıcı Eğitimi olacak mı? Olacak ise kaç farklı lokasyonda olacak? (Modül bazında)",
+  "Süreç Dokümantasyonu yapılacak mı?",
+  "Performans Testi",
+  "Stres Testi",
+  "Saha Testi",
+  "OKC kullanımı",
+  "EFT POS kullanılıyor mu?",
+  "Click and Collect süreci",
+  "Mağaza teslim alım süreci kullanılacak mı? (C&C)",
+  "Müşteri teslim et süreci kullanılacak mı? (C&C)",
+  "Kaç dil için ekran kullanımı olacaktır?",
+  "E-çözümler süreci ile POS entegrasyonu var mı?",
+  "Lokalizasyon",
+  "Tax free satış",
+  "Vergi istisnai satış",
+  "Değişim süreci",
+  "Satış sonrası hizmet süreci",
+  "Garanti süreci",
+  "Kasa kapanışı günlük yapılıyor mu?",
+  "Merkez kasa/yönetim kasası yönetimi",
+  "CRM entegrasyonları",
+  "Loyalty",
+  "Kupon kullanımı",
+  "Gift Card kullanımı var mı?",
+  "Kampanya hesaplaması kasa üzerinde mi yapılacak?",
+  "Marketing kampanyaları ya da tarihli kampanyalar kasada tutulacak mı?",
+  "Kampanya tipleri ve sayısı",
+  "Dış sistem entegrasyonları",
+  "Localization Selection"
+];
