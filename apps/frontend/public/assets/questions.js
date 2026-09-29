@@ -958,7 +958,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 78,
+    "no": 85,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -973,7 +973,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 79,
+    "no": 86,
     "sizeImpact": false,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
@@ -988,7 +988,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 80,
+    "no": 87,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1003,7 +1003,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 81,
+    "no": 88,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1018,7 +1018,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 82,
+    "no": 89,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1033,7 +1033,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 83,
+    "no": 90,
     "sizeImpact": false,
     "category": "D. Teknik / Custom Code",
     "group": "Kapsam",
@@ -1048,7 +1048,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 84,
+    "no": 91,
     "sizeImpact": false,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
@@ -1063,7 +1063,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 85,
+    "no": 92,
     "sizeImpact": false,
     "category": "A. Organizasyon & Kapsam",
     "group": "Kapsam",
@@ -1078,7 +1078,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 86,
+    "no": 93,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1093,7 +1093,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 87,
+    "no": 94,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1108,7 +1108,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 88,
+    "no": 95,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1123,7 +1123,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 89,
+    "no": 96,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1138,7 +1138,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 90,
+    "no": 97,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1153,7 +1153,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 91,
+    "no": 98,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1168,7 +1168,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 92,
+    "no": 99,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1183,7 +1183,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 93,
+    "no": 100,
     "sizeImpact": false,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
@@ -1198,7 +1198,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 94,
+    "no": 101,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1213,7 +1213,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 95,
+    "no": 102,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1228,7 +1228,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 96,
+    "no": 103,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1243,7 +1243,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 97,
+    "no": 104,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1258,7 +1258,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 98,
+    "no": 105,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1273,7 +1273,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 99,
+    "no": 106,
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
@@ -1288,7 +1288,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 100,
+    "no": 107,
     "sizeImpact": false,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
@@ -1303,7 +1303,7 @@ window.scopeQuestions = [
     "active": true
   },
   {
-    "no": 101,
+    "no": 108,
     "sizeImpact": false,
     "category": "A. Organizasyon & Kapsam",
     "group": "Kapsam",

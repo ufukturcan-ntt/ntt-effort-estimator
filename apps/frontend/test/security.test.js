@@ -349,5 +349,11 @@ test("requested retail scope questions are bundled and seeded", () => {
     assert.ok(seeded.has(name), `Seeded scope question missing: ${name}`);
   });
   assert.equal(context.window.scopeQuestions.length, 101);
-  assert.ok(context.window.scopeQuestions.filter(item => Number(item.no) >= 78).every(item => item.sizeImpact === false));
+  const addedQuestions = context.window.scopeQuestions.filter(item => expected.includes(item.name));
+  assert.deepEqual(Array.from(addedQuestions, item => Number(item.no)), Array.from({ length: 24 }, (_, index) => index + 85));
+  assert.ok(addedQuestions.every(item => item.sizeImpact === false));
+});
+
+test("server-only questions keep their numbers and are sorted with bundled questions", () => {
+  assert.match(html, /config\[configKey\] = \[\.\.\.merged, \.\.\.extras\]\.sort\(\(a, b\) =>\s*\(Number\(a\.no\) \|\| Number\.MAX_SAFE_INTEGER\) - \(Number\(b\.no\) \|\| Number\.MAX_SAFE_INTEGER\)/s);
 });

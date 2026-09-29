@@ -6850,7 +6850,9 @@
         });
         const bundledIds = new Set(merged.map(item => questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development")));
         const extras = existing.filter(item => !bundledIds.has(questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development")));
-        config[configKey] = [...merged, ...extras];
+        config[configKey] = [...merged, ...extras].sort((a, b) =>
+          (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER)
+        );
       };
       syncList("scopeQuestions", bundledScopeQuestions, "Kapsam");
       syncList("developmentQuestions", bundledDevelopmentQuestions, "Geliştirme");
