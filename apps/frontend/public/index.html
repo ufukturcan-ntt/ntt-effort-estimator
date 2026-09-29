@@ -9319,6 +9319,7 @@
         showAuthenticatedApp();
         const screenId = storedScreenId();
         const offerContext = storedOfferContext();
+        if (screenId === "admin") await ensureAdminConfigLoaded({ render: false });
         if (!offerScreens.has(screenId)) openScreen(screenId);
         ensureNavigationHistory(screenId);
         if (offerScreens.has(screenId) && offerContext?.id) {
@@ -9328,7 +9329,7 @@
         } else if (offerScreens.has(screenId)) {
           await ensureAdminConfigLoaded({ render: false });
           openWork(screenId);
-        } else {
+        } else if (screenId !== "admin") {
           scheduleDeferredAdminConfigHydration();
         }
         wakeTranslationQueue();

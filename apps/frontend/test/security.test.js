@@ -83,6 +83,11 @@ test("screen data is loaded lazily after authentication", () => {
   assert.doesNotMatch(html, /const offersPromise = loadOffers\(\)/);
 });
 
+test("admin refresh waits for persisted configuration before rendering", () => {
+  assert.match(html, /const screenId = storedScreenId\(\);\s*const offerContext = storedOfferContext\(\);\s*if \(screenId === "admin"\) await ensureAdminConfigLoaded\(\{ render: false \}\);\s*if \(!offerScreens\.has\(screenId\)\) openScreen\(screenId\);/s);
+  assert.match(html, /else if \(screenId !== "admin"\) \{\s*scheduleDeferredAdminConfigHydration\(\);\s*\}/s);
+});
+
 test("new offer screen opens before heavy panel hydration", () => {
   assert.match(html, /function hydrateNewOfferScreens\(\)/);
   assert.match(html, /setProjectForm\(\{[\s\S]*?\}, \{ preserveAnswers: false, renderQuestions: false \}\);\s*resetSelectableState\("new", null, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateNewOfferScreens\(\);/s);
