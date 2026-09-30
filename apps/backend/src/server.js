@@ -6,7 +6,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
-import { obsoletePosScopeQuestions, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions } from "./scope-question-migrations.js";
+import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions } from "./scope-question-migrations.js";
 import { retailRestrictionRollback } from "./restriction-rollback.js";
 
 const app = express();
@@ -1028,6 +1028,46 @@ function upsertPosRestrictionRows(matrix) {
   return [headers, ...rows];
 }
 
+function upsertPosDevelopmentRestrictionRows(matrix) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const index = header => headers.indexOf(header);
+  const noIndex = index("No");
+  const typeIndex = index("Variable Type") >= 0 ? index("Variable Type") : index("Question Type");
+  const idIndex = index("Question ID");
+  const questionIndex = index("Question");
+  const industryIndex = index("Allowed Industries");
+  const implementationIndex = index("Allowed Implementation Types");
+  const systemIndex = index("Allowed System Types");
+  const activeIndex = index("Active?");
+  if ([typeIndex, idIndex, questionIndex, industryIndex, implementationIndex, systemIndex, activeIndex].some(value => value < 0)) return matrix;
+  const rows = matrix.slice(1).filter(Array.isArray).map(row => [...row]);
+  let nextNo = Math.max(0, ...rows.map(row => Number(row[noIndex]) || 0));
+  for (const maintenance of posDevelopmentQuestionMaintenance) {
+    const key = normalizedQuestionKey(maintenance.name);
+    let row = rows.find(candidate =>
+      ["geliştirme", "development"].includes(normalizedQuestionKey(candidate[typeIndex]))
+      && (
+        String(candidate[idIndex] || "").trim() === maintenance.questionId
+        || normalizedQuestionKey(candidate[questionIndex]) === key
+      )
+    );
+    if (!row) {
+      row = Array.from({ length: headers.length }, () => "");
+      if (noIndex >= 0) row[noIndex] = ++nextNo;
+      rows.push(row);
+    }
+    row[typeIndex] = "Geliştirme";
+    row[idIndex] = maintenance.questionId;
+    row[questionIndex] = maintenance.name;
+    row[industryIndex] = "Perakende";
+    row[implementationIndex] = "Greenfield";
+    row[systemIndex] = "NTT POS on S4, NTT POS on CAR, Offline POS";
+    row[activeIndex] = "Yes";
+  }
+  return [headers, ...rows];
+}
+
 function rollbackRetailRestrictionRows(matrix) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -1104,6 +1144,37 @@ async function migrateQuestionIds() {
   }
   next.scopeQuestions = normalizeScopeQuestionStorage(next.scopeQuestions);
   const developmentByName = new Map(next.developmentQuestions.map(item => [normalizedQuestionKey(item.name), item]));
+  const developmentById = new Map(next.developmentQuestions.map(item => [String(item.id || "").trim(), item]));
+  for (const maintenance of posDevelopmentQuestionMaintenance) {
+    const key = normalizedQuestionKey(maintenance.name);
+    let item = developmentByName.get(key) || developmentById.get(maintenance.questionId);
+    if (!item) {
+      item = {
+        id: maintenance.questionId,
+        no: maintenance.no,
+        name: maintenance.name,
+        description: maintenance.description,
+        group: "Geliştirme",
+        variableType: maintenance.variableType,
+        answerType: maintenance.answerType,
+        sizeImpact: false,
+        score: 0,
+        effortImpactType: "",
+        active: true
+      };
+      next.developmentQuestions.push(item);
+      developmentByName.set(key, item);
+      developmentById.set(maintenance.questionId, item);
+    }
+    item.name = maintenance.name;
+    item.description = maintenance.description;
+    item.variableType = maintenance.variableType;
+    item.answerType = maintenance.answerType;
+  }
+  next.developmentQuestions.sort((left, right) =>
+    (Number(left.no) || Number.MAX_SAFE_INTEGER) - (Number(right.no) || Number.MAX_SAFE_INTEGER)
+    || String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
+  );
 
   next.restrictions = ensureMatrixColumn(original.restrictions, "Question ID", "Question");
   next.restrictions = setQuestionReferenceIds(next.restrictions, [
@@ -1120,6 +1191,7 @@ async function migrateQuestionIds() {
   ]);
   next.restrictions = removeObsoleteScopeQuestionReferences(next.restrictions);
   next.restrictions = upsertPosRestrictionRows(next.restrictions);
+  next.restrictions = upsertPosDevelopmentRestrictionRows(next.restrictions);
   next.restrictions = normalizeRestrictionStorage(next.restrictions);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = ensureMatrixColumn(next.scopeSizeImpacts, "System Type", "Kapsam Sorusu");

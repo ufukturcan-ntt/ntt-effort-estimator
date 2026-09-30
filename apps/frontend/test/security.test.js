@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { posScopeQuestionMaintenance } from "../../backend/src/scope-question-migrations.js";
+import { posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance } from "../../backend/src/scope-question-migrations.js";
 
 const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 const apiClient = fs.readFileSync(new URL("../public/assets/api-client.js", import.meta.url), "utf8");
@@ -410,6 +410,31 @@ test("POS question restrictions update existing rows without duplicates", () => 
     assert.equal(matches.length, 1, `Restriction row count differs for ${question.name}`);
     const row = matches[0];
     assert.equal(value(row, "Variable Type"), "Kapsam");
+    assert.equal(value(row, "Allowed Industries"), "Perakende");
+    assert.equal(value(row, "Allowed Implementation Types"), "Greenfield");
+    assert.equal(value(row, "Allowed System Types"), "NTT POS on S4, NTT POS on CAR, Offline POS");
+    assert.equal(value(row, "Active?"), "Yes");
+  }
+});
+
+test("POS development questions and restrictions are seeded without duplicates", () => {
+  const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(questionsJs, context);
+  vm.runInNewContext(adminDataJs, context);
+  const restrictions = context.window.adminSeedData.restrictions;
+  const headers = restrictions[0];
+  const value = (row, header) => row[headers.indexOf(header)];
+  for (const expected of posDevelopmentQuestionMaintenance) {
+    const questions = context.window.developmentQuestions.filter(item => item.id === expected.questionId);
+    assert.equal(questions.length, 1, `Development question count differs for ${expected.name}`);
+    assert.equal(questions[0].name, expected.name);
+    assert.equal(questions[0].variableType, expected.variableType);
+    const matches = restrictions.slice(1).filter(row => value(row, "Question ID") === expected.questionId);
+    assert.equal(matches.length, 1, `Development restriction count differs for ${expected.name}`);
+    const row = matches[0];
+    assert.equal(value(row, "Variable Type"), "Geliştirme");
     assert.equal(value(row, "Allowed Industries"), "Perakende");
     assert.equal(value(row, "Allowed Implementation Types"), "Greenfield");
     assert.equal(value(row, "Allowed System Types"), "NTT POS on S4, NTT POS on CAR, Offline POS");

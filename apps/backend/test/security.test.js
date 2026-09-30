@@ -4,7 +4,7 @@ import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } f
 import fs from "node:fs";
 import vm from "node:vm";
 import { retailRestrictionRollback } from "../src/restriction-rollback.js";
-import { obsoletePosScopeQuestions, posScopeQuestionMaintenance } from "../src/scope-question-migrations.js";
+import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance } from "../src/scope-question-migrations.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -71,6 +71,13 @@ test("POS scope maintenance restores only requested questions and removes obsole
   assert.equal(new Set(posScopeQuestionMaintenance.map(item => item.questionId)).size, 23);
 });
 
+test("POS development maintenance keeps stable ids and unique question definitions", () => {
+  assert.equal(posDevelopmentQuestionMaintenance.length, 15);
+  assert.equal(new Set(posDevelopmentQuestionMaintenance.map(item => item.questionId)).size, 15);
+  assert.equal(posDevelopmentQuestionMaintenance.find(item => item.name === "CRM entegrasyonları")?.questionId, "dev-11");
+  assert.equal(posDevelopmentQuestionMaintenance.find(item => item.name === "CRM entegrasyonları")?.variableType, "Sayı");
+});
+
 test("retail POS restriction batch is rolled back exactly once", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.equal(retailRestrictionRollback.restore.length, 14);
@@ -87,7 +94,7 @@ test("fallback restrictions omit persisted row numbers and sort by question id",
   const rows = context.window.adminSeedData.restrictions;
   const idIndex = rows[0].indexOf("Question ID");
   assert.equal(rows[0].includes("No"), false);
-  assert.equal(rows.length - 1, 117);
+  assert.equal(rows.length - 1, 131);
   assert.ok(rows.slice(1).every(row => row[idIndex]));
   const ids = Array.from(rows.slice(1), row => String(row[idIndex]));
   assert.deepEqual(ids, [...ids].sort((left, right) => String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" })));

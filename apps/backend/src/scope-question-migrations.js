@@ -244,6 +244,31 @@ export const obsoletePosScopeQuestions = [
   ["scope-108", "Localization Selection"]
 ].map(([questionId, name]) => ({ questionId, name }));
 
+export const posDevelopmentQuestionMaintenance = [
+  ["dev-25", 25, "Click and Collect süreci", "Click and Collect süreci var mı?", "Sayı"],
+  ["dev-26", 26, "Müşteri teslim et süreci kullanılacak mı? (C&C)", "Müşteri teslim et süreci", "Sayı"],
+  ["dev-27", 27, "E-çözümler süreci ile POS entegrasyonu var mı?", "Kasada e-fatura/e-arşiv entegrasyonu olacak mı?", "Evet/Hayır"],
+  ["dev-28", 28, "Lokalizasyon", "Ülkeye göre değişkenlik gösterebilir.", "Evet/Hayır"],
+  ["dev-29", 29, "Tax free satış", "Global Blue entegrasyonu var mı?", "Evet/Hayır"],
+  ["dev-30", 30, "Vergi istisnai satış", "Diplomat veya hayır kurumlarına vergi istisnalı satış yapılmakta mıdır?", "Evet/Hayır"],
+  ["dev-31", 31, "Merkez kasa/yönetim kasası yönetimi", "Günsonu ve banka transfer işlemleri yapılıyor mu?", "Evet/Hayır"],
+  ["dev-11", 11, "CRM entegrasyonları", "CRM entegrasyonu var mı?", "Sayı"],
+  ["dev-32", 32, "Loyalty", "Sadakat süreci ve kasada puan kullanımı var mı?", "Evet/Hayır"],
+  ["dev-33", 33, "Kupon kullanımı", "Sonradan faturalandırılan kupon süreci var mı?", "Evet/Hayır"],
+  ["dev-34", 34, "Gift Card kullanımı var mı?", "Gift Card satış ve kullanımı", "Evet/Hayır"],
+  ["dev-35", 35, "Kampanya hesaplaması kasa üzerinde mi yapılacak?", "Kampanya hesaplaması kasa üzerinde mi yapılacak, CAR varsa OPP Engine olacak mı?", "Evet/Hayır"],
+  ["dev-36", 36, "Marketing kampanyaları ya da tarihli kampanyalar kasada tutulacak mı?", "Kampanyaların tutulması", "Evet/Hayır"],
+  ["dev-37", 37, "Kampanya tipleri ve sayısı", "Kampanya tipleri", "Evet/Hayır"],
+  ["dev-38", 38, "Localization Selection", "Ülke", "Evet/Hayır"]
+].map(([questionId, no, name, description, variableType]) => ({
+  questionId,
+  no,
+  name,
+  description,
+  variableType,
+  answerType: variableType === "Sayı" ? "number" : "yesno"
+}));
+
 export const posScopeImpactMaintenance = [
   { questionId: "scope-109", question: "Mağaza Sayısı", score: 0.5 },
   { questionId: "scope-110", question: "Kasa Sayısı", score: 0.5 },
