@@ -5913,6 +5913,7 @@
     }
 
     const restrictionHeaders = ["No", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"];
+    const restrictionStorageHeaders = restrictionHeaders.slice(1);
 
     function normalizeRestrictionRows(rows = window.adminSeedData?.restrictions || []) {
       const source = Array.isArray(rows) && rows.length ? rows : [restrictionHeaders];
@@ -5924,7 +5925,11 @@
         const type = row[idx("Variable Type")] || "Kapsam";
         const questionType = questionTypeFromLabel(type);
         const question = row[idx("Question")] || "";
-        const questionId = canonicalQuestionId(questionType, row[idx("Question ID")] || questionIdFromName(questionType, question), question);
+        const questionId = canonicalQuestionId(
+          questionType,
+          row[idx("Question ID")] || questionIdFromName(questionType, question) || stableQuestionId(questionType, "", question),
+          question
+        );
         const displayName = questionDisplayName(questionType, questionId, question);
         const rawImplementationTypes = row[idx("Allowed Implementation Types")] || "All";
         const implementationTypes = displayName.includes("TSA / Paralel İşletim") && String(rawImplementationTypes || "").trim() === "All"
@@ -5965,7 +5970,17 @@
           keep[7] || other[7]
         ];
       });
-      return [restrictionHeaders, ...deduped];
+      deduped.sort((left, right) =>
+        String(left[2] || "").localeCompare(String(right[2] || ""), "en", { numeric: true, sensitivity: "base" })
+        || questionTypeFromLabel(left[1]).localeCompare(questionTypeFromLabel(right[1]), "en", { sensitivity: "base" })
+        || String(left[3] || "").localeCompare(String(right[3] || ""), "tr", { sensitivity: "base" })
+      );
+      return [restrictionHeaders, ...deduped.map((row, index) => [index + 1, ...row.slice(1)])];
+    }
+
+    function restrictionStorageRows(rows = window.adminSeedData?.restrictions || []) {
+      const normalized = normalizeRestrictionRows(rows);
+      return [restrictionStorageHeaders, ...normalized.slice(1).map(row => row.slice(1))];
     }
 
     function isRestrictionQuestionHeader(header, headers = []) {
@@ -6026,6 +6041,7 @@
       return headers.map((header, index) => {
         const normalizedHeader = String(header || "").trim();
         if ((bodyId === "adminLibraryRows" && normalizedHeader === "ID") || isHiddenAdminColumn(normalizedHeader)) return `<td hidden>${escapeHtml(values[index] || "")}</td>`;
+        if (bodyId === "adminRestrictionsRows" && normalizedHeader === "No") return `<td class="restriction-row-number">${escapeHtml(values[index] || "")}</td>`;
         if (isDateHeader(normalizedHeader)) return adminDateCell(values[index] || todayInputDate());
         const isLocalizationCountry = bodyId === "adminLocalizationRows" && ["Ülke", "Ulke", "Ãœlke"].includes(normalizedHeader);
         const isVariableModuleCell = bodyId === "adminVmpRows"
@@ -6057,6 +6073,7 @@
       bindAdminEditable(body);
       syncVmpModuleCells(body);
       syncRestrictionQuestionCells(body);
+      if (bodyId === "adminRestrictionsRows") renumberRestrictionDisplayRows(body);
       if (bodyId === "adminFixedRows") requestAnimationFrame(syncFixedDaysScrollbars);
     }
 
@@ -6108,7 +6125,7 @@
       const nextNo = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
       const cells = headers.map((header, index) => {
         const normalized = String(header || "").trim();
-        if (normalized === "No") return editableCell(nextNo);
+        if (normalized === "No") return `<td class="restriction-row-number">${nextNo}</td>`;
         if (normalized === "Variable Type") return adminSelectCell("Kapsam", ["Kapsam", "Geliştirme"]);
         if (normalized === "Question ID") return `<td hidden></td>`;
         if (normalized === "Question") return adminSelectCell("", ["", ...adminQuestionNamesByType("Kapsam")], false, "data-restriction-question");
@@ -6121,7 +6138,19 @@
       body.insertAdjacentHTML("beforeend", `<tr>${cells}<td><button class="button danger" data-admin-remove type="button">Sil</button></td></tr>`);
       bindAdminEditable(body);
       syncRestrictionQuestionCells(body);
+      renumberRestrictionDisplayRows(body);
       markAdminDirty();
+    }
+
+    function renumberRestrictionDisplayRows(body = document.getElementById("adminRestrictionsRows")) {
+      if (!body) return;
+      [...body.querySelectorAll("tr")].forEach((row, index) => {
+        const cell = row.children[0];
+        if (!cell) return;
+        cell.textContent = String(index + 1);
+        cell.classList.add("restriction-row-number");
+        cell.removeAttribute("contenteditable");
+      });
     }
 
     function syncRestrictionQuestionCells(root = document) {
@@ -6276,7 +6305,10 @@
         button.dataset.removeBound = "true";
         button.addEventListener("click", () => {
           if (!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
-          button.closest("tr, .definition-row, .admin-module-card")?.remove();
+          const row = button.closest("tr, .definition-row, .admin-module-card");
+          const restrictionBody = row?.closest?.("#adminRestrictionsRows");
+          row?.remove();
+          if (restrictionBody) renumberRestrictionDisplayRows(restrictionBody);
           markAdminDirty();
         });
       });
@@ -6669,7 +6701,7 @@
         }
         return values;
       }).filter(row => row.some(Boolean));
-      if (bodyId === "adminRestrictionsRows") return normalizeRestrictionRows([headers, ...rows]);
+      if (bodyId === "adminRestrictionsRows") return restrictionStorageRows([headers, ...rows]);
       if (bodyId === "adminScopeImpactRows") return normalizeScopeImpactRows([headers, ...rows]);
       if (bodyId === "adminEffortPhaseRows") return normalizeEffortPhaseRows([headers, ...rows]);
       if (bodyId === "adminVmpRows") return normalizeVariableModulePhaseRows([headers, ...rows]);

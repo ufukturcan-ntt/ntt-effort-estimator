@@ -888,6 +888,34 @@ function setQuestionReferenceIds(matrix, definitions) {
   return changed ? next : matrix;
 }
 
+function normalizeRestrictionStorage(matrix) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const noIndex = headers.indexOf("No");
+  const nextHeaders = headers.filter((_, index) => index !== noIndex);
+  const idIndex = nextHeaders.indexOf("Question ID");
+  const typeIndex = nextHeaders.findIndex(header => ["Variable Type", "Question Type"].includes(header));
+  const questionIndex = nextHeaders.indexOf("Question");
+  const rows = matrix.slice(1).filter(Array.isArray).map(row => {
+    const nextRow = row.filter((_, index) => index !== noIndex);
+    if (idIndex >= 0 && !String(nextRow[idIndex] || "").trim()) {
+      const type = normalizedQuestionKey(nextRow[typeIndex]).includes("geli") ? "dev" : "scope";
+      const slug = normalizedQuestionKey(nextRow[questionIndex])
+        .replace(/[^a-z0-9ğüşöçı]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48);
+      nextRow[idIndex] = `${type}-legacy-${slug || "question"}`;
+    }
+    return nextRow;
+  });
+  rows.sort((left, right) =>
+    String(left[idIndex] || "").localeCompare(String(right[idIndex] || ""), "en", { numeric: true, sensitivity: "base" })
+    || String(left[typeIndex] || "").localeCompare(String(right[typeIndex] || ""), "en", { sensitivity: "base" })
+    || String(left[questionIndex] || "").localeCompare(String(right[questionIndex] || ""), "tr", { sensitivity: "base" })
+  );
+  return [nextHeaders, ...rows];
+}
+
 function rollbackRetailRestrictionRows(matrix) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -940,6 +968,7 @@ async function migrateQuestionIds() {
       }
     }
   ]);
+  next.restrictions = normalizeRestrictionStorage(next.restrictions);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
     { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }

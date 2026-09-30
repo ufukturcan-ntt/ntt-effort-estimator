@@ -105,6 +105,11 @@ test("question restriction rows preserve question values by stable id", () => {
   assert.match(html, /\.filter\(row => row\[2\] \|\| row\[3\]\)/);
   assert.match(html, /const current = questionDisplayName\(questionType, idValue, currentText\)/);
   assert.match(html, /uniqueOptionValues\(\["", \.\.\.adminQuestionNamesByType\(typeSelect\.value\), current\]\)/);
+  assert.match(html, /const restrictionStorageHeaders = restrictionHeaders\.slice\(1\)/);
+  assert.match(html, /return \[restrictionStorageHeaders, \.\.\.normalized\.slice\(1\)\.map\(row => row\.slice\(1\)\)\]/);
+  assert.match(html, /String\(left\[2\] \|\| ""\)\.localeCompare\(String\(right\[2\] \|\| ""\), "en", \{ numeric: true/);
+  assert.match(html, /class="restriction-row-number"/);
+  assert.match(html, /return restrictionStorageRows\(\[headers, \.\.\.rows\]\)/);
 });
 
 test("question restrictions omit notes and usage columns", () => {

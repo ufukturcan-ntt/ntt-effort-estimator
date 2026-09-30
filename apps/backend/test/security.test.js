@@ -61,16 +61,17 @@ test("retail POS restriction batch is rolled back exactly once", () => {
   assert.doesNotMatch(server, /ensureRetailRestrictionRows/);
 });
 
-test("fallback restriction numbers remain unique and continue from the previous maximum", () => {
+test("fallback restrictions omit persisted row numbers and sort by question id", () => {
   const adminData = fs.readFileSync(new URL("../../frontend/public/assets/admin-data.js", import.meta.url), "utf8");
   const context = { window: {} };
   vm.runInNewContext(adminData, context);
   const rows = context.window.adminSeedData.restrictions;
-  const noIndex = rows[0].indexOf("No");
-  const numbers = Array.from(rows.slice(1), row => Number(row[noIndex]));
-  assert.equal(numbers.length, 105);
-  assert.equal(new Set(numbers).size, numbers.length);
-  assert.deepEqual(numbers, Array.from({ length: 105 }, (_, index) => index + 1));
+  const idIndex = rows[0].indexOf("Question ID");
+  assert.equal(rows[0].includes("No"), false);
+  assert.equal(rows.length - 1, 105);
+  assert.ok(rows.slice(1).every(row => row[idIndex]));
+  const ids = Array.from(rows.slice(1), row => String(row[idIndex]));
+  assert.deepEqual(ids, [...ids].sort((left, right) => String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" })));
 });
 
 test("local seed only initializes an empty admin configuration", () => {
