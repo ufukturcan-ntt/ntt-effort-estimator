@@ -50,6 +50,9 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /idHeader: "Question ID"[\s\S]*?nameHeader: "Question"/);
   assert.match(server, /idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu"/);
   assert.match(server, /idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu"/);
+  assert.match(server, /function normalizeScopeQuestionStorage/);
+  assert.match(server, /delete next\.no/);
+  assert.match(server, /next\.scopeQuestions = normalizeScopeQuestionStorage\(next\.scopeQuestions\)/);
 });
 
 test("retail POS restriction batch is rolled back exactly once", () => {
@@ -79,6 +82,8 @@ test("local seed only initializes an empty admin configuration", () => {
   assert.match(seed, /if \(count\) \{/);
   assert.match(seed, /Yerel seed uygulanmadı/);
   assert.match(seed, /insert into admin_config/);
+  assert.match(seed, /delete next\.no/);
+  assert.match(seed, /id: String\(item\.id \|\| `scope-\$\{item\.no\}`\)/);
 });
 
 test("offer update SQL uses contiguous parameter numbers", () => {

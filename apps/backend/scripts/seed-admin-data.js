@@ -11,7 +11,13 @@ async function loadFrontendSeed() {
   const seed = context.window.adminSeedData || {};
   return {
     projectDefinitions: seed.projectDefinitions,
-    scopeQuestions: context.window.scopeQuestions,
+    scopeQuestions: context.window.scopeQuestions
+      .map(item => {
+        const next = { ...item, id: String(item.id || `scope-${item.no}`) };
+        delete next.no;
+        return next;
+      })
+      .sort((left, right) => left.id.localeCompare(right.id, "en", { numeric: true, sensitivity: "base" })),
     developmentQuestions: context.window.developmentQuestions,
     libraryItems: seed.libraryItems,
     questionFieldOptions: seed.questionFieldOptions,

@@ -6307,8 +6307,10 @@
           if (!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
           const row = button.closest("tr, .definition-row, .admin-module-card");
           const restrictionBody = row?.closest?.("#adminRestrictionsRows");
+          const scopeQuestionBody = row?.closest?.("#adminScopeRows");
           row?.remove();
           if (restrictionBody) renumberRestrictionDisplayRows(restrictionBody);
+          if (scopeQuestionBody) renumberScopeQuestionDisplayRows(scopeQuestionBody);
           markAdminDirty();
         });
       });
@@ -6420,10 +6422,11 @@
     function renderQuestionAdmin(targetId, questions) {
       const target = document.getElementById(targetId);
       if (!target) return;
+      if (targetId === "adminScopeRows") questions = normalizeScopeQuestionRows(questions);
       const fieldOptions = currentQuestionFieldOptions();
       target.innerHTML = questions.map((item, index) => {
         const questionType = targetId === "adminDevelopmentRows" ? "development" : "scope";
-        const questionId = questionIdFor(item, questionType);
+        const questionId = String(item.id || item.questionId || "").trim() || questionIdFor(item, questionType);
         const noValue = targetId === "adminScopeRows" ? index + 1 : (item.no || index + 1);
         const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
         const actionButtons = `<div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div>`;
@@ -6441,7 +6444,7 @@
         const categoryValue = item.category || "";
         return `
         <tr data-question-id="${escapeHtml(questionId)}">
-          ${editableCell(noValue)}
+          <td class="scope-question-row-number">${noValue}</td>
           ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
           ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
           ${editableCell(item.name)}
@@ -6451,6 +6454,7 @@
       `;
       }).join("");
       bindAdminEditable(target);
+      if (targetId === "adminScopeRows") renumberScopeQuestionDisplayRows(target);
     }
 
     function addAdminQuestion(targetId) {
@@ -6472,13 +6476,14 @@
       }
       const questionId = `scope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
       target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
-        ${editableCell(no)}
+        <td class="scope-question-row-number">${no}</td>
         ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
         ${adminSelectCell("", fieldOptions.scopeCategories)}
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
+      renumberScopeQuestionDisplayRows(target);
       markAdminDirty();
     }
 
@@ -6573,7 +6578,7 @@
       const categoryValue = cells[2] || "";
       const questionId = `scope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
       target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
-        ${editableCell(nextNo)}
+        <td class="scope-question-row-number">${nextNo}</td>
         ${adminSelectCell(variableTypeValue, optionValuesWithCurrent(fieldOptions.variableTypes, variableTypeValue))}
         ${adminSelectCell(categoryValue, optionValuesWithCurrent(fieldOptions.scopeCategories, categoryValue))}
         ${editableCell(`${cells[3] || "Yeni soru"} - Kopya`)}
@@ -6581,7 +6586,19 @@
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
+      renumberScopeQuestionDisplayRows(target);
       markAdminDirty();
+    }
+
+    function renumberScopeQuestionDisplayRows(body = document.getElementById("adminScopeRows")) {
+      if (!body) return;
+      [...body.querySelectorAll("tr")].forEach((row, index) => {
+        const cell = row.children[0];
+        if (!cell) return;
+        cell.textContent = String(index + 1);
+        cell.classList.add("scope-question-row-number");
+        cell.removeAttribute("contenteditable");
+      });
     }
 
     function collectDefinitionValues(targetId) {
@@ -6638,8 +6655,7 @@
         const cells = [...row.children].slice(0, 5).map(adminCellValue);
         const answerType = isNumberVariableType(cells[1]) ? "number" : "yesno";
         return {
-          id: row.dataset.questionId || stableQuestionId("scope", cells[0], cells[3]),
-          no: Number(cells[0]) || cells[0],
+          id: row.dataset.questionId || stableQuestionId("scope", "", cells[3]),
           group: "Kapsam",
           variableType: cells[1],
           category: cells[2],
@@ -6651,7 +6667,11 @@
           answerType,
           active: true
         };
-      }).filter(item => item.name);
+      }).filter(item => item.name).sort((left, right) =>
+        targetId === "adminScopeRows"
+          ? String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
+          : (Number(left.no) || Number.MAX_SAFE_INTEGER) - (Number(right.no) || Number.MAX_SAFE_INTEGER)
+      );
     }
 
     function collectMatrixRows(headId, bodyId) {
@@ -6788,6 +6808,19 @@
       return `${prefix}-${text || Date.now().toString(36)}`;
     }
 
+    function normalizeScopeQuestionRows(questions = []) {
+      return (Array.isArray(questions) ? questions : [])
+        .map((item, index) => ({
+          ...item,
+          id: String(item.id || item.questionId || "").trim() || stableQuestionId("scope", item.no || index + 1, item.name)
+        }))
+        .sort((left, right) =>
+          String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
+          || String(left.name || "").localeCompare(String(right.name || ""), "tr", { sensitivity: "base" })
+        )
+        .map((item, index) => ({ ...item, no: index + 1 }));
+    }
+
     function questionIdFor(item = {}, type = "scope") {
       return canonicalQuestionId(type, item.id || item.questionId || "", item.name)
         || stableQuestionId(type, item.no, canonicalQuestionName(type, "", item.name));
@@ -6880,9 +6913,10 @@
         });
         const bundledIds = new Set(merged.map(item => questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development")));
         const extras = existing.filter(item => !bundledIds.has(questionIdFor(item, defaultGroup === "Kapsam" ? "scope" : "development")));
-        config[configKey] = [...merged, ...extras].sort((a, b) =>
-          (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER)
-        );
+        const combined = [...merged, ...extras];
+        config[configKey] = configKey === "scopeQuestions"
+          ? normalizeScopeQuestionRows(combined)
+          : combined.sort((a, b) => (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER));
       };
       syncList("scopeQuestions", bundledScopeQuestions, "Kapsam");
       syncList("developmentQuestions", bundledDevelopmentQuestions, "Geliştirme");
@@ -6900,9 +6934,13 @@
         ["developmentQuestions", "development"]
       ].forEach(([key, type]) => {
         if (!Array.isArray(config[key])) return;
+        if (key === "scopeQuestions") {
+          config[key] = normalizeScopeQuestionRows(config[key]);
+          return;
+        }
         config[key] = config[key].map(item => ({
           ...item,
-          id: questionIdFor(item, type)
+          id: String(item.id || item.questionId || "").trim() || questionIdFor(item, type)
         })).sort((a, b) => (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER));
       });
       return config;

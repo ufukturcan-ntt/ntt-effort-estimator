@@ -360,6 +360,11 @@ test("requested retail scope questions are bundled and seeded", () => {
   assert.ok(addedQuestions.every(item => item.sizeImpact === false));
 });
 
-test("server-only questions keep their numbers and are sorted with bundled questions", () => {
-  assert.match(html, /config\[configKey\] = \[\.\.\.merged, \.\.\.extras\]\.sort\(\(a, b\) =>\s*\(Number\(a\.no\) \|\| Number\.MAX_SAFE_INTEGER\) - \(Number\(b\.no\) \|\| Number\.MAX_SAFE_INTEGER\)/s);
+test("scope questions use stable ids for storage and generated display numbers", () => {
+  assert.match(html, /config\[configKey\] = configKey === "scopeQuestions"\s*\? normalizeScopeQuestionRows\(combined\)/s);
+  assert.match(html, /id: String\(item\.id \|\| item\.questionId \|\| ""\)\.trim\(\) \|\| stableQuestionId\("scope", item\.no \|\| index \+ 1, item\.name\)/);
+  assert.match(html, /\.map\(\(item, index\) => \(\{ \.\.\.item, no: index \+ 1 \}\)\)/);
+  assert.match(html, /<td class="scope-question-row-number">\$\{noValue\}<\/td>/);
+  assert.match(html, /function renumberScopeQuestionDisplayRows/);
+  assert.doesNotMatch(html, /id: row\.dataset\.questionId \|\| stableQuestionId\("scope", "", cells\[3\]\),\s*no:/s);
 });

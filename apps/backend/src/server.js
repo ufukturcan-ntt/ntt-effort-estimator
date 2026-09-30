@@ -851,6 +851,19 @@ function attachQuestionIds(questions = [], type = "scope") {
   }));
 }
 
+function normalizeScopeQuestionStorage(questions = []) {
+  return (Array.isArray(questions) ? questions : [])
+    .map(item => {
+      const next = { ...item };
+      delete next.no;
+      return next;
+    })
+    .sort((left, right) =>
+      String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
+      || String(left.name || "").localeCompare(String(right.name || ""), "tr", { sensitivity: "base" })
+    );
+}
+
 function ensureMatrixColumn(matrix, header, beforeHeader) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -952,7 +965,7 @@ async function migrateQuestionIds() {
     next.scopeQuestions.push(item);
     scopeByName.set(key, item);
   }
-  next.scopeQuestions.sort((a, b) => (Number(a.no) || Number.MAX_SAFE_INTEGER) - (Number(b.no) || Number.MAX_SAFE_INTEGER));
+  next.scopeQuestions = normalizeScopeQuestionStorage(next.scopeQuestions);
   const developmentByName = new Map(next.developmentQuestions.map(item => [normalizedQuestionKey(item.name), item]));
 
   next.restrictions = ensureMatrixColumn(original.restrictions, "Question ID", "Question");
