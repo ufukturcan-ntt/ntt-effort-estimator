@@ -53,6 +53,8 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /function normalizeScopeQuestionStorage/);
   assert.match(server, /delete next\.no/);
   assert.match(server, /next\.scopeQuestions = normalizeScopeQuestionStorage\(next\.scopeQuestions\)/);
+  assert.match(server, /for \(const maintenance of posScopeQuestionMaintenance\)/);
+  assert.match(server, /next\.scopeSizeImpacts = upsertPosScopeImpactRows\(next\.scopeSizeImpacts\)/);
 });
 
 test("retail POS restriction batch is rolled back exactly once", () => {

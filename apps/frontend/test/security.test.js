@@ -316,7 +316,7 @@ test("admin question seed stays synchronized with bundled questions", () => {
       no: Number(row[0]),
       name: String(row[1] || ""),
       description: String(row[2] || ""),
-      answerType: String(row[3] || "")
+      answerType: String(row[3] || "").replace("Evet/Hayır", "Evet / Hayır")
     }));
   };
   const questionRows = key => (context.window[key] || []).map(question => ({
@@ -354,10 +354,40 @@ test("requested retail scope questions are bundled and seeded", () => {
     assert.ok(bundled.has(name), `Bundled scope question missing: ${name}`);
     assert.ok(seeded.has(name), `Seeded scope question missing: ${name}`);
   });
-  assert.equal(context.window.scopeQuestions.length, 101);
+  assert.equal(context.window.scopeQuestions.length, 104);
   const addedQuestions = context.window.scopeQuestions.filter(item => expected.includes(item.name));
   assert.deepEqual(Array.from(addedQuestions, item => Number(item.no)), Array.from({ length: 24 }, (_, index) => index + 85));
   assert.ok(addedQuestions.every(item => item.sizeImpact === false));
+});
+
+test("POS scope questions and Greenfield size impacts are seeded", () => {
+  const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(questionsJs, context);
+  vm.runInNewContext(adminDataJs, context);
+  const expectedQuestions = new Map([
+    ["Mağaza Sayısı", ["scope-109", "Sayı"]],
+    ["Kasa Sayısı", ["scope-110", "Sayı"]],
+    ["Mağaza içi depo sayısı", ["scope-111", "Sayı"]]
+  ]);
+  for (const [name, [id, variableType]] of expectedQuestions) {
+    const question = context.window.scopeQuestions.find(item => item.name === name);
+    assert.equal(question?.id, id);
+    assert.equal(question?.variableType, variableType);
+  }
+  const impacts = context.window.adminSeedData.scopeSizeImpacts;
+  const headers = impacts[0];
+  const value = (row, header) => row[headers.indexOf(header)];
+  const expectedScores = new Map([["scope-109", 0.5], ["scope-110", 0.5], ["scope-111", 1]]);
+  for (const [id, score] of expectedScores) {
+    const row = impacts.slice(1).find(item => value(item, "Question ID") === id);
+    assert.equal(value(row, "Implementation Type"), "Greenfield");
+    assert.equal(value(row, "System Type"), "NTT POS on S4, NTT POS on CAR, Offline POS");
+    assert.equal(Number(value(row, "Puan")), score);
+    assert.equal(Number(value(row, "Katsayı")), 1);
+    assert.equal(value(row, "Size Etki Tipi"), "Katsayı");
+  }
 });
 
 test("scope questions use stable ids for storage and generated display numbers", () => {

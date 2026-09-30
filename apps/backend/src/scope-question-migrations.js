@@ -382,5 +382,90 @@ export const requiredScopeQuestions = [
     "systemTypes": "All",
     "active": true,
     "id": "scope-108"
+  },
+  {
+    "no": 109,
+    "sizeImpact": false,
+    "category": "A. Organizasyon & Kapsam",
+    "group": "Kapsam",
+    "variableType": "Sayı",
+    "name": "Mağaza Sayısı",
+    "description": "Kasa operasyonlarının yürütüldüğü ne kadar mağaza bulunmaktadır?",
+    "answerType": "number",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "id": "scope-109"
+  },
+  {
+    "no": 110,
+    "sizeImpact": false,
+    "category": "A. Organizasyon & Kapsam",
+    "group": "Kapsam",
+    "variableType": "Sayı",
+    "name": "Kasa Sayısı",
+    "description": "Mağazalardaki toplam kasa sayısı ne kadardır?",
+    "answerType": "number",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "id": "scope-110"
+  },
+  {
+    "no": 111,
+    "sizeImpact": false,
+    "category": "A. Organizasyon & Kapsam",
+    "group": "Kapsam",
+    "variableType": "Sayı",
+    "name": "Mağaza içi depo sayısı",
+    "description": "Mağazalarda farklı depolar bulunuyor mu? (satış, iade vs)",
+    "answerType": "number",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "id": "scope-111"
   }
+];
+
+export const posScopeQuestionMaintenance = [
+  ["Mağaza Sayısı", "Kasa operasyonlarının yürütüldüğü ne kadar mağaza bulunmaktadır?", "Sayı"],
+  ["Kasa Sayısı", "Mağazalardaki toplam kasa sayısı ne kadardır?", "Sayı"],
+  ["Mağaza içi depo sayısı", "Mağazalarda farklı depolar bulunuyor mu? (satış, iade vs)", "Sayı"],
+  ["Şirket Kodu", "Farklı şirket kodu sayısı", "Sayı"],
+  ["Üretim Yeri", "Farklı üretim yeri sayısı", "Sayı"],
+  ["Birim Test Sayısı", "Kapsamda bulunan şirket kodları ve üretim yerleri bazında 1 kere birim test eğitimi verilecektir.", "Sayı"],
+  ["Dokümantasyon Dili", "Kaç farklı dilde dokümantasyon talebi bulunmakta?", "Evet/Hayır"],
+  ["Sistem Dili", "Uyarlaması gereken dil sayısı", "Sayı"],
+  ["Anahtar Kullanıcı Eğitimi olacak mı?", "Anahtar kullanıcı eğitimi proje ekibi tarafından verilecek mi?", "Sayı"],
+  ["Son Kullanıcı Eğitimi olacak mı? Olacak ise kaç farklı lokasyonda olacak? (Modül bazında)", "Son kullanıcı eğitimi proje ekibi tarafından verilecek mi?", "Sayı"],
+  ["Süreç Dokümantasyonu yapılacak mı?", "İhtiyacı bulunmakta mıdır?", "Evet/Hayır"],
+  ["Performans Testi", "Testler kapsamında performans testi yapılacak mı?", "Sayı"],
+  ["Stres Testi", "Testler kapsamında stres testi yapılacak mı?", "Evet/Hayır"],
+  ["Saha Testi", "Testler kapsamında saha testi yapılacak mı?", "Evet/Hayır"],
+  ["OKC kullanımı", "Kaç tip ÖKC cihaz kullanılıyor?", "Evet/Hayır"],
+  ["EFT POS kullanılıyor mu?", "EFT POS muafiyeti var mı, kullanılıyor mu?", "Evet/Hayır"],
+  ["Mağaza teslim alım süreci kullanılacak mı? (C&C)", "Mağaza teslim alım süreci", "Evet/Hayır"],
+  ["Kaç dil için ekran kullanımı olacaktır?", "ABAP, Fiori ekran çevirim gereksinimleri olacak mı?", "Evet/Hayır"],
+  ["Değişim süreci", "Değişim, birebir değişim süreçleri var mı?", "Evet/Hayır"],
+  ["Satış sonrası hizmet süreci", "Satış sonrası hizmet", "Evet/Hayır"],
+  ["Garanti süreci", "Garanti süreci", "Evet/Hayır"],
+  ["Kasa kapanışı günlük yapılıyor mu?", "Kasa kapanışı ve muhasebeye aktarım var mı?", "Sayı"],
+  ["Dış sistem entegrasyonları", "Kasanın entegre olduğu başka sistemler var mı?", "Evet/Hayır"]
+].map(([name, description, variableType]) => ({
+  name,
+  description,
+  variableType,
+  answerType: variableType === "Sayı" ? "number" : "yesno"
+}));
+
+export const posScopeImpactMaintenance = [
+  { questionId: "scope-109", question: "Mağaza Sayısı", score: 0.5 },
+  { questionId: "scope-110", question: "Kasa Sayısı", score: 0.5 },
+  { questionId: "scope-111", question: "Mağaza içi depo sayısı", score: 1 }
 ];

@@ -6,7 +6,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
-import { requiredScopeQuestions } from "./scope-question-migrations.js";
+import { posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions } from "./scope-question-migrations.js";
 import { retailRestrictionRollback } from "./restriction-rollback.js";
 
 const app = express();
@@ -929,6 +929,49 @@ function normalizeRestrictionStorage(matrix) {
   return [nextHeaders, ...rows];
 }
 
+function upsertPosScopeImpactRows(matrix) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const index = header => headers.indexOf(header);
+  const noIndex = index("No");
+  const idIndex = index("Question ID");
+  const implementationIndex = index("Implementation Type");
+  const systemIndex = index("System Type");
+  const questionIndex = index("Kapsam Sorusu");
+  const scoreIndex = index("Puan");
+  const coefficientIndex = index("Katsayı");
+  const impactTypeIndex = index("Size Etki Tipi");
+  if ([idIndex, implementationIndex, systemIndex, questionIndex, scoreIndex, coefficientIndex, impactTypeIndex].some(value => value < 0)) return matrix;
+  const rows = matrix.slice(1).filter(Array.isArray).map(row => [...row]);
+  const systemTypes = "NTT POS on S4, NTT POS on CAR, Offline POS";
+  const dimensionKey = value => String(value || "").split(",")
+    .map(item => normalizedQuestionKey(item))
+    .filter(Boolean)
+    .sort()
+    .join("|");
+  let nextNo = Math.max(0, ...rows.map(row => Number(row[noIndex]) || 0));
+  for (const maintenance of posScopeImpactMaintenance) {
+    let row = rows.find(candidate =>
+      String(candidate[idIndex] || "").trim() === maintenance.questionId
+      && normalizedQuestionKey(candidate[implementationIndex]) === normalizedQuestionKey("Greenfield")
+      && dimensionKey(candidate[systemIndex]) === dimensionKey(systemTypes)
+    );
+    if (!row) {
+      row = Array.from({ length: headers.length }, () => "");
+      if (noIndex >= 0) row[noIndex] = ++nextNo;
+      rows.push(row);
+    }
+    row[idIndex] = maintenance.questionId;
+    row[implementationIndex] = "Greenfield";
+    row[systemIndex] = systemTypes;
+    row[questionIndex] = maintenance.question;
+    row[scoreIndex] = maintenance.score;
+    row[coefficientIndex] = 1;
+    row[impactTypeIndex] = "Katsayı";
+  }
+  return [headers, ...rows];
+}
+
 function rollbackRetailRestrictionRows(matrix) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -965,6 +1008,13 @@ async function migrateQuestionIds() {
     next.scopeQuestions.push(item);
     scopeByName.set(key, item);
   }
+  for (const maintenance of posScopeQuestionMaintenance) {
+    const item = scopeByName.get(normalizedQuestionKey(maintenance.name));
+    if (!item) continue;
+    item.description = maintenance.description;
+    item.variableType = maintenance.variableType;
+    item.answerType = maintenance.answerType;
+  }
   next.scopeQuestions = normalizeScopeQuestionStorage(next.scopeQuestions);
   const developmentByName = new Map(next.developmentQuestions.map(item => [normalizedQuestionKey(item.name), item]));
 
@@ -983,9 +1033,11 @@ async function migrateQuestionIds() {
   ]);
   next.restrictions = normalizeRestrictionStorage(next.restrictions);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
+  next.scopeSizeImpacts = ensureMatrixColumn(next.scopeSizeImpacts, "System Type", "Kapsam Sorusu");
   next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
     { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }
   ]);
+  next.scopeSizeImpacts = upsertPosScopeImpactRows(next.scopeSizeImpacts);
   next.variableModulePhase = ensureMatrixColumn(original.variableModulePhase, "Kapsam Soru ID", "Kapsam Sorusu");
   next.variableModulePhase = ensureMatrixColumn(next.variableModulePhase, "Geliştirme Soru ID", "Geliştirme Sorusu");
   next.variableModulePhase = setQuestionReferenceIds(next.variableModulePhase, [

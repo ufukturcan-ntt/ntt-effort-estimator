@@ -22,7 +22,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 3,
@@ -44,7 +45,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 5,
@@ -182,12 +184,13 @@ window.scopeQuestions = [
     "no": 17,
     "name": "Dokümantasyon Dili",
     "description": "Kaç farklı dilde dokümantasyon talebi bulunmakta?",
-    "answerType": "number",
+    "answerType": "yesno",
     "score": null,
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Evet/Hayır"
   },
   {
     "no": 18,
@@ -198,7 +201,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 19,
@@ -220,7 +224,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Evet/Hayır"
   },
   {
     "no": 21,
@@ -231,7 +236,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 22,
@@ -259,12 +265,13 @@ window.scopeQuestions = [
     "no": 24,
     "name": "Anahtar Kullanıcı Eğitimi olacak mı?",
     "description": "Anahtar kullanıcı eğitimi proje ekibi tarafından verilecek mi?",
-    "answerType": "yesno",
+    "answerType": "number",
     "score": null,
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 25,
@@ -275,18 +282,20 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 26,
     "name": "Performans Testi",
     "description": "Testler kapsamında performans testi yapılacak mı?",
-    "answerType": "yesno",
+    "answerType": "number",
     "score": null,
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Sayı"
   },
   {
     "no": 27,
@@ -297,7 +306,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Evet/Hayır"
   },
   {
     "no": 28,
@@ -308,7 +318,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "variableType": "Evet/Hayır"
   },
   {
     "no": 29,
@@ -962,10 +973,10 @@ window.scopeQuestions = [
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
-    "variableType": "Sayı",
+    "variableType": "Evet/Hayır",
     "name": "OKC kullanımı",
     "description": "Kaç tip ÖKC cihaz kullanılıyor?",
-    "answerType": "number",
+    "answerType": "yesno",
     "score": 0,
     "industries": "All",
     "implementationTypes": "All",
@@ -1037,10 +1048,10 @@ window.scopeQuestions = [
     "sizeImpact": false,
     "category": "D. Teknik / Custom Code",
     "group": "Kapsam",
-    "variableType": "Sayı",
+    "variableType": "Evet/Hayır",
     "name": "Kaç dil için ekran kullanımı olacaktır?",
     "description": "ABAP, Fiori ekran çevirim gereksinimleri olacak mı?",
-    "answerType": "number",
+    "answerType": "yesno",
     "score": 0,
     "industries": "All",
     "implementationTypes": "All",
@@ -1157,10 +1168,10 @@ window.scopeQuestions = [
     "sizeImpact": false,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
-    "variableType": "Evet/Hayır",
+    "variableType": "Sayı",
     "name": "Kasa kapanışı günlük yapılıyor mu?",
     "description": "Kasa kapanışı ve muhasebeye aktarım var mı?",
-    "answerType": "yesno",
+    "answerType": "number",
     "score": 0,
     "industries": "All",
     "implementationTypes": "All",
@@ -1316,8 +1327,57 @@ window.scopeQuestions = [
     "implementationTypes": "All",
     "systemTypes": "All",
     "active": true
+  },
+  {
+    "no": 109,
+    "name": "Mağaza Sayısı",
+    "description": "Kasa operasyonlarının yürütüldüğü ne kadar mağaza bulunmaktadır?",
+    "answerType": "number",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "category": "A. Organizasyon & Kapsam",
+    "sizeImpact": false,
+    "group": "Kapsam",
+    "variableType": "Sayı",
+    "id": "scope-109"
+  },
+  {
+    "no": 110,
+    "name": "Kasa Sayısı",
+    "description": "Mağazalardaki toplam kasa sayısı ne kadardır?",
+    "answerType": "number",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "category": "A. Organizasyon & Kapsam",
+    "sizeImpact": false,
+    "group": "Kapsam",
+    "variableType": "Sayı",
+    "id": "scope-110"
+  },
+  {
+    "no": 111,
+    "name": "Mağaza içi depo sayısı",
+    "description": "Mağazalarda farklı depolar bulunuyor mu? (satış, iade vs)",
+    "answerType": "number",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "category": "A. Organizasyon & Kapsam",
+    "sizeImpact": false,
+    "group": "Kapsam",
+    "variableType": "Sayı",
+    "id": "scope-111"
   }
 ];
+
 window.developmentQuestions = [
   {
     "no": 1,
