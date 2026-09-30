@@ -942,6 +942,7 @@ function ensureRetailRestrictionRows(matrix, questionsByName) {
       if (indexes.no >= 0) row[indexes.no] = nextNumber++;
       next.push(row);
     }
+    if (indexes.no >= 0 && !(Number(row[indexes.no]) > 0)) row[indexes.no] = nextNumber++;
     row[indexes.type] = "Kapsam";
     row[indexes.id] = question.id;
     row[indexes.question] = question.name;

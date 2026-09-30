@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "../src/auth.js";
 import fs from "node:fs";
+import vm from "node:vm";
 import { retailRestrictionQuestionNames } from "../src/scope-question-migrations.js";
 
 test("signed access token verifies and expires", () => {
@@ -58,6 +59,19 @@ test("retail POS scope restrictions are maintained for every requested question"
   assert.match(server, /row\[indexes\.industries\] = "Perakende"/);
   assert.match(server, /row\[indexes\.implementations\] = "Greenfield"/);
   assert.match(server, /row\[indexes\.systems\] = "NTT POS on CAR, NTT POS on S4, Offline POS"/);
+  assert.match(server, /!\(Number\(row\[indexes\.no\]\) > 0\)\) row\[indexes\.no\] = nextNumber\+\+/);
+});
+
+test("fallback restriction numbers remain unique and continue from the previous maximum", () => {
+  const adminData = fs.readFileSync(new URL("../../frontend/public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(adminData, context);
+  const rows = context.window.adminSeedData.restrictions;
+  const noIndex = rows[0].indexOf("No");
+  const numbers = Array.from(rows.slice(1), row => Number(row[noIndex]));
+  assert.equal(numbers.length, 128);
+  assert.equal(new Set(numbers).size, numbers.length);
+  assert.deepEqual(numbers, Array.from({ length: 128 }, (_, index) => index + 1));
 });
 
 test("local seed only initializes an empty admin configuration", () => {
