@@ -1001,19 +1001,43 @@ async function migrateQuestionIds() {
   next.developmentQuestions = attachQuestionIds(original.developmentQuestions, "development");
 
   const scopeByName = new Map(next.scopeQuestions.map(item => [normalizedQuestionKey(item.name), item]));
+  const scopeById = new Map(next.scopeQuestions.map(item => [String(item.id || "").trim(), item]));
   for (const required of requiredScopeQuestions) {
     const key = normalizedQuestionKey(required.name);
     if (scopeByName.has(key)) continue;
     const item = { ...required };
     next.scopeQuestions.push(item);
     scopeByName.set(key, item);
+    scopeById.set(String(item.id || "").trim(), item);
   }
   for (const maintenance of posScopeQuestionMaintenance) {
-    const item = scopeByName.get(normalizedQuestionKey(maintenance.name));
-    if (!item) continue;
+    const key = normalizedQuestionKey(maintenance.name);
+    let item = scopeByName.get(key) || scopeById.get(maintenance.questionId);
+    if (!item) {
+      item = {
+        id: maintenance.questionId,
+        name: maintenance.name,
+        description: maintenance.description,
+        category: maintenance.category,
+        group: "Kapsam",
+        variableType: maintenance.variableType,
+        answerType: maintenance.answerType,
+        sizeImpact: false,
+        score: 0,
+        industries: "All",
+        implementationTypes: "All",
+        systemTypes: "All",
+        active: true
+      };
+      next.scopeQuestions.push(item);
+      scopeByName.set(key, item);
+      scopeById.set(maintenance.questionId, item);
+    }
+    item.name = maintenance.name;
     item.description = maintenance.description;
     item.variableType = maintenance.variableType;
     item.answerType = maintenance.answerType;
+    if (!item.category && maintenance.category) item.category = maintenance.category;
   }
   next.scopeQuestions = normalizeScopeQuestionStorage(next.scopeQuestions);
   const developmentByName = new Map(next.developmentQuestions.map(item => [normalizedQuestionKey(item.name), item]));

@@ -54,6 +54,8 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /delete next\.no/);
   assert.match(server, /next\.scopeQuestions = normalizeScopeQuestionStorage\(next\.scopeQuestions\)/);
   assert.match(server, /for \(const maintenance of posScopeQuestionMaintenance\)/);
+  assert.match(server, /scopeByName\.get\(key\) \|\| scopeById\.get\(maintenance\.questionId\)/);
+  assert.match(server, /id: maintenance\.questionId[\s\S]*?next\.scopeQuestions\.push\(item\)/);
   assert.match(server, /next\.scopeSizeImpacts = upsertPosScopeImpactRows\(next\.scopeSizeImpacts\)/);
 });
 
