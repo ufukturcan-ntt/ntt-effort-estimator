@@ -4,6 +4,7 @@ import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } f
 import fs from "node:fs";
 import vm from "node:vm";
 import { retailRestrictionRollback } from "../src/restriction-rollback.js";
+import { obsoletePosScopeQuestions, posScopeQuestionMaintenance } from "../src/scope-question-migrations.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -57,6 +58,15 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /scopeByName\.get\(key\) \|\| scopeById\.get\(maintenance\.questionId\)/);
   assert.match(server, /id: maintenance\.questionId[\s\S]*?next\.scopeQuestions\.push\(item\)/);
   assert.match(server, /next\.scopeSizeImpacts = upsertPosScopeImpactRows\(next\.scopeSizeImpacts\)/);
+});
+
+test("POS scope maintenance restores only requested questions and removes obsolete additions", () => {
+  const names = new Set(posScopeQuestionMaintenance.map(item => item.name));
+  assert.equal(posScopeQuestionMaintenance.length, 23);
+  assert.equal(obsoletePosScopeQuestions.length, 15);
+  assert.equal(names.has("Loyalty"), false);
+  assert.equal(names.has("Mağaza Sayısı"), true);
+  assert.equal(new Set(posScopeQuestionMaintenance.map(item => item.questionId)).size, 23);
 });
 
 test("retail POS restriction batch is rolled back exactly once", () => {

@@ -329,22 +329,27 @@ test("admin question seed stays synchronized with bundled questions", () => {
   assert.deepEqual(adminQuestions("development"), questionRows("developmentQuestions"));
 });
 
-test("requested retail scope questions are bundled and seeded", () => {
+test("only requested POS scope questions are bundled and seeded", () => {
   const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
   const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
   const context = { window: {} };
   vm.runInNewContext(questionsJs, context);
   vm.runInNewContext(adminDataJs, context);
   const expected = [
-    "OKC kullanımı", "EFT POS kullanılıyor mu?", "Click and Collect süreci",
-    "Mağaza teslim alım süreci kullanılacak mı? (C&C)", "Müşteri teslim et süreci kullanılacak mı? (C&C)",
-    "Kaç dil için ekran kullanımı olacaktır?", "E-çözümler süreci ile POS entegrasyonu var mı?",
-    "Lokalizasyon", "Tax free satış", "Vergi istisnai satış", "Değişim süreci",
+    "OKC kullanımı", "EFT POS kullanılıyor mu?",
+    "Mağaza teslim alım süreci kullanılacak mı? (C&C)",
+    "Kaç dil için ekran kullanımı olacaktır?", "Değişim süreci",
     "Satış sonrası hizmet süreci", "Garanti süreci", "Kasa kapanışı günlük yapılıyor mu?",
-    "Merkez kasa/yönetim kasası yönetimi", "CRM entegrasyonları", "Loyalty", "Kupon kullanımı",
-    "Gift Card kullanımı var mı?", "Kampanya hesaplaması kasa üzerinde mi yapılacak?",
-    "Marketing kampanyaları ya da tarihli kampanyalar kasada tutulacak mı?", "Kampanya tipleri ve sayısı",
-    "Dış sistem entegrasyonları", "Localization Selection"
+    "Dış sistem entegrasyonları", "Mağaza Sayısı", "Kasa Sayısı", "Mağaza içi depo sayısı"
+  ];
+  const excluded = [
+    "Click and Collect süreci", "Müşteri teslim et süreci kullanılacak mı? (C&C)",
+    "E-çözümler süreci ile POS entegrasyonu var mı?", "Lokalizasyon", "Tax free satış",
+    "Vergi istisnai satış", "Merkez kasa/yönetim kasası yönetimi", "CRM entegrasyonları",
+    "Loyalty", "Kupon kullanımı", "Gift Card kullanımı var mı?",
+    "Kampanya hesaplaması kasa üzerinde mi yapılacak?",
+    "Marketing kampanyaları ya da tarihli kampanyalar kasada tutulacak mı?",
+    "Kampanya tipleri ve sayısı", "Localization Selection"
   ];
   const bundled = new Set(context.window.scopeQuestions.map(item => item.name));
   const scopeTable = context.window.adminSeedData.scope;
@@ -354,10 +359,12 @@ test("requested retail scope questions are bundled and seeded", () => {
     assert.ok(bundled.has(name), `Bundled scope question missing: ${name}`);
     assert.ok(seeded.has(name), `Seeded scope question missing: ${name}`);
   });
-  assert.equal(context.window.scopeQuestions.length, 104);
-  const addedQuestions = context.window.scopeQuestions.filter(item => expected.includes(item.name));
-  assert.deepEqual(Array.from(addedQuestions, item => Number(item.no)), Array.from({ length: 24 }, (_, index) => index + 85));
-  assert.ok(addedQuestions.every(item => item.sizeImpact === false));
+  excluded.forEach(name => {
+    assert.equal(bundled.has(name), false, `Unexpected bundled scope question: ${name}`);
+    assert.equal(seeded.has(name), false, `Unexpected seeded scope question: ${name}`);
+  });
+  assert.equal(context.window.scopeQuestions.length, 89);
+  assert.ok(context.window.scopeQuestions.filter(item => expected.includes(item.name)).every(item => item.sizeImpact === false));
 });
 
 test("POS scope questions and Greenfield size impacts are seeded", () => {

@@ -6,7 +6,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
-import { posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions } from "./scope-question-migrations.js";
+import { obsoletePosScopeQuestions, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions } from "./scope-question-migrations.js";
 import { retailRestrictionRollback } from "./restriction-rollback.js";
 
 const app = express();
@@ -864,6 +864,22 @@ function normalizeScopeQuestionStorage(questions = []) {
     );
 }
 
+function removeObsoleteScopeQuestionReferences(matrix) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const idIndexes = ["Question ID", "Kapsam Soru ID"].map(header => headers.indexOf(header)).filter(index => index >= 0);
+  const nameIndexes = ["Question", "Kapsam Sorusu"].map(header => headers.indexOf(header)).filter(index => index >= 0);
+  const typeIndex = headers.findIndex(header => ["Variable Type", "Question Type"].includes(header));
+  const obsoleteIds = new Set(obsoletePosScopeQuestions.map(item => item.questionId));
+  const obsoleteNames = new Set(obsoletePosScopeQuestions.map(item => normalizedQuestionKey(item.name)));
+  const rows = matrix.slice(1).filter(Array.isArray).filter(row => {
+    if (typeIndex >= 0 && normalizedQuestionKey(row[typeIndex]).includes("geli")) return true;
+    return !idIndexes.some(index => obsoleteIds.has(String(row[index] || "").trim()))
+      && !nameIndexes.some(index => obsoleteNames.has(normalizedQuestionKey(row[index])));
+  });
+  return [matrix[0], ...rows];
+}
+
 function ensureMatrixColumn(matrix, header, beforeHeader) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -998,12 +1014,19 @@ async function migrateQuestionIds() {
   const original = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
   const next = { ...original };
   next.scopeQuestions = attachQuestionIds(original.scopeQuestions, "scope");
+  const obsoleteScopeIds = new Set(obsoletePosScopeQuestions.map(item => item.questionId));
+  const obsoleteScopeNames = new Set(obsoletePosScopeQuestions.map(item => normalizedQuestionKey(item.name)));
+  next.scopeQuestions = next.scopeQuestions.filter(item =>
+    !obsoleteScopeIds.has(String(item.id || "").trim())
+    && !obsoleteScopeNames.has(normalizedQuestionKey(item.name))
+  );
   next.developmentQuestions = attachQuestionIds(original.developmentQuestions, "development");
 
   const scopeByName = new Map(next.scopeQuestions.map(item => [normalizedQuestionKey(item.name), item]));
   const scopeById = new Map(next.scopeQuestions.map(item => [String(item.id || "").trim(), item]));
   for (const required of requiredScopeQuestions) {
     const key = normalizedQuestionKey(required.name);
+    if (obsoleteScopeIds.has(String(required.id || "").trim()) || obsoleteScopeNames.has(key)) continue;
     if (scopeByName.has(key)) continue;
     const item = { ...required };
     next.scopeQuestions.push(item);
@@ -1055,12 +1078,14 @@ async function migrateQuestionIds() {
       }
     }
   ]);
+  next.restrictions = removeObsoleteScopeQuestionReferences(next.restrictions);
   next.restrictions = normalizeRestrictionStorage(next.restrictions);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = ensureMatrixColumn(next.scopeSizeImpacts, "System Type", "Kapsam Sorusu");
   next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
     { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }
   ]);
+  next.scopeSizeImpacts = removeObsoleteScopeQuestionReferences(next.scopeSizeImpacts);
   next.scopeSizeImpacts = upsertPosScopeImpactRows(next.scopeSizeImpacts);
   next.variableModulePhase = ensureMatrixColumn(original.variableModulePhase, "Kapsam Soru ID", "Kapsam Sorusu");
   next.variableModulePhase = ensureMatrixColumn(next.variableModulePhase, "Geliştirme Soru ID", "Geliştirme Sorusu");
@@ -1068,6 +1093,7 @@ async function migrateQuestionIds() {
     { idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu", byName: scopeByName },
     { idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu", byName: developmentByName }
   ]);
+  next.variableModulePhase = removeObsoleteScopeQuestionReferences(next.variableModulePhase);
 
   const changedEntries = Object.entries(next).filter(([entity, payload]) =>
     payload !== undefined && JSON.stringify(payload) !== JSON.stringify(original[entity])
