@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "../src/auth.js";
 import fs from "node:fs";
 import vm from "node:vm";
-import { retailRestrictionQuestionNames } from "../src/scope-question-migrations.js";
+import { retailRestrictionRollback } from "../src/restriction-rollback.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -52,14 +52,13 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu"/);
 });
 
-test("retail POS scope restrictions are maintained for every requested question", () => {
+test("retail POS restriction batch is rolled back exactly once", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
-  assert.equal(retailRestrictionQuestionNames.length, 37);
-  assert.equal(new Set(retailRestrictionQuestionNames).size, 37);
-  assert.match(server, /row\[indexes\.industries\] = "Perakende"/);
-  assert.match(server, /row\[indexes\.implementations\] = "Greenfield"/);
-  assert.match(server, /row\[indexes\.systems\] = "NTT POS on CAR, NTT POS on S4, Offline POS"/);
-  assert.match(server, /!\(Number\(row\[indexes\.no\]\) > 0\)\) row\[indexes\.no\] = nextNumber\+\+/);
+  assert.equal(retailRestrictionRollback.restore.length, 14);
+  assert.equal(retailRestrictionRollback.remove.length, 23);
+  assert.match(server, /insert into app_migration \(name\)/);
+  assert.match(server, /await rollbackLatestRetailRestrictions\(\)/);
+  assert.doesNotMatch(server, /ensureRetailRestrictionRows/);
 });
 
 test("fallback restriction numbers remain unique and continue from the previous maximum", () => {
@@ -69,9 +68,9 @@ test("fallback restriction numbers remain unique and continue from the previous 
   const rows = context.window.adminSeedData.restrictions;
   const noIndex = rows[0].indexOf("No");
   const numbers = Array.from(rows.slice(1), row => Number(row[noIndex]));
-  assert.equal(numbers.length, 128);
+  assert.equal(numbers.length, 105);
   assert.equal(new Set(numbers).size, numbers.length);
-  assert.deepEqual(numbers, Array.from({ length: 128 }, (_, index) => index + 1));
+  assert.deepEqual(numbers, Array.from({ length: 105 }, (_, index) => index + 1));
 });
 
 test("local seed only initializes an empty admin configuration", () => {

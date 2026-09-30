@@ -6,7 +6,8 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
-import { requiredScopeQuestions, retailRestrictionQuestionNames } from "./scope-question-migrations.js";
+import { requiredScopeQuestions } from "./scope-question-migrations.js";
+import { retailRestrictionRollback } from "./restriction-rollback.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -887,73 +888,24 @@ function setQuestionReferenceIds(matrix, definitions) {
   return changed ? next : matrix;
 }
 
-function ensureRequiredRestrictionRows(matrix, questionsByName) {
+function rollbackRetailRestrictionRows(matrix) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
-  const typeIndex = headers.indexOf("Question Type") >= 0 ? headers.indexOf("Question Type") : headers.indexOf("Variable Type");
-  const idIndex = headers.indexOf("Question ID");
   const questionIndex = headers.indexOf("Question");
-  if (typeIndex < 0 || idIndex < 0 || questionIndex < 0) return matrix;
-  const next = matrix.map(row => Array.isArray(row) ? [...row] : row);
-  const existingIds = new Set(next.slice(1).map(row => String(row?.[idIndex] || "").trim()).filter(Boolean));
-  for (const question of requiredScopeQuestions) {
-    const stored = questionsByName.get(normalizedQuestionKey(question.name));
-    if (!stored || existingIds.has(stored.id)) continue;
-    const row = Array(headers.length).fill("");
-    row[typeIndex] = "Kapsam";
-    row[idIndex] = stored.id;
-    row[questionIndex] = stored.name;
-    [["Allowed Industries", "All"], ["Allowed Implementation Types", "All"], ["Allowed System Types", "All"], [headers.includes("Active?") ? "Active?" : "Aktif", "Yes"]]
-      .forEach(([header, value]) => {
-        const index = headers.indexOf(header);
-        if (index >= 0) row[index] = value;
-      });
-    next.push(row);
-    existingIds.add(stored.id);
-  }
-  return next;
-}
-
-function ensureRetailRestrictionRows(matrix, questionsByName) {
-  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
-  const headers = matrix[0].map(value => String(value || "").trim());
-  const indexOf = (...names) => names.map(name => headers.indexOf(name)).find(index => index >= 0) ?? -1;
-  const indexes = {
-    no: indexOf("No"),
-    type: indexOf("Question Type", "Variable Type"),
-    id: indexOf("Question ID"),
-    question: indexOf("Question"),
-    industries: indexOf("Allowed Industries"),
-    implementations: indexOf("Allowed Implementation Types"),
-    systems: indexOf("Allowed System Types"),
-    active: indexOf("Active?", "Aktif")
-  };
-  if ([indexes.type, indexes.id, indexes.question, indexes.industries, indexes.implementations, indexes.systems].some(index => index < 0)) return matrix;
-  const next = matrix.map(row => Array.isArray(row) ? [...row] : row);
-  const byId = new Map(next.slice(1).filter(Array.isArray).map(row => [String(row[indexes.id] || "").trim(), row]));
-  const byName = new Map(next.slice(1).filter(Array.isArray).map(row => [normalizedQuestionKey(row[indexes.question]), row]));
-  let nextNumber = Math.max(0, ...next.slice(1).map(row => Number(row?.[indexes.no]) || 0)) + 1;
-  for (const name of retailRestrictionQuestionNames) {
-    const question = questionsByName.get(normalizedQuestionKey(name));
-    if (!question) continue;
-    let row = byId.get(question.id) || byName.get(normalizedQuestionKey(question.name));
-    if (!row) {
-      row = Array(headers.length).fill("");
-      if (indexes.no >= 0) row[indexes.no] = nextNumber++;
-      next.push(row);
-    }
-    if (indexes.no >= 0 && !(Number(row[indexes.no]) > 0)) row[indexes.no] = nextNumber++;
-    row[indexes.type] = "Kapsam";
-    row[indexes.id] = question.id;
-    row[indexes.question] = question.name;
-    row[indexes.industries] = "Perakende";
-    row[indexes.implementations] = "Greenfield";
-    row[indexes.systems] = "NTT POS on CAR, NTT POS on S4, Offline POS";
-    if (indexes.active >= 0) row[indexes.active] = "Yes";
-    byId.set(question.id, row);
-    byName.set(normalizedQuestionKey(question.name), row);
-  }
-  return next;
+  const idIndex = headers.indexOf("Question ID");
+  if (questionIndex < 0) return matrix;
+  const removeNames = new Set(retailRestrictionRollback.remove.map(normalizedQuestionKey));
+  const restoreByName = new Map(retailRestrictionRollback.restore.map(item => [normalizedQuestionKey(item.Question), item]));
+  const rows = matrix.slice(1).filter(Array.isArray).flatMap(row => {
+    const key = normalizedQuestionKey(row[questionIndex]);
+    if (removeNames.has(key)) return [];
+    const previous = restoreByName.get(key);
+    if (!previous) return [[...row]];
+    return [headers.map((header, index) => header === "Question ID" && idIndex >= 0
+      ? row[idIndex] || previous[header] || ""
+      : Object.prototype.hasOwnProperty.call(previous, header) ? previous[header] : row[index])];
+  });
+  return [headers, ...rows];
 }
 
 async function migrateQuestionIds() {
@@ -988,8 +940,6 @@ async function migrateQuestionIds() {
       }
     }
   ]);
-  next.restrictions = ensureRequiredRestrictionRows(next.restrictions, scopeByName);
-  next.restrictions = ensureRetailRestrictionRows(next.restrictions, scopeByName);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
     { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }
@@ -1024,6 +974,35 @@ async function migrateQuestionIds() {
   }
 }
 
+async function rollbackLatestRetailRestrictions() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      [`restriction-rollback-${retailRestrictionRollback.version}`]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'restrictions' for update`);
+    if (result.rowCount) {
+      const payload = rollbackRetailRestrictionRows(result.rows[0].payload);
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'restrictions'`,
+        [JSON.stringify(payload)]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1031,6 +1010,7 @@ async function ensureDatabase() {
   await ensureBootstrapAdmin();
   await migrateLibraryItemIds();
   await migrateQuestionIds();
+  await rollbackLatestRetailRestrictions();
 }
 
 async function ensureBootstrapAdmin() {

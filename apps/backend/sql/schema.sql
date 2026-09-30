@@ -80,3 +80,8 @@ create table if not exists admin_config (
   payload jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+create table if not exists app_migration (
+  name text primary key,
+  applied_at timestamptz not null default now()
+);
