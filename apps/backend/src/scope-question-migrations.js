@@ -269,6 +269,19 @@ export const posDevelopmentQuestionMaintenance = [
   answerType: variableType === "Sayı" ? "number" : "yesno"
 }));
 
+export const vmpDevelopmentQuestionMaintenance = [
+  ["dev-39", 39, "LME Entegrasyonu ihtiyacı bulunmakta mıdır?", "LME entegrasyonu ihtiyacı bulunmakta mıdır?", "Evet/Hayır"],
+  ["dev-40", 40, "Toplam rapor sayısı", "İhtiyaç duyulan toplam rapor sayısı", "Sayı"],
+  ["dev-41", 41, "Toplam çıktı sayısı", "İhtiyaç duyulan toplam çıktı, etiket ve form sayısı", "Sayı"]
+].map(([questionId, no, name, description, variableType]) => ({
+  questionId,
+  no,
+  name,
+  description,
+  variableType,
+  answerType: variableType === "Sayı" ? "number" : "yesno"
+}));
+
 export const posScopeImpactMaintenance = [
   { questionId: "scope-109", question: "Mağaza Sayısı", score: 0.5 },
   { questionId: "scope-110", question: "Kasa Sayısı", score: 0.5 },

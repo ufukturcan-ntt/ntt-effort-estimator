@@ -4,7 +4,7 @@ import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } f
 import fs from "node:fs";
 import vm from "node:vm";
 import { retailRestrictionRollback } from "../src/restriction-rollback.js";
-import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance } from "../src/scope-question-migrations.js";
+import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance, vmpDevelopmentQuestionMaintenance } from "../src/scope-question-migrations.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -51,6 +51,8 @@ test("question relationships are migrated to stable ids without overwriting exis
   assert.match(server, /idHeader: "Question ID"[\s\S]*?nameHeader: "Question"/);
   assert.match(server, /idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu"/);
   assert.match(server, /idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu"/);
+  assert.match(server, /definition\.byId\?\.get\(storedId\)/);
+  assert.match(server, /row\[nameIndex\] = question\.name/);
   assert.match(server, /function normalizeScopeQuestionStorage/);
   assert.match(server, /delete next\.no/);
   assert.match(server, /next\.scopeQuestions = normalizeScopeQuestionStorage\(next\.scopeQuestions\)/);
@@ -76,6 +78,21 @@ test("POS development maintenance keeps stable ids and unique question definitio
   assert.equal(new Set(posDevelopmentQuestionMaintenance.map(item => item.questionId)).size, 15);
   assert.equal(posDevelopmentQuestionMaintenance.find(item => item.name === "CRM entegrasyonları")?.questionId, "dev-11");
   assert.equal(posDevelopmentQuestionMaintenance.find(item => item.name === "CRM entegrasyonları")?.variableType, "Sayı");
+});
+
+test("VMP orphan development definitions are restored with stable ids", () => {
+  assert.deepEqual(vmpDevelopmentQuestionMaintenance.map(item => item.questionId), ["dev-39", "dev-40", "dev-41"]);
+  assert.equal(new Set(vmpDevelopmentQuestionMaintenance.map(item => item.name)).size, 3);
+});
+
+test("users, development questions and restrictions use persistent ids", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  const schema = fs.readFileSync(new URL("../sql/schema.sql", import.meta.url), "utf8");
+  assert.match(schema, /id uuid primary key default gen_random_uuid\(\)/);
+  assert.match(server, /function normalizeDevelopmentQuestionStorage/);
+  assert.match(server, /delete next\.no/);
+  assert.match(server, /ensureMatrixColumn\(original\.restrictions, "Restriction ID", "Variable Type"\)/);
+  assert.match(server, /`restriction-\$\{questionId \|\| type\}`/);
 });
 
 test("retail POS restriction batch is rolled back exactly once", () => {

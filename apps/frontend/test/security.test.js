@@ -103,18 +103,18 @@ test("new offer always starts with an empty module selection", () => {
 
 test("question restriction rows preserve question values by stable id", () => {
   assert.match(html, /const displayName = questionDisplayName\(questionType, questionId, question\)/);
-  assert.match(html, /\.filter\(row => row\[2\] \|\| row\[3\]\)/);
+  assert.match(html, /\.filter\(row => row\[3\] \|\| row\[4\]\)/);
   assert.match(html, /const current = questionDisplayName\(questionType, idValue, currentText\)/);
   assert.match(html, /uniqueOptionValues\(\["", \.\.\.adminQuestionNamesByType\(typeSelect\.value\), current\]\)/);
   assert.match(html, /const restrictionStorageHeaders = restrictionHeaders\.slice\(1\)/);
   assert.match(html, /return \[restrictionStorageHeaders, \.\.\.normalized\.slice\(1\)\.map\(row => row\.slice\(1\)\)\]/);
-  assert.match(html, /String\(left\[2\] \|\| ""\)\.localeCompare\(String\(right\[2\] \|\| ""\), "en", \{ numeric: true/);
+  assert.match(html, /String\(left\[1\] \|\| ""\)\.localeCompare\(String\(right\[1\] \|\| ""\), "en", \{ numeric: true/);
   assert.match(html, /class="restriction-row-number"/);
   assert.match(html, /return restrictionStorageRows\(\[headers, \.\.\.rows\]\)/);
 });
 
 test("question restrictions omit notes and usage columns", () => {
-  assert.match(html, /const restrictionHeaders = \["No", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active\?"\];/);
+  assert.match(html, /const restrictionHeaders = \["No", "Restriction ID", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active\?"\];/);
   assert.doesNotMatch(html, /row\[idx\("Notes"\)\]/);
   assert.doesNotMatch(html, /row\[idx\("Usage"\)\]/);
 });
@@ -124,7 +124,7 @@ test("duplicate 3rd party integration scope question is canonicalized", () => {
   assert.match(html, /fromNames:\s*\["Kaç farklı 3rd party entegrasyon sayısı bulunmaktadır\?"\]/);
   assert.match(html, /toId:\s*"scope-40"/);
   assert.match(html, /toName:\s*"3rd Party Entegrasyon Sayısı"/);
-  assert.match(html, /const key = \[questionTypeFromLabel\(row\[1\]\), row\[2\] \|\| normalizeQuestionName\(row\[3\]\)\]/);
+  assert.match(html, /const key = row\[1\] \|\| \[questionTypeFromLabel\(row\[2\]\), row\[3\] \|\| normalizeQuestionName\(row\[4\]\)\]/);
 });
 
 test("scope restrictions and numeric answers are guarded in the offer flow", () => {
@@ -449,4 +449,47 @@ test("scope questions use stable ids for storage and generated display numbers",
   assert.match(html, /<td class="scope-question-row-number">\$\{noValue\}<\/td>/);
   assert.match(html, /function renumberScopeQuestionDisplayRows/);
   assert.doesNotMatch(html, /id: row\.dataset\.questionId \|\| stableQuestionId\("scope", "", cells\[3\]\),\s*no:/s);
+});
+
+test("development questions and restrictions use stable ids with generated row numbers", () => {
+  assert.match(html, /function normalizeDevelopmentQuestionRows/);
+  assert.match(html, /function renumberDevelopmentQuestionDisplayRows/);
+  assert.match(html, /class="development-question-row-number"/);
+  assert.match(html, /const restrictionHeaders = \["No", "Restriction ID", "Variable Type", "Question ID"/);
+  assert.match(html, /const restrictionId = `restriction-\$\{crypto\.randomUUID\(\)\}`/);
+  assert.match(html, /data-user-id="\$\{escapeHtml\(row\.id \|\| ""\)\}"/);
+});
+
+test("VMP rows resolve question labels from persistent ids without orphan variables", () => {
+  const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(questionsJs, context);
+  vm.runInNewContext(adminDataJs, context);
+  const matrix = context.window.adminSeedData.variableModulePhase;
+  const headers = matrix[0];
+  const at = header => headers.indexOf(header);
+  const scopeById = new Map(context.window.scopeQuestions.map((item, index) => [String(item.id || `scope-${item.no || index + 1}`), item.name]));
+  const developmentById = new Map(context.window.developmentQuestions.map((item, index) => [String(item.id || `dev-${item.no || index + 1}`), item.name]));
+  const unresolved = [];
+  for (const [index, row] of matrix.slice(1).entries()) {
+    if (row[at("Kaynak Tipi")] === "Modül") continue;
+    const scopeId = String(row[at("Kapsam Soru ID")] || "");
+    const developmentId = String(row[at("Geliştirme Soru ID")] || "");
+    if (scopeId && scopeById.get(scopeId) === row[at("Kapsam Sorusu")]) continue;
+    if (developmentId && developmentById.get(developmentId) === row[at("Geliştirme Sorusu")]) continue;
+    unresolved.push(index + 2);
+  }
+  assert.deepEqual(unresolved, []);
+});
+
+test("restriction seed ids are present and unique", () => {
+  const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(adminDataJs, context);
+  const rows = context.window.adminSeedData.restrictions;
+  const idIndex = rows[0].indexOf("Restriction ID");
+  const ids = rows.slice(1).map(row => row[idIndex]);
+  assert.ok(ids.every(Boolean));
+  assert.equal(new Set(ids).size, ids.length);
 });

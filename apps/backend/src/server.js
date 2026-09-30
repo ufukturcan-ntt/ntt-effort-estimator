@@ -6,7 +6,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
-import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions } from "./scope-question-migrations.js";
+import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions, vmpDevelopmentQuestionMaintenance } from "./scope-question-migrations.js";
 import { retailRestrictionRollback } from "./restriction-rollback.js";
 
 const app = express();
@@ -864,6 +864,19 @@ function normalizeScopeQuestionStorage(questions = []) {
     );
 }
 
+function normalizeDevelopmentQuestionStorage(questions = []) {
+  return (Array.isArray(questions) ? questions : [])
+    .map(item => {
+      const next = { ...item };
+      delete next.no;
+      return next;
+    })
+    .sort((left, right) =>
+      String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
+      || String(left.name || "").localeCompare(String(right.name || ""), "tr", { sensitivity: "base" })
+    );
+}
+
 function removeObsoleteScopeQuestionReferences(matrix) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -906,12 +919,19 @@ function setQuestionReferenceIds(matrix, definitions) {
     for (let index = 1; index < next.length; index += 1) {
       const row = next[index];
       if (!Array.isArray(row)) continue;
-      const question = definition.resolve
-        ? definition.resolve(row, headers)
-        : definition.byName.get(normalizedQuestionKey(row[nameIndex]));
-      if (!question || row[idIndex] === question.id) continue;
-      row[idIndex] = question.id;
-      changed = true;
+      const storedId = String(row[idIndex] || "").trim();
+      const question = definition.byId?.get(storedId)
+        || (definition.resolve ? definition.resolve(row, headers) : null)
+        || definition.byName?.get(normalizedQuestionKey(row[nameIndex]));
+      if (!question) continue;
+      if (row[idIndex] !== question.id) {
+        row[idIndex] = question.id;
+        changed = true;
+      }
+      if (row[nameIndex] !== question.name) {
+        row[nameIndex] = question.name;
+        changed = true;
+      }
     }
   }
   return changed ? next : matrix;
@@ -922,6 +942,7 @@ function normalizeRestrictionStorage(matrix) {
   const headers = matrix[0].map(value => String(value || "").trim());
   const noIndex = headers.indexOf("No");
   const nextHeaders = headers.filter((_, index) => index !== noIndex);
+  const restrictionIdIndex = nextHeaders.indexOf("Restriction ID");
   const idIndex = nextHeaders.indexOf("Question ID");
   const typeIndex = nextHeaders.findIndex(header => ["Variable Type", "Question Type"].includes(header));
   const questionIndex = nextHeaders.indexOf("Question");
@@ -935,10 +956,15 @@ function normalizeRestrictionStorage(matrix) {
         .slice(0, 48);
       nextRow[idIndex] = `${type}-legacy-${slug || "question"}`;
     }
+    if (restrictionIdIndex >= 0 && !String(nextRow[restrictionIdIndex] || "").trim()) {
+      const questionId = String(nextRow[idIndex] || "").trim();
+      const type = normalizedQuestionKey(nextRow[typeIndex]).includes("geli") ? "development" : "scope";
+      nextRow[restrictionIdIndex] = `restriction-${questionId || type}`;
+    }
     return nextRow;
   });
   rows.sort((left, right) =>
-    String(left[idIndex] || "").localeCompare(String(right[idIndex] || ""), "en", { numeric: true, sensitivity: "base" })
+    String(left[restrictionIdIndex] || "").localeCompare(String(right[restrictionIdIndex] || ""), "en", { numeric: true, sensitivity: "base" })
     || String(left[typeIndex] || "").localeCompare(String(right[typeIndex] || ""), "en", { sensitivity: "base" })
     || String(left[questionIndex] || "").localeCompare(String(right[questionIndex] || ""), "tr", { sensitivity: "base" })
   );
@@ -1141,11 +1167,13 @@ async function migrateQuestionIds() {
     item.variableType = maintenance.variableType;
     item.answerType = maintenance.answerType;
     if (!item.category && maintenance.category) item.category = maintenance.category;
+    scopeByName.set(normalizedQuestionKey(item.name), item);
+    scopeById.set(String(item.id || "").trim(), item);
   }
   next.scopeQuestions = normalizeScopeQuestionStorage(next.scopeQuestions);
   const developmentByName = new Map(next.developmentQuestions.map(item => [normalizedQuestionKey(item.name), item]));
   const developmentById = new Map(next.developmentQuestions.map(item => [String(item.id || "").trim(), item]));
-  for (const maintenance of posDevelopmentQuestionMaintenance) {
+  for (const maintenance of [...posDevelopmentQuestionMaintenance, ...vmpDevelopmentQuestionMaintenance]) {
     const key = normalizedQuestionKey(maintenance.name);
     let item = developmentByName.get(key) || developmentById.get(maintenance.questionId);
     if (!item) {
@@ -1170,13 +1198,22 @@ async function migrateQuestionIds() {
     item.description = maintenance.description;
     item.variableType = maintenance.variableType;
     item.answerType = maintenance.answerType;
+    developmentByName.set(normalizedQuestionKey(item.name), item);
+    developmentById.set(String(item.id || "").trim(), item);
+    if (maintenance.questionId === "dev-39") {
+      developmentByName.set(normalizedQuestionKey("LME Entegrasyonu ihtiyacı bulunmaktadı mdır?"), item);
+    }
+    if (maintenance.questionId === "dev-40") {
+      developmentByName.set(normalizedQuestionKey("İhtiyaç duyulan rapor sayısı"), item);
+    }
+    if (maintenance.questionId === "dev-41") {
+      developmentByName.set(normalizedQuestionKey("İhtiyaç duyulan çıktı-etiket-form sayısı"), item);
+    }
   }
-  next.developmentQuestions.sort((left, right) =>
-    (Number(left.no) || Number.MAX_SAFE_INTEGER) - (Number(right.no) || Number.MAX_SAFE_INTEGER)
-    || String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
-  );
+  next.developmentQuestions = normalizeDevelopmentQuestionStorage(next.developmentQuestions);
 
-  next.restrictions = ensureMatrixColumn(original.restrictions, "Question ID", "Question");
+  next.restrictions = ensureMatrixColumn(original.restrictions, "Restriction ID", "Variable Type");
+  next.restrictions = ensureMatrixColumn(next.restrictions, "Question ID", "Question");
   next.restrictions = setQuestionReferenceIds(next.restrictions, [
     {
       idHeader: "Question ID",
@@ -1184,8 +1221,11 @@ async function migrateQuestionIds() {
       resolve: (row, headers) => {
         const typeIndex = headers.indexOf("Question Type") >= 0 ? headers.indexOf("Question Type") : headers.indexOf("Variable Type");
         const type = normalizedQuestionKey(row[typeIndex]);
+        const id = String(row[headers.indexOf("Question ID")] || "").trim();
         const name = normalizedQuestionKey(row[headers.indexOf("Question")]);
-        return type.includes("geli") || type.includes("develop") ? developmentByName.get(name) : scopeByName.get(name);
+        return type.includes("geli") || type.includes("develop")
+          ? developmentById.get(id) || developmentByName.get(name)
+          : scopeById.get(id) || scopeByName.get(name);
       }
     }
   ]);
@@ -1196,15 +1236,15 @@ async function migrateQuestionIds() {
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = ensureMatrixColumn(next.scopeSizeImpacts, "System Type", "Kapsam Sorusu");
   next.scopeSizeImpacts = setQuestionReferenceIds(next.scopeSizeImpacts, [
-    { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byName: scopeByName }
+    { idHeader: "Question ID", nameHeader: "Kapsam Sorusu", byId: scopeById, byName: scopeByName }
   ]);
   next.scopeSizeImpacts = removeObsoleteScopeQuestionReferences(next.scopeSizeImpacts);
   next.scopeSizeImpacts = upsertPosScopeImpactRows(next.scopeSizeImpacts);
   next.variableModulePhase = ensureMatrixColumn(original.variableModulePhase, "Kapsam Soru ID", "Kapsam Sorusu");
   next.variableModulePhase = ensureMatrixColumn(next.variableModulePhase, "Geliştirme Soru ID", "Geliştirme Sorusu");
   next.variableModulePhase = setQuestionReferenceIds(next.variableModulePhase, [
-    { idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu", byName: scopeByName },
-    { idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu", byName: developmentByName }
+    { idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu", byId: scopeById, byName: scopeByName },
+    { idHeader: "Geliştirme Soru ID", nameHeader: "Geliştirme Sorusu", byId: developmentById, byName: developmentByName }
   ]);
   next.variableModulePhase = removeObsoleteScopeQuestionReferences(next.variableModulePhase);
 

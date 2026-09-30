@@ -18,7 +18,13 @@ async function loadFrontendSeed() {
         return next;
       })
       .sort((left, right) => left.id.localeCompare(right.id, "en", { numeric: true, sensitivity: "base" })),
-    developmentQuestions: context.window.developmentQuestions,
+    developmentQuestions: context.window.developmentQuestions
+      .map(item => {
+        const next = { ...item, id: String(item.id || `dev-${item.no}`) };
+        delete next.no;
+        return next;
+      })
+      .sort((left, right) => left.id.localeCompare(right.id, "en", { numeric: true, sensitivity: "base" })),
     libraryItems: seed.libraryItems,
     questionFieldOptions: seed.questionFieldOptions,
     restrictions: seed.restrictions,

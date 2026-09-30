@@ -11,7 +11,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "A. Organizasyon & Kapsam",
     "group": "Kapsam",
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-1"
   },
   {
     "no": 2,
@@ -23,7 +24,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-2"
   },
   {
     "no": 3,
@@ -34,7 +36,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-3"
   },
   {
     "no": 4,
@@ -46,7 +49,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-4"
   },
   {
     "no": 5,
@@ -57,7 +61,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-5"
   },
   {
     "no": 6,
@@ -68,7 +73,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-6"
   },
   {
     "no": 7,
@@ -79,7 +85,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-7"
   },
   {
     "no": 8,
@@ -90,7 +97,8 @@ window.scopeQuestions = [
     "industries": "Ambalaj, Demir & Çelik",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-8"
   },
   {
     "no": 9,
@@ -101,7 +109,8 @@ window.scopeQuestions = [
     "industries": "Konfeksiyon, Otomotiv",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-9"
   },
   {
     "no": 10,
@@ -112,7 +121,8 @@ window.scopeQuestions = [
     "industries": "Otomotiv",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-10"
   },
   {
     "no": 11,
@@ -123,7 +133,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-11"
   },
   {
     "no": 12,
@@ -134,7 +145,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-12"
   },
   {
     "no": 13,
@@ -145,7 +157,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-13"
   },
   {
     "no": 14,
@@ -156,7 +169,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-14"
   },
   {
     "no": 15,
@@ -167,7 +181,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-15"
   },
   {
     "no": 16,
@@ -178,7 +193,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-16"
   },
   {
     "no": 17,
@@ -190,7 +206,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-17"
   },
   {
     "no": 18,
@@ -202,7 +219,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-18"
   },
   {
     "no": 19,
@@ -213,7 +231,8 @@ window.scopeQuestions = [
     "industries": "İlaç",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-19"
   },
   {
     "no": 20,
@@ -225,7 +244,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-20"
   },
   {
     "no": 21,
@@ -237,7 +257,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-21"
   },
   {
     "no": 22,
@@ -248,7 +269,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-22"
   },
   {
     "no": 23,
@@ -259,7 +281,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-23"
   },
   {
     "no": 24,
@@ -271,7 +294,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-24"
   },
   {
     "no": 25,
@@ -283,7 +307,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-25"
   },
   {
     "no": 26,
@@ -295,7 +320,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-26"
   },
   {
     "no": 27,
@@ -307,7 +333,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-27"
   },
   {
     "no": 28,
@@ -319,7 +346,8 @@ window.scopeQuestions = [
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
     "active": true,
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-28"
   },
   {
     "no": 29,
@@ -330,7 +358,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-29"
   },
   {
     "no": 30,
@@ -341,7 +370,8 @@ window.scopeQuestions = [
     "industries": "İlaç, Kimya",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-30"
   },
   {
     "no": 31,
@@ -352,7 +382,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-31"
   },
   {
     "no": 32,
@@ -363,7 +394,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-32"
   },
   {
     "no": 33,
@@ -374,7 +406,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-33"
   },
   {
     "no": 34,
@@ -385,7 +418,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-34"
   },
   {
     "no": 35,
@@ -396,7 +430,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-35"
   },
   {
     "no": 36,
@@ -407,7 +442,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-36"
   },
   {
     "no": 37,
@@ -418,7 +454,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-37"
   },
   {
     "no": 38,
@@ -429,7 +466,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Conversion",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-38"
   },
   {
     "no": 39,
@@ -443,7 +481,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-39"
   },
   {
     "no": 40,
@@ -457,7 +496,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-40"
   },
   {
     "no": 41,
@@ -468,7 +508,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Conversion",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-41"
   },
   {
     "no": 42,
@@ -482,7 +523,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-42"
   },
   {
     "no": 43,
@@ -496,7 +538,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "E. Entegrasyon",
     "group": "Kapsam",
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-43"
   },
   {
     "no": 44,
@@ -507,7 +550,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Conversion",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-44"
   },
   {
     "no": 45,
@@ -521,7 +565,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "D. Teknik / Custom Code",
     "group": "Kapsam",
-    "variableType": "Sayı"
+    "variableType": "Sayı",
+    "id": "scope-45"
   },
   {
     "no": 46,
@@ -535,7 +580,8 @@ window.scopeQuestions = [
     "active": true,
     "category": "B. Fonksiyonel Dönüşüm",
     "group": "Kapsam",
-    "variableType": "Evet/Hayır"
+    "variableType": "Evet/Hayır",
+    "id": "scope-46"
   },
   {
     "no": 47,
@@ -546,7 +592,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Conversion",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-47"
   },
   {
     "no": 48,
@@ -560,7 +607,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-48"
   },
   {
     "no": 49,
@@ -574,7 +622,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-49"
   },
   {
     "no": 50,
@@ -588,7 +637,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-50"
   },
   {
     "no": 51,
@@ -602,7 +652,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-51"
   },
   {
     "no": 52,
@@ -616,7 +667,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-52"
   },
   {
     "no": 53,
@@ -630,7 +682,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-53"
   },
   {
     "no": 54,
@@ -644,7 +697,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-54"
   },
   {
     "no": 55,
@@ -658,7 +712,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-55"
   },
   {
     "no": 56,
@@ -672,7 +727,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-56"
   },
   {
     "no": 57,
@@ -686,7 +742,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-57"
   },
   {
     "no": 58,
@@ -700,7 +757,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-58"
   },
   {
     "no": 59,
@@ -714,7 +772,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-59"
   },
   {
     "no": 60,
@@ -728,7 +787,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-60"
   },
   {
     "no": 61,
@@ -742,7 +802,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-61"
   },
   {
     "no": 62,
@@ -756,7 +817,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-62"
   },
   {
     "no": 63,
@@ -770,7 +832,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-63"
   },
   {
     "no": 64,
@@ -784,7 +847,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-64"
   },
   {
     "no": 65,
@@ -798,7 +862,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-65"
   },
   {
     "no": 66,
@@ -812,7 +877,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-66"
   },
   {
     "no": 67,
@@ -826,7 +892,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-67"
   },
   {
     "no": 68,
@@ -840,7 +907,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-68"
   },
   {
     "no": 69,
@@ -854,7 +922,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-69"
   },
   {
     "no": 70,
@@ -868,7 +937,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-70"
   },
   {
     "no": 71,
@@ -882,7 +952,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-71"
   },
   {
     "no": 72,
@@ -896,7 +967,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-72"
   },
   {
     "no": 73,
@@ -910,7 +982,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-73"
   },
   {
     "no": 74,
@@ -924,7 +997,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-74"
   },
   {
     "no": 75,
@@ -938,7 +1012,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-75"
   },
   {
     "no": 76,
@@ -952,7 +1027,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-76"
   },
   {
     "no": 77,
@@ -966,7 +1042,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "Carve-out",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-77"
   },
   {
     "no": 85,
@@ -981,7 +1058,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-85"
   },
   {
     "no": 86,
@@ -996,7 +1074,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-86"
   },
   {
     "no": 88,
@@ -1011,7 +1090,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-88"
   },
   {
     "no": 90,
@@ -1026,7 +1106,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-90"
   },
   {
     "no": 95,
@@ -1041,7 +1122,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-95"
   },
   {
     "no": 96,
@@ -1056,7 +1138,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-96"
   },
   {
     "no": 97,
@@ -1071,7 +1154,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-97"
   },
   {
     "no": 98,
@@ -1086,7 +1170,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-98"
   },
   {
     "no": 107,
@@ -1101,7 +1186,8 @@ window.scopeQuestions = [
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "scope-107"
   },
   {
     "no": 109,
@@ -1163,7 +1249,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-1"
   },
   {
     "no": 2,
@@ -1174,7 +1261,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-2"
   },
   {
     "no": 3,
@@ -1185,7 +1273,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-3"
   },
   {
     "no": 4,
@@ -1196,7 +1285,8 @@ window.developmentQuestions = [
     "industries": "Otomotiv",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-4"
   },
   {
     "no": 5,
@@ -1207,7 +1297,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-5"
   },
   {
     "no": 6,
@@ -1218,7 +1309,8 @@ window.developmentQuestions = [
     "industries": "Demir & Çelik",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-6"
   },
   {
     "no": 7,
@@ -1229,7 +1321,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-7"
   },
   {
     "no": 8,
@@ -1240,7 +1333,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-8"
   },
   {
     "no": 9,
@@ -1251,7 +1345,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-9"
   },
   {
     "no": 10,
@@ -1262,7 +1357,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-10"
   },
   {
     "no": 11,
@@ -1289,7 +1385,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-12"
   },
   {
     "no": 13,
@@ -1300,7 +1397,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-13"
   },
   {
     "no": 14,
@@ -1311,7 +1409,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-14"
   },
   {
     "no": 15,
@@ -1322,7 +1421,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-15"
   },
   {
     "no": 16,
@@ -1333,7 +1433,8 @@ window.developmentQuestions = [
     "industries": "Ambalaj, Demir & Çelik",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-16"
   },
   {
     "no": 17,
@@ -1344,7 +1445,8 @@ window.developmentQuestions = [
     "industries": "Konfeksiyon",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-17"
   },
   {
     "no": 18,
@@ -1355,7 +1457,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-18"
   },
   {
     "no": 19,
@@ -1366,7 +1469,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-19"
   },
   {
     "no": 20,
@@ -1377,7 +1481,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-20"
   },
   {
     "no": 21,
@@ -1388,7 +1493,8 @@ window.developmentQuestions = [
     "industries": "Ambalaj, Demir & Çelik",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-21"
   },
   {
     "no": 22,
@@ -1399,7 +1505,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-22"
   },
   {
     "no": 23,
@@ -1410,7 +1517,8 @@ window.developmentQuestions = [
     "industries": "All",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-23"
   },
   {
     "no": 24,
@@ -1421,7 +1529,8 @@ window.developmentQuestions = [
     "industries": "İlaç",
     "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
     "systemTypes": "All",
-    "active": true
+    "active": true,
+    "id": "dev-24"
   },
   {
     "id": "dev-25",
@@ -1600,6 +1709,45 @@ window.developmentQuestions = [
     "group": "Geliştirme",
     "variableType": "Evet/Hayır",
     "answerType": "yesno",
+    "sizeImpact": false,
+    "score": 0,
+    "effortImpactType": "",
+    "active": true
+  },
+  {
+    "id": "dev-39",
+    "no": 39,
+    "name": "LME Entegrasyonu ihtiyacı bulunmakta mıdır?",
+    "description": "LME entegrasyonu ihtiyacı bulunmakta mıdır?",
+    "group": "Geliştirme",
+    "variableType": "Evet/Hayır",
+    "answerType": "yesno",
+    "sizeImpact": false,
+    "score": 0,
+    "effortImpactType": "",
+    "active": true
+  },
+  {
+    "id": "dev-40",
+    "no": 40,
+    "name": "Toplam rapor sayısı",
+    "description": "İhtiyaç duyulan toplam rapor sayısı",
+    "group": "Geliştirme",
+    "variableType": "Sayı",
+    "answerType": "number",
+    "sizeImpact": false,
+    "score": 0,
+    "effortImpactType": "",
+    "active": true
+  },
+  {
+    "id": "dev-41",
+    "no": 41,
+    "name": "Toplam çıktı sayısı",
+    "description": "İhtiyaç duyulan toplam çıktı, etiket ve form sayısı",
+    "group": "Geliştirme",
+    "variableType": "Sayı",
+    "answerType": "number",
     "sizeImpact": false,
     "score": 0,
     "effortImpactType": "",

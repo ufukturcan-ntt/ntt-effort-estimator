@@ -7,8 +7,8 @@ const outputUrl = new URL("../../frontend/public/assets/admin-data.js", import.m
 function questionTable(existing = [], questions = []) {
   const headerIndex = existing.findIndex(row => Array.isArray(row) && row[0] === "No");
   const prefix = headerIndex >= 0 ? existing.slice(0, headerIndex + 1) : [["No", "Değişken Tanım (Soru)", "Değişken Açıklama", "Cevap için baz değer", "Puan", "Cevap (Evet/Hayır)", "Adet (opsiyonel)", "Hesaplanan Puan"]];
-  return [...prefix, ...questions.map(item => [
-    item.no,
+  return [...prefix, ...questions.map((item, index) => [
+    index + 1,
     item.name || "",
     item.description || "",
     item.variableType || (item.answerType === "number" ? "Sayı" : "Evet / Hayır"),
