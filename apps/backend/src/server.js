@@ -988,6 +988,46 @@ function upsertPosScopeImpactRows(matrix) {
   return [headers, ...rows];
 }
 
+function upsertPosRestrictionRows(matrix) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const index = header => headers.indexOf(header);
+  const noIndex = index("No");
+  const typeIndex = index("Variable Type") >= 0 ? index("Variable Type") : index("Question Type");
+  const idIndex = index("Question ID");
+  const questionIndex = index("Question");
+  const industryIndex = index("Allowed Industries");
+  const implementationIndex = index("Allowed Implementation Types");
+  const systemIndex = index("Allowed System Types");
+  const activeIndex = index("Active?");
+  if ([typeIndex, idIndex, questionIndex, industryIndex, implementationIndex, systemIndex, activeIndex].some(value => value < 0)) return matrix;
+  const rows = matrix.slice(1).filter(Array.isArray).map(row => [...row]);
+  let nextNo = Math.max(0, ...rows.map(row => Number(row[noIndex]) || 0));
+  for (const maintenance of posScopeQuestionMaintenance) {
+    const key = normalizedQuestionKey(maintenance.name);
+    let row = rows.find(candidate =>
+      ["kapsam", "scope"].includes(normalizedQuestionKey(candidate[typeIndex]))
+      && (
+        String(candidate[idIndex] || "").trim() === maintenance.questionId
+        || normalizedQuestionKey(candidate[questionIndex]) === key
+      )
+    );
+    if (!row) {
+      row = Array.from({ length: headers.length }, () => "");
+      if (noIndex >= 0) row[noIndex] = ++nextNo;
+      rows.push(row);
+    }
+    row[typeIndex] = "Kapsam";
+    row[idIndex] = maintenance.questionId;
+    row[questionIndex] = maintenance.name;
+    row[industryIndex] = "Perakende";
+    row[implementationIndex] = "Greenfield";
+    row[systemIndex] = "NTT POS on S4, NTT POS on CAR, Offline POS";
+    row[activeIndex] = "Yes";
+  }
+  return [headers, ...rows];
+}
+
 function rollbackRetailRestrictionRows(matrix) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
   const headers = matrix[0].map(value => String(value || "").trim());
@@ -1079,6 +1119,7 @@ async function migrateQuestionIds() {
     }
   ]);
   next.restrictions = removeObsoleteScopeQuestionReferences(next.restrictions);
+  next.restrictions = upsertPosRestrictionRows(next.restrictions);
   next.restrictions = normalizeRestrictionStorage(next.restrictions);
   next.scopeSizeImpacts = ensureMatrixColumn(original.scopeSizeImpacts, "Question ID", "Kapsam Sorusu");
   next.scopeSizeImpacts = ensureMatrixColumn(next.scopeSizeImpacts, "System Type", "Kapsam Sorusu");
