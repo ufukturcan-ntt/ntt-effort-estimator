@@ -7,6 +7,7 @@ import { retailRestrictionRollback } from "../src/restriction-rollback.js";
 import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance, vmpDevelopmentQuestionMaintenance } from "../src/scope-question-migrations.js";
 import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } from "../src/pos-effort-maintenance.js";
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
+import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -226,4 +227,18 @@ test("conversion scope impact correction replaces placeholders with id-linked im
   assert.ok(simplification.every(row => row[6] === 1 && row[7] === "Katsayı"));
   const cvi = once.slice(1).filter(row => row[1] === "scope-1");
   assert.deepEqual(cvi.map(row => row[5]), [20, 0, 10, 10]);
+});
+
+test("legacy POS module is merged into the NTT Own IP module without losing references", () => {
+  const catalog = normalizePosModuleCatalog([
+    { module: "POS", group: "Advanced Solution", selected: true },
+    { module: "NTT Data POS", group: "NTT Own IP", selected: false },
+    { module: "FI", group: "S4Core" }
+  ]);
+  assert.equal(catalog.filter(item => item.module === "NTT Data POS").length, 1);
+  assert.equal(catalog.find(item => item.module === "NTT Data POS").group, "NTT Own IP");
+  assert.equal(catalog.some(item => item.module === "POS"), false);
+  const payload = replaceLegacyPosModule({ modules: ["POS", "FI"], efforts: { POS: { Analiz: 2 }, "NTT Data POS": { Uyarlama: 3 } } });
+  assert.deepEqual(payload.modules, ["NTT Data POS", "FI"]);
+  assert.deepEqual(payload.efforts["NTT Data POS"], { Uyarlama: 3, Analiz: 2 });
 });

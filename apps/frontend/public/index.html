@@ -2858,6 +2858,10 @@
 
     const defaultModuleGroups = ["S4Core", "NTT Own IP", "Advanced Solution", "Zorunlu Modüller"];
 
+    function canonicalModuleName(value = "") {
+      return String(value || "").trim() === "POS" ? "NTT Data POS" : String(value || "").trim();
+    }
+
     function sortByModuleName(items) {
       return [...items].sort((a, b) => String(a.module || "").localeCompare(String(b.module || ""), "tr-TR"));
     }
@@ -6788,7 +6792,7 @@
       return [...document.querySelectorAll("[data-admin-module-group]")].flatMap(groupEl => {
         const group = groupEl.dataset.adminModuleGroup;
         return [...groupEl.querySelectorAll(".admin-module-card .admin-edit")]
-          .map(item => ({ module: item.textContent.trim(), group, selected: false, team: "" }))
+          .map(item => ({ module: canonicalModuleName(item.textContent), group: canonicalModuleName(item.textContent) === "NTT Data POS" ? "NTT Own IP" : group, selected: false, team: "" }))
           .filter(item => item.module);
       });
     }
@@ -7556,7 +7560,15 @@
       if (config.developmentQuestions) window.developmentQuestions = config.developmentQuestions;
       window.adminSeedData.sizeRanges = normalizeSizeRangeRows(config.sizeRanges || config.questionFieldOptions?.sizeRanges || window.adminSeedData.sizeRanges);
       window.adminSeedData.scopeSizeImpacts = normalizeScopeImpactRows(config.scopeSizeImpacts || window.adminSeedData.scopeSizeImpacts);
-      if (config.moduleCatalog?.length) replaceArray(moduleCatalog, config.moduleCatalog);
+      if (config.moduleCatalog?.length) {
+        const normalizedModules = [];
+        config.moduleCatalog.forEach(item => {
+          const module = canonicalModuleName(item.module);
+          if (normalizedModules.some(candidate => candidate.module === module)) return;
+          normalizedModules.push({ ...item, module, group: module === "NTT Data POS" ? "NTT Own IP" : item.group });
+        });
+        replaceArray(moduleCatalog, normalizedModules);
+      }
       if (config.approvalSettings) {
         const userInput = document.getElementById("userApproverEmail");
         const offerInput = document.getElementById("offerApproverEmail");

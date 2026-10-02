@@ -512,3 +512,9 @@ test("scope question variable types use one canonical yes-no label", () => {
   assert.match(html, /variableType: canonicalVariableType\(item\.variableType/);
   assert.doesNotMatch(html, /adminSelectCell\("Evet\/Hayır"/);
 });
+
+test("legacy POS module is normalized to the NTT Own IP catalog entry", () => {
+  assert.match(html, /function canonicalModuleName\(value = ""\)/);
+  assert.match(html, /=== "POS" \? "NTT Data POS"/);
+  assert.match(html, /group: module === "NTT Data POS" \? "NTT Own IP"/);
+});

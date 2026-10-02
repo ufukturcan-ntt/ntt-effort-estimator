@@ -10,6 +10,7 @@ import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeI
 import { retailRestrictionRollback } from "./restriction-rollback.js";
 import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js";
 import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
+import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1491,6 +1492,51 @@ async function maintainConversionScopeImpacts() {
   }
 }
 
+async function migrateLegacyPosModule() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["pos-module-to-ntt-data-pos-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const configs = await client.query(`select entity, payload from admin_config order by entity for update`);
+    for (const row of configs.rows) {
+      const payload = row.entity === "moduleCatalog"
+        ? normalizePosModuleCatalog(row.payload)
+        : replaceLegacyPosModule(row.payload);
+      if (JSON.stringify(payload) === JSON.stringify(row.payload)) continue;
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = $2`,
+        [JSON.stringify(payload), row.entity]
+      );
+    }
+    const jsonColumns = [
+      "project_definition", "scope_answers", "development_answers", "module_selection",
+      "localization_selection", "hypercare_inputs", "final_effort"
+    ];
+    const offers = await client.query(`select id, ${jsonColumns.join(", ")} from offer for update`);
+    for (const offer of offers.rows) {
+      const payloads = jsonColumns.map(column => replaceLegacyPosModule(offer[column]));
+      if (payloads.every((payload, index) => JSON.stringify(payload) === JSON.stringify(offer[jsonColumns[index]]))) continue;
+      await client.query(
+        `update offer set ${jsonColumns.map((column, index) => `${column} = $${index + 2}::jsonb`).join(", ")}, updated_at = now() where id = $1`,
+        [offer.id, ...payloads.map(JSON.stringify)]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1502,6 +1548,7 @@ async function ensureDatabase() {
   await maintainPosGreenfieldEfforts();
   await normalizeScopeQuestionVariableTypes();
   await maintainConversionScopeImpacts();
+  await migrateLegacyPosModule();
 }
 
 async function ensureBootstrapAdmin() {
