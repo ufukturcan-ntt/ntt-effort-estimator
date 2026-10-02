@@ -518,3 +518,13 @@ test("legacy POS module is normalized to the NTT Own IP catalog entry", () => {
   assert.match(html, /=== "POS" \? "NTT Data POS"/);
   assert.match(html, /group: module === "NTT Data POS" \? "NTT Own IP"/);
 });
+
+test("admins can reset an unprotected user password through a masked confirmation form", () => {
+  const api = fs.readFileSync(new URL("../public/assets/api-client.js", import.meta.url), "utf8");
+  assert.match(html, /id="adminPasswordResetNew" type="password" minlength="12"/);
+  assert.match(html, /id="adminPasswordResetConfirm" type="password" minlength="12"/);
+  assert.match(html, /data-reset-user-password="\$\{row\.id\}"/);
+  assert.match(html, /newPassword !== \(resetConfirm\?\.value \|\| ""\)/);
+  assert.match(api, /resetUserPassword\(id, newPassword\)/);
+  assert.match(api, /\/api\/admin\/users\/\$\{encodeURIComponent\(id\)\}\/password/);
+});

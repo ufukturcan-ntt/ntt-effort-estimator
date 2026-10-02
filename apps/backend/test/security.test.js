@@ -242,3 +242,12 @@ test("legacy POS module is merged into the NTT Own IP module without losing refe
   assert.deepEqual(payload.modules, ["NTT Data POS", "FI"]);
   assert.deepEqual(payload.efforts["NTT Data POS"], { Uyarlama: 3, Analiz: 2 });
 });
+
+test("admin password reset is protected, validates length and stores only a hash", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /app\.put\("\/api\/admin\/users\/:id\/password", requireAuth, requireAdmin/);
+  assert.match(server, /if \(newPassword\.length < 12\)/);
+  assert.match(server, /normalizeEmail\(target\.rows\[0\]\.email\) === protectedAdminEmail/);
+  assert.match(server, /password_hash = crypt\(\$2, gen_salt\('bf'\)\)/);
+  assert.doesNotMatch(server, /returning[^;]*password_hash/);
+});

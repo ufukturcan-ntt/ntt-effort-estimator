@@ -2791,6 +2791,23 @@
     </div>
   </div>
 
+  <div class="confirm-modal" id="adminPasswordResetModal" role="dialog" aria-modal="true" aria-labelledby="adminPasswordResetTitle">
+    <div class="confirm-box">
+      <h3 id="adminPasswordResetTitle">Kullanıcı Şifresini Sıfırla</h3>
+      <p id="adminPasswordResetUser"></p>
+      <label><span id="adminPasswordResetNewLabel">Yeni şifre</span>
+        <input id="adminPasswordResetNew" type="password" minlength="12" autocomplete="new-password" />
+      </label>
+      <label><span id="adminPasswordResetConfirmLabel">Yeni şifre tekrar</span>
+        <input id="adminPasswordResetConfirm" type="password" minlength="12" autocomplete="new-password" />
+      </label>
+      <div class="quick-actions">
+        <button class="button primary" id="adminPasswordResetSave" type="button">Şifreyi Kaydet</button>
+        <button class="button" id="adminPasswordResetCancel" type="button">Vazgeç</button>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/app-config.js"></script>
   <script src="assets/api-client.js"></script>
   <script src="assets/questions.js"></script>
@@ -3832,6 +3849,13 @@
         passwordMinLength: "Yeni şifre en az 12 karakter olmalı.",
         passwordChanged: "Şifreniz değiştirildi.",
         passwordChangeFailed: "Şifre değiştirilemedi",
+        resetPassword: "Şifre Sıfırla",
+        resetUserPasswordTitle: "Kullanıcı Şifresini Sıfırla",
+        newPasswordAgain: "Yeni şifre tekrar",
+        savePassword: "Şifreyi Kaydet",
+        passwordsDoNotMatch: "Girilen şifreler birbiriyle aynı olmalı.",
+        userPasswordReset: "Kullanıcı şifresi sıfırlandı.",
+        userPasswordResetFailed: "Kullanıcı şifresi sıfırlanamadı",
         language: "Dil",
         loginButton: "Giriş Yap",
         registerButton: "Kayıt Ol",
@@ -4019,6 +4043,13 @@
         passwordMinLength: "New password must be at least 12 characters.",
         passwordChanged: "Your password has been changed.",
         passwordChangeFailed: "Password could not be changed",
+        resetPassword: "Reset Password",
+        resetUserPasswordTitle: "Reset User Password",
+        newPasswordAgain: "Repeat new password",
+        savePassword: "Save Password",
+        passwordsDoNotMatch: "The passwords must match.",
+        userPasswordReset: "The user password has been reset.",
+        userPasswordResetFailed: "The user password could not be reset",
         language: "Language",
         loginButton: "Sign In",
         registerButton: "Register",
@@ -9256,6 +9287,7 @@
           <td>
             <div class="quick-actions">
               <button class="button primary" data-save-user-role="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>Kaydet</button>
+              <button class="button" data-reset-user-password="${row.id}" data-user-email="${escapeHtml(row.email || "")}" type="button" ${protectedUser ? "disabled" : ""}>${escapeHtml(t("resetPassword"))}</button>
               ${row.status === "PENDING" ? `<button class="button" data-approve-user="${row.id}" type="button" ${protectedUser ? "disabled" : ""}>${currentLanguage === "en" ? "Approve" : "Onayla"}</button>` : ""}
             </div>
           </td>
@@ -9284,6 +9316,55 @@
           await loadAdminUsers(true);
         });
       });
+      const resetModal = document.getElementById("adminPasswordResetModal");
+      const resetNew = document.getElementById("adminPasswordResetNew");
+      const resetConfirm = document.getElementById("adminPasswordResetConfirm");
+      const resetSave = document.getElementById("adminPasswordResetSave");
+      const closeResetModal = () => {
+        resetModal?.classList.remove("is-open");
+        if (resetModal) delete resetModal.dataset.userId;
+        if (resetNew) resetNew.value = "";
+        if (resetConfirm) resetConfirm.value = "";
+      };
+      body.querySelectorAll("[data-reset-user-password]").forEach(button => {
+        button.addEventListener("click", () => {
+          if (!resetModal) return;
+          resetModal.dataset.userId = button.dataset.resetUserPassword;
+          setText("adminPasswordResetTitle", t("resetUserPasswordTitle"));
+          setText("adminPasswordResetUser", button.dataset.userEmail || "");
+          setText("adminPasswordResetNewLabel", t("newPassword"));
+          setText("adminPasswordResetConfirmLabel", t("newPasswordAgain"));
+          setText("adminPasswordResetSave", t("savePassword"));
+          setText("adminPasswordResetCancel", currentLanguage === "en" ? "Cancel" : "Vazgeç");
+          resetModal.classList.add("is-open");
+          resetNew?.focus();
+        });
+      });
+      const resetCancel = document.getElementById("adminPasswordResetCancel");
+      if (resetCancel && !resetCancel.dataset.bound) {
+        resetCancel.dataset.bound = "true";
+        resetCancel.addEventListener("click", closeResetModal);
+      }
+      if (resetSave && !resetSave.dataset.bound) {
+        resetSave.dataset.bound = "true";
+        resetSave.addEventListener("click", async () => {
+          const userId = resetModal?.dataset.userId || "";
+          const newPassword = resetNew?.value || "";
+          if (!userId) return;
+          if (newPassword.length < 12) return alert(t("passwordMinLength"));
+          if (newPassword !== (resetConfirm?.value || "")) return alert(t("passwordsDoNotMatch"));
+          resetSave.disabled = true;
+          try {
+            await window.EffortApi.resetUserPassword(userId, newPassword);
+            closeResetModal();
+            alert(t("userPasswordReset"));
+          } catch (error) {
+            alert(`${t("userPasswordResetFailed")}: ${error.message}`);
+          } finally {
+            resetSave.disabled = false;
+          }
+        });
+      }
     }
 
     function clearModuleSelectionState() {

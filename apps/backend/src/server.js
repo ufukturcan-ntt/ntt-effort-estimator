@@ -401,6 +401,25 @@ app.put("/api/admin/users/:id/role", requireAuth, requireAdmin, async (req, res,
     next(error);
   }
 });
+
+app.put("/api/admin/users/:id/password", requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const newPassword = String(req.body?.newPassword || "");
+    if (newPassword.length < 12) return res.status(400).json({ error: "Yeni şifre en az 12 karakter olmalı" });
+    const target = await query(`select email from app_user where id = $1`, [req.params.id]);
+    if (!target.rowCount) return res.status(404).json({ error: "User not found" });
+    if (normalizeEmail(target.rows[0].email) === protectedAdminEmail) {
+      return res.status(409).json({ error: "Bu kullanıcı üzerinde işlem yapılamaz" });
+    }
+    await query(
+      `update app_user set password_hash = crypt($2, gen_salt('bf')) where id = $1`,
+      [req.params.id, newPassword]
+    );
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
 app.get("/api/admin/users/pending", requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const result = await query(

@@ -149,6 +149,12 @@ window.EffortApi = {
       body: JSON.stringify({ role, adminUserId })
     });
   },
+  resetUserPassword(id, newPassword) {
+    return this.request(`/api/admin/users/${encodeURIComponent(id)}/password`, {
+      method: "PUT",
+      body: JSON.stringify({ newPassword })
+    });
+  },
   approveUser(id, adminUserId) {
     return this.request(`/api/admin/users/${encodeURIComponent(id)}/approve`, {
       method: "POST",
