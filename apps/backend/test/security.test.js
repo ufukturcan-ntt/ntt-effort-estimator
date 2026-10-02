@@ -202,3 +202,11 @@ test("POS Greenfield phase maintenance uses stable question ids and the configur
   assert.match(server, /applyPosGreenfieldEffortMaintenance\(result\.rows\[0\]\.payload\)/);
   assert.match(server, /await maintainPosGreenfieldEfforts\(\)/);
 });
+
+test("scope question variable type maintenance normalizes live admin data", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /function canonicalScopeVariableType\(value = ""\)/);
+  assert.match(server, /\["scope-variable-types-v1"\]/);
+  assert.match(server, /variableType: canonicalScopeVariableType\(item\?\.variableType/);
+  assert.match(server, /await normalizeScopeQuestionVariableTypes\(\)/);
+});

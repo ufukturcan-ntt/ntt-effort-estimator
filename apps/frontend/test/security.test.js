@@ -504,3 +504,11 @@ test("question deletion warns about and removes every id-linked admin record", (
   assert.match(html, /confirmQuestionCascadeDelete\(row, "scope"\)/);
   assert.match(html, /confirmQuestionCascadeDelete\(row, "development"\)/);
 });
+
+test("scope question variable types use one canonical yes-no label", () => {
+  assert.match(html, /function canonicalVariableType\(value = ""\)/);
+  assert.match(html, /return "Evet \/ Hayır"/);
+  assert.match(html, /variableType: canonicalVariableType\(cells\[1\]\)/);
+  assert.match(html, /variableType: canonicalVariableType\(item\.variableType/);
+  assert.doesNotMatch(html, /adminSelectCell\("Evet\/Hayır"/);
+});

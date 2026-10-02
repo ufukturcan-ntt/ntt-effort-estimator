@@ -3624,7 +3624,7 @@
         .map(row => [String(row[0]), row]));
       return questions.map(item => {
         const excelRow = excelRows.get(String(item.no)) || [];
-        const variableType = item.variableType || excelRow[3] || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
+        const variableType = canonicalVariableType(item.variableType || excelRow[3] || (item.answerType === "number" ? "Sayı" : "Evet / Hayır"));
         const answerType = String(variableType).toLocaleLowerCase("tr-TR").includes("sayı")
           ? "number"
           : "yesno";
@@ -5667,10 +5667,16 @@
         : value;
     }
 
+    function canonicalVariableType(value = "") {
+      const raw = String(value || "").trim();
+      const normalized = raw.toLocaleLowerCase("tr-TR").replace(/\s+/g, "");
+      if (["yesno", "evet/hayır", "evet/hayir"].includes(normalized)) return "Evet / Hayır";
+      if (["number", "sayı", "sayi"].includes(normalized)) return "Sayı";
+      return raw;
+    }
+
     function displayVariableType(value) {
-      if (value === "number") return "Sayı";
-      if (value === "yesno") return "Evet/Hayır";
-      return value;
+      return canonicalVariableType(value);
     }
 
     function currentQuestionFieldOptions() {
@@ -5688,7 +5694,7 @@
           ...questions.map(item => item.variableType),
           "Evet/Hayır",
           "Sayı"
-        ].map(displayVariableType)),
+        ].map(canonicalVariableType)),
         scopeCategories: uniqueOptionValues([
           ...(configured.scopeCategories || []),
           ...(window.scopeQuestions || []).map(item => item.category)
@@ -6568,7 +6574,7 @@
         const questionType = targetId === "adminDevelopmentRows" ? "development" : "scope";
         const questionId = String(item.id || item.questionId || "").trim() || questionIdFor(item, questionType);
         const noValue = index + 1;
-        const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet/Hayır");
+        const variableTypeValue = displayVariableType(item.variableType) || (item.answerType === "number" ? "Sayı" : "Evet / Hayır");
         const actionButtons = `<div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div>`;
         if (targetId === "adminDevelopmentRows") {
           return `
@@ -6607,7 +6613,7 @@
         const questionId = `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
           <td class="development-question-row-number">${no}</td>
-          ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
+          ${adminSelectCell("Evet / Hayır", fieldOptions.variableTypes)}
           ${["Yeni geliştirme", "Açıklama"].map(editableCell).join("")}
           <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
         </tr>`);
@@ -6619,7 +6625,7 @@
       const questionId = `scope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
       target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
         <td class="scope-question-row-number">${no}</td>
-        ${adminSelectCell("Evet/Hayır", fieldOptions.variableTypes)}
+        ${adminSelectCell("Evet / Hayır", fieldOptions.variableTypes)}
         ${adminSelectCell("", fieldOptions.scopeCategories)}
         ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
@@ -6701,7 +6707,7 @@
       if (target.id === "adminDevelopmentRows") {
         const cells = [...sourceRow.children].slice(0, 4).map(adminCellValue);
         const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
-        const variableTypeValue = cells[1] || "Evet/Hayır";
+        const variableTypeValue = canonicalVariableType(cells[1] || "Evet / Hayır");
         const questionId = `dev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
         target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
           <td class="development-question-row-number">${nextNo}</td>
@@ -6717,7 +6723,7 @@
       }
       const cells = [...sourceRow.children].slice(0, 5).map(adminCellValue);
       const nextNo = Math.max(0, ...[...target.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[0])) || 0)) + 1;
-      const variableTypeValue = cells[1] || "Evet/Hayır";
+      const variableTypeValue = canonicalVariableType(cells[1] || "Evet / Hayır");
       const categoryValue = cells[2] || "";
       const questionId = `scope-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
       target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
@@ -6795,7 +6801,7 @@
           return {
             id: row.dataset.questionId || stableQuestionId("development", cells[0], cells[2]),
             group: "Geliştirme",
-            variableType: cells[1],
+            variableType: canonicalVariableType(cells[1]),
             name: cells[2],
             description: cells[3],
             sizeImpact: false,
@@ -6810,7 +6816,7 @@
         return {
           id: row.dataset.questionId || stableQuestionId("scope", "", cells[3]),
           group: "Kapsam",
-          variableType: cells[1],
+          variableType: canonicalVariableType(cells[1]),
           category: cells[2],
           name: cells[3],
           description: cells[4],
@@ -6966,7 +6972,8 @@
       return (Array.isArray(questions) ? questions : [])
         .map((item, index) => ({
           ...item,
-          id: String(item.id || item.questionId || "").trim() || stableQuestionId("scope", item.no || index + 1, item.name)
+          id: String(item.id || item.questionId || "").trim() || stableQuestionId("scope", item.no || index + 1, item.name),
+          variableType: canonicalVariableType(item.variableType || (item.answerType === "number" ? "Sayı" : "Evet / Hayır"))
         }))
         .sort((left, right) =>
           String(left.id || "").localeCompare(String(right.id || ""), "en", { numeric: true, sensitivity: "base" })
@@ -7519,6 +7526,7 @@
         const defaultGroup = key === "scopeQuestions" ? "Kapsam" : "Geliştirme";
         config[key] = enrichQuestionsFromExcel(dataKey, config[key], defaultGroup).map(item => ({
             ...item,
+            variableType: canonicalVariableType(item.variableType),
             name: key === "developmentQuestions" ? canonicalDevelopmentName(item.name) : item.name
           }));
       });

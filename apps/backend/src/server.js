@@ -1416,6 +1416,46 @@ async function maintainPosGreenfieldEfforts() {
   }
 }
 
+function canonicalScopeVariableType(value = "") {
+  const raw = String(value || "").trim();
+  const normalized = raw.toLocaleLowerCase("tr-TR").replace(/\s+/g, "");
+  if (["yesno", "evet/hayır", "evet/hayir"].includes(normalized)) return "Evet / Hayır";
+  if (["number", "sayı", "sayi"].includes(normalized)) return "Sayı";
+  return raw;
+}
+
+async function normalizeScopeQuestionVariableTypes() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["scope-variable-types-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'scopeQuestions' for update`);
+    if (result.rowCount && Array.isArray(result.rows[0].payload)) {
+      const payload = result.rows[0].payload.map(item => ({
+        ...item,
+        variableType: canonicalScopeVariableType(item?.variableType || (item?.answerType === "number" ? "Sayı" : "Evet / Hayır"))
+      }));
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'scopeQuestions'`,
+        [JSON.stringify(payload)]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1425,6 +1465,7 @@ async function ensureDatabase() {
   // Historical question maintenance has already run; replaying it resurrects deleted questions.
   await rollbackLatestRetailRestrictions();
   await maintainPosGreenfieldEfforts();
+  await normalizeScopeQuestionVariableTypes();
 }
 
 async function ensureBootstrapAdmin() {
