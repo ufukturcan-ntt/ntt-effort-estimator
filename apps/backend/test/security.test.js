@@ -5,6 +5,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { retailRestrictionRollback } from "../src/restriction-rollback.js";
 import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance, vmpDevelopmentQuestionMaintenance } from "../src/scope-question-migrations.js";
+import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } from "../src/pos-effort-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -46,7 +47,7 @@ test("authenticated users can read public live configuration without private app
 
 test("question relationships are migrated to stable ids without overwriting existing questions", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
-  assert.match(server, /await migrateQuestionIds\(\)/);
+  assert.doesNotMatch(server, /await migrateQuestionIds\(\)/);
   assert.match(server, /if \(scopeByName\.has\(key\)\) continue/);
   assert.match(server, /idHeader: "Question ID"[\s\S]*?nameHeader: "Question"/);
   assert.match(server, /idHeader: "Kapsam Soru ID", nameHeader: "Kapsam Sorusu"/);
@@ -150,4 +151,54 @@ test("offer detail endpoint rejects unauthorized viewers", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /async function canViewOffer\(user, offer\)/);
   assert.match(server, /if \(!\(await canViewOffer\(req\.user, result\.rows\[0\]\)\)\) return res\.status\(403\)\.json\(\{ error: "Offer access denied" \}\)/);
+});
+
+test("admin deletion requires confirmation and preserves unrelated orphan records", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  const source = server.slice(server.indexOf("function matrixHeaderDetails("), server.indexOf('app.put("/api/admin/:entity"'));
+  const context = { concurrencyConflict: message => new Error(message) };
+  vm.runInNewContext(source, context);
+  const previous = { scopeQuestions: [{ id: "s1" }, { id: "s2" }], developmentQuestions: [{ id: "d1" }] };
+  const config = {
+    scopeQuestions: [{ id: "s2" }], developmentQuestions: [{ id: "d1" }],
+    restrictions: [["Question ID", "Variable Type"], ["s1", "Kapsam"], ["d1", "Geliştirme"], ["old-orphan", "Kapsam"]],
+    scopeSizeImpacts: [["Question ID", "Puan"], ["s1", 4], ["s2", 0], ["old-orphan", ""]],
+    variableModulePhase: [["Kapsam Soru ID", "Geliştirme Soru ID"], ["s1", ""], ["", "d1"], ["", ""], ["old-orphan", ""]],
+    __meta: { versions: Object.fromEntries(["scopeQuestions", "developmentQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"].map(key => [key, "v1"])) }
+  };
+  const before = JSON.stringify(config);
+  assert.throws(() => context.cascadeDeletedQuestionReferences(config, previous), /açık onay/);
+  assert.equal(JSON.stringify(config), before);
+  config.__meta.confirmedQuestionDeletions = { scope: ["s1"] };
+  context.cascadeDeletedQuestionReferences(config, previous);
+  assert.deepEqual(Array.from(config.restrictions.slice(1), row => row[0]), ["d1", "old-orphan"]);
+  assert.equal(config.scopeSizeImpacts[1][1], 0);
+  assert.equal(config.variableModulePhase.length, 4);
+  assert.equal(config.variableModulePhase[2][0], "");
+  const after = JSON.stringify(config);
+  context.cascadeDeletedQuestionReferences(config, {scopeQuestions: config.scopeQuestions, developmentQuestions: config.developmentQuestions});
+  assert.equal(JSON.stringify(config), after);
+  assert.doesNotMatch(server, /await migrateQuestionIds\(\)/);
+});
+
+test("POS Greenfield phase maintenance uses stable question ids and the configured module", () => {
+  assert.equal(posGreenfieldEffortMaintenance.length, 32);
+  assert.equal(new Set(posGreenfieldEffortMaintenance.map(item => item.id)).size, 32);
+  assert.equal(posGreenfieldEffortMaintenance.some(item => item.name === "Arızi müşteri satışı"), false);
+  assert.equal(posGreenfieldEffortMaintenance.filter(item => item.name === "Garanti süreci").length, 1);
+  assert.equal(posGreenfieldEffortMaintenance.find(item => item.id === "dev-27").values["Internal Entegrasyon Testi"], 0.5);
+  assert.equal(posGreenfieldEffortMaintenance.find(item => item.id === "scope-110").values.Yetkilendirme, 0.125);
+  const input = [["Kaynak Tipi", "Kapsam Soru ID", "Kapsam Sorusu", "Geliştirme Soru ID", "Geliştirme Sorusu", "Hedef Modül", "Efor Bazı", "Analiz"], ["Modül", "", "", "", "", "FI", "Sabit", 9]];
+  const once = applyPosGreenfieldEffortMaintenance(input);
+  const twice = applyPosGreenfieldEffortMaintenance(once);
+  const headers = once[0];
+  const posRows = once.slice(1).filter(row => row[headers.indexOf("Hedef Modül")] === "NTT Data POS");
+  assert.equal(posRows.length, 32);
+  assert.equal(once.length, twice.length);
+  assert.equal(once[1][headers.indexOf("Analiz")], 9);
+  const cashRegister = posRows.find(row => row[headers.indexOf("Kapsam Soru ID")] === "scope-110");
+  assert.equal(cashRegister[headers.indexOf("Yetkilendirme")], 0.125);
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /applyPosGreenfieldEffortMaintenance\(result\.rows\[0\]\.payload\)/);
+  assert.match(server, /await maintainPosGreenfieldEfforts\(\)/);
 });

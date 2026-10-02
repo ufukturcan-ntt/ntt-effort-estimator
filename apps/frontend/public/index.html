@@ -6284,6 +6284,119 @@
       alert(`${selectedRows.length} Kapsam Size Etkisi satırı kopyalandı.`);
     }
 
+    const confirmedQuestionDeletions = { scope: new Set(), development: new Set() };
+
+    function questionDependencyDefinitions(questionType) {
+      const isScope = questionType === "scope";
+      return [
+        {
+          dataKey: "restrictions",
+          bodyId: "adminRestrictionsRows",
+          section: "restrictions",
+          idHeader: "Question ID",
+          label: "Question Restrictions"
+        },
+        ...(isScope ? [{
+          dataKey: "scopeSizeImpacts",
+          bodyId: "adminScopeImpactRows",
+          section: "scope-impact",
+          idHeader: "Question ID",
+          label: currentLanguage === "en" ? "Scope Size Impact" : "Kapsam Size Etkisi"
+        }] : []),
+        {
+          dataKey: "variableModulePhase",
+          bodyId: "adminVmpRows",
+          section: "vmp",
+          idHeader: isScope ? "Kapsam Soru ID" : "Geliştirme Soru ID",
+          label: "Variable + Module + Phase"
+        }
+      ];
+    }
+
+    function matrixHeaderDetails(matrix, idHeader) {
+      if (!Array.isArray(matrix)) return null;
+      const headerIndex = matrix.findIndex(row => Array.isArray(row)
+        && row.some(value => String(value || "").trim() === idHeader));
+      if (headerIndex < 0) return null;
+      const headers = matrix[headerIndex].map(value => String(value || "").trim());
+      const idIndex = headers.indexOf(idHeader);
+      return idIndex < 0 ? null : { headerIndex, idIndex };
+    }
+
+    function seededQuestionDependencyRows(definition, questionId) {
+      const matrix = window.adminSeedData?.[definition.dataKey];
+      const details = matrixHeaderDetails(matrix, definition.idHeader);
+      if (!details) return [];
+      return matrix.slice(details.headerIndex + 1)
+        .filter(row => Array.isArray(row) && String(row[details.idIndex] || "").trim() === questionId);
+    }
+
+    function renderedQuestionDependencyRows(definition, questionId) {
+      const body = document.getElementById(definition.bodyId);
+      if (!adminRenderedSections.has(definition.section) || !body?.dataset.matrixHeaders) return null;
+      let headers = [];
+      try {
+        headers = JSON.parse(body.dataset.matrixHeaders);
+      } catch (_error) {
+        return null;
+      }
+      const idIndex = headers.indexOf(definition.idHeader);
+      if (idIndex < 0) return [];
+      return [...body.querySelectorAll(":scope > tr")]
+        .filter(row => String(adminCellValue(row.children[idIndex]) || "").trim() === questionId);
+    }
+
+    function questionDependencies(questionType, questionId) {
+      return questionDependencyDefinitions(questionType).map(definition => {
+        const renderedRows = renderedQuestionDependencyRows(definition, questionId);
+        const count = renderedRows === null
+          ? seededQuestionDependencyRows(definition, questionId).length
+          : renderedRows.length;
+        return { ...definition, count };
+      }).filter(item => item.count > 0);
+    }
+
+    function removeQuestionDependencies(questionType, questionId) {
+      questionDependencyDefinitions(questionType).forEach(definition => {
+        const matrix = window.adminSeedData?.[definition.dataKey];
+        const details = matrixHeaderDetails(matrix, definition.idHeader);
+        if (details) {
+          window.adminSeedData[definition.dataKey] = matrix.filter((row, index) => index <= details.headerIndex
+            || !Array.isArray(row)
+            || String(row[details.idIndex] || "").trim() !== questionId);
+        }
+        const renderedRows = renderedQuestionDependencyRows(definition, questionId);
+        renderedRows?.forEach(row => row.remove());
+      });
+      renumberRestrictionDisplayRows();
+    }
+
+    function confirmQuestionCascadeDelete(row, questionType) {
+      const questionId = String(row?.dataset.questionId || "").trim();
+      if (!questionId) {
+        alert(currentLanguage === "en" ? "Question ID is missing. Reload before deleting." : "Soru ID bilgisi eksik. Silmeden önce sayfayı yenileyin.");
+        return false;
+      }
+      const nameCellIndex = questionType === "scope" ? 3 : 2;
+      const questionName = adminCellValue(row.children[nameCellIndex]) || questionId;
+      const dependencies = questionDependencies(questionType, questionId);
+      if (!dependencies.length) {
+        const accepted = confirm(currentLanguage === "en"
+          ? `Are you sure you want to delete \"${questionName}\"?`
+          : `\"${questionName}\" sorusunu silmek istediğinize emin misiniz?`);
+        if (accepted) confirmedQuestionDeletions[questionType].add(questionId);
+        return accepted;
+      }
+      const dependencyLines = dependencies.map(item => `- ${item.label}: ${item.count}`).join("\n");
+      const message = currentLanguage === "en"
+        ? `\"${questionName}\" has linked records:\n\n${dependencyLines}\n\nThe question and all linked records will be deleted together. Continue?`
+        : `\"${questionName}\" sorusuna bağlı kayıtlar var:\n\n${dependencyLines}\n\nSoru ve tüm bağlı kayıtlar birlikte silinecek. Devam edilsin mi?`;
+      if (!confirm(message)) return false;
+      confirmedQuestionDeletions[questionType].add(questionId);
+      removeQuestionDependencies(questionType, questionId);
+      return true;
+    }
+
     function bindAdminEditable(root = document) {
       root.querySelectorAll("[contenteditable]").forEach(cell => {
         if (cell.dataset.editBound) return;
@@ -6322,13 +6435,21 @@
         if (button.dataset.removeBound) return;
         button.dataset.removeBound = "true";
         button.addEventListener("click", () => {
-          if (!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
           const row = button.closest("tr, .definition-row, .admin-module-card");
           const restrictionBody = row?.closest?.("#adminRestrictionsRows");
           const scopeQuestionBody = row?.closest?.("#adminScopeRows");
+          const developmentQuestionBody = row?.closest?.("#adminDevelopmentRows");
+          if (scopeQuestionBody) {
+            if (!confirmQuestionCascadeDelete(row, "scope")) return;
+          } else if (developmentQuestionBody) {
+            if (!confirmQuestionCascadeDelete(row, "development")) return;
+          } else if (!confirm(currentLanguage === "en"
+            ? "Are you sure you want to delete this row?"
+            : "Bu satırı silmek istediğinize emin misiniz?")) return;
           row?.remove();
           if (restrictionBody) renumberRestrictionDisplayRows(restrictionBody);
           if (scopeQuestionBody) renumberScopeQuestionDisplayRows(scopeQuestionBody);
+          if (developmentQuestionBody) renumberDevelopmentQuestionDisplayRows(developmentQuestionBody);
           markAdminDirty();
         });
       });
@@ -7520,8 +7641,16 @@
       try {
         renderUnrenderedAdminSections();
         const config = collectAdminConfig();
-        config.__meta = { versions: adminConfigVersions };
+        config.__meta = {
+          versions: adminConfigVersions,
+          confirmedQuestionDeletions: {
+            scope: [...confirmedQuestionDeletions.scope],
+            development: [...confirmedQuestionDeletions.development]
+          }
+        };
         const savedConfig = await window.EffortApi.saveAdminConfig(config);
+        confirmedQuestionDeletions.scope.clear();
+        confirmedQuestionDeletions.development.clear();
         applyAdminConfig(savedConfig || config, { source: "live" });
         renderLocalizationControls();
         renderWorkbookDrivenScreens();

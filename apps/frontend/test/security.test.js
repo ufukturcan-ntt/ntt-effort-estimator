@@ -493,3 +493,14 @@ test("restriction seed ids are present and unique", () => {
   assert.ok(ids.every(Boolean));
   assert.equal(new Set(ids).size, ids.length);
 });
+
+test("question deletion warns about and removes every id-linked admin record", () => {
+  assert.match(html, /function confirmQuestionCascadeDelete\(row, questionType\)/);
+  assert.match(html, /Soru ve tüm bağlı kayıtlar birlikte silinecek\. Devam edilsin mi\?/);
+  assert.match(html, /dataKey: "restrictions"[\s\S]*?idHeader: "Question ID"/);
+  assert.match(html, /dataKey: "scopeSizeImpacts"[\s\S]*?idHeader: "Question ID"/);
+  assert.match(html, /dataKey: "variableModulePhase"[\s\S]*?"Kapsam Soru ID" : "Geliştirme Soru ID"/);
+  assert.match(html, /String\(row\[details\.idIndex\] \|\| ""\)\.trim\(\) !== questionId/);
+  assert.match(html, /confirmQuestionCascadeDelete\(row, "scope"\)/);
+  assert.match(html, /confirmQuestionCascadeDelete\(row, "development"\)/);
+});

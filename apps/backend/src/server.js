@@ -8,6 +8,7 @@ import { pool, query } from "./db.js";
 import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } from "./auth.js";
 import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions, vmpDevelopmentQuestionMaintenance } from "./scope-question-migrations.js";
 import { retailRestrictionRollback } from "./restriction-rollback.js";
+import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -766,6 +767,12 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
   const client = await pool.connect();
   try {
     await client.query("begin");
+    const currentConfigRows = await client.query(
+      `select entity, payload, updated_at from admin_config where entity = any($1::text[]) order by entity for update`,
+      [entries.map(([entity]) => entity)]
+    );
+    const currentConfig = Object.fromEntries(currentConfigRows.rows.map(row => [row.entity, row.payload]));
+    cascadeDeletedQuestionReferences(config, currentConfig);
     for (const [entity] of entries) {
       const expectedUpdatedAt = normalizedVersion(expectedVersions[entity]);
       if (!expectedUpdatedAt) continue;
@@ -774,7 +781,8 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
         throw concurrencyConflict("Admin bakım verisi başka bir kullanıcı tarafından güncellendi. Lütfen Admin sayfasını yenileyip tekrar deneyin.");
       }
     }
-    for (const [entity, payload] of entries) {
+    for (const [entity] of entries) {
+      const payload = config[entity];
       await client.query(
         `insert into admin_config (entity, payload)
          values ($1, $2::jsonb)
@@ -797,8 +805,88 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
   }
 });
 
+function matrixHeaderDetails(matrix, requiredHeaders) {
+  if (!Array.isArray(matrix)) return null;
+  const headerIndex = matrix.findIndex(row => Array.isArray(row)
+    && requiredHeaders.every(header => row.some(value => String(value || "").trim() === header)));
+  if (headerIndex < 0) return null;
+  const headers = matrix[headerIndex].map(value => String(value || "").trim());
+  return { headerIndex, headers };
+}
+
+function filterAdminMatrix(matrix, requiredHeaders, keepRow) {
+  const details = matrixHeaderDetails(matrix, requiredHeaders);
+  if (!details) return matrix;
+  return matrix.filter((row, index) => index <= details.headerIndex
+    || !Array.isArray(row)
+    || keepRow(row, details.headers));
+}
+
+function questionIdSet(questions) {
+  if (!Array.isArray(questions)) return null;
+  return new Set(questions.map(question => String(question?.id || question?.questionId || "").trim()).filter(Boolean));
+}
+
+function cascadeDeletedQuestionReferences(config, previous) {
+  const deletedIds = (key, type) => {
+    const nextIds = questionIdSet(config[key]);
+    const oldIds = questionIdSet(previous[key]);
+    if (!nextIds || !oldIds) return new Set();
+    const confirmed = new Set(config.__meta?.confirmedQuestionDeletions?.[type] || []);
+    const deleted = new Set([...oldIds].filter(id => !nextIds.has(id)));
+    if ([...deleted].some(id => !confirmed.has(id))) {
+      throw concurrencyConflict("Soru silme işlemi için bağlı kayıtları kontrol ederek açık onay verin.");
+    }
+    return deleted;
+  };
+  const scopeIds = deletedIds("scopeQuestions", "scope");
+  const developmentIds = deletedIds("developmentQuestions", "development");
+  if (!scopeIds.size && !developmentIds.size) return;
+  for (const key of ["scopeQuestions", "developmentQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"]) {
+    if (!Array.isArray(config[key]) || !config.__meta?.versions?.[key]) {
+      throw concurrencyConflict("Bağlı kayıtları birlikte silmek için güncel admin verisini yükleyip tekrar deneyin.");
+    }
+  }
+
+  if (scopeIds && Array.isArray(config.scopeSizeImpacts)) {
+    config.scopeSizeImpacts = filterAdminMatrix(config.scopeSizeImpacts, ["Question ID"], (row, headers) => {
+      const questionId = String(row[headers.indexOf("Question ID")] || "").trim();
+      return !scopeIds.has(questionId);
+    });
+  }
+
+  if ((scopeIds || developmentIds) && Array.isArray(config.restrictions)) {
+    config.restrictions = filterAdminMatrix(config.restrictions, ["Question ID", "Variable Type"], (row, headers) => {
+      const questionId = String(row[headers.indexOf("Question ID")] || "").trim();
+      if (!questionId) return true;
+      const variableType = String(row[headers.indexOf("Variable Type")] || "").trim().toLocaleLowerCase("tr-TR");
+      const isDevelopment = variableType.includes("geliştirme") || variableType.includes("development");
+      return isDevelopment
+        ? !developmentIds.has(questionId)
+        : !scopeIds.has(questionId);
+    });
+  }
+
+  if ((scopeIds || developmentIds) && Array.isArray(config.variableModulePhase)) {
+    config.variableModulePhase = filterAdminMatrix(
+      config.variableModulePhase,
+      ["Kapsam Soru ID", "Geliştirme Soru ID"],
+      (row, headers) => {
+        const scopeId = String(row[headers.indexOf("Kapsam Soru ID")] || "").trim();
+        const developmentId = String(row[headers.indexOf("Geliştirme Soru ID")] || "").trim();
+        if (scopeIds.has(scopeId)) return false;
+        if (developmentIds.has(developmentId)) return false;
+        return true;
+      }
+    );
+  }
+}
+
 app.put("/api/admin/:entity", requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    if (["scopeQuestions", "developmentQuestions"].includes(req.params.entity)) {
+      return res.status(409).json({ error: "Soruları ve bağlı kayıtlarını /api/admin/config üzerinden birlikte kaydedin." });
+    }
     const payload = req.body || {};
     const expectedUpdatedAt = clientVersion(req, payload);
     if (expectedUpdatedAt) {
@@ -1300,14 +1388,43 @@ async function rollbackLatestRetailRestrictions() {
   }
 }
 
+async function maintainPosGreenfieldEfforts() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["pos-greenfield-efforts-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'variableModulePhase' for update`);
+    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Variable + Module + Phase data is missing");
+    const payload = applyPosGreenfieldEffortMaintenance(result.rows[0].payload);
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'variableModulePhase'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
   await query(schema);
   await ensureBootstrapAdmin();
   await migrateLibraryItemIds();
-  await migrateQuestionIds();
+  // Historical question maintenance has already run; replaying it resurrects deleted questions.
   await rollbackLatestRetailRestrictions();
+  await maintainPosGreenfieldEfforts();
 }
 
 async function ensureBootstrapAdmin() {
