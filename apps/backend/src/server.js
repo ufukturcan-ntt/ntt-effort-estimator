@@ -9,6 +9,7 @@ import { bearerToken, createAccessToken, validOfferStatus, verifyAccessToken } f
 import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeImpactMaintenance, posScopeQuestionMaintenance, requiredScopeQuestions, vmpDevelopmentQuestionMaintenance } from "./scope-question-migrations.js";
 import { retailRestrictionRollback } from "./restriction-rollback.js";
 import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js";
+import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1456,6 +1457,40 @@ async function normalizeScopeQuestionVariableTypes() {
   }
 }
 
+async function maintainConversionScopeImpacts() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["conversion-scope-impact-corrections-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(
+      `select entity, payload from admin_config where entity = any($1::text[]) order by entity for update`,
+      [["scopeQuestions", "scopeSizeImpacts"]]
+    );
+    const config = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    if (!Array.isArray(config.scopeQuestions) || !Array.isArray(config.scopeSizeImpacts)) {
+      throw new Error("Scope questions or scope size impacts are missing");
+    }
+    const payload = applyConversionScopeImpactCorrections(config.scopeSizeImpacts, config.scopeQuestions);
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'scopeSizeImpacts'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1466,6 +1501,7 @@ async function ensureDatabase() {
   await rollbackLatestRetailRestrictions();
   await maintainPosGreenfieldEfforts();
   await normalizeScopeQuestionVariableTypes();
+  await maintainConversionScopeImpacts();
 }
 
 async function ensureBootstrapAdmin() {

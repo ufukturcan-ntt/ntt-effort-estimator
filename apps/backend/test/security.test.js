@@ -6,6 +6,7 @@ import vm from "node:vm";
 import { retailRestrictionRollback } from "../src/restriction-rollback.js";
 import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQuestionMaintenance, vmpDevelopmentQuestionMaintenance } from "../src/scope-question-migrations.js";
 import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } from "../src/pos-effort-maintenance.js";
+import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -209,4 +210,20 @@ test("scope question variable type maintenance normalizes live admin data", () =
   assert.match(server, /\["scope-variable-types-v1"\]/);
   assert.match(server, /variableType: canonicalScopeVariableType\(item\?\.variableType/);
   assert.match(server, /await normalizeScopeQuestionVariableTypes\(\)/);
+});
+
+test("conversion scope impact correction replaces placeholders with id-linked implementation rows", () => {
+  const headers = ["No", "Question ID", "Implementation Type", "System Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"];
+  const questions = conversionScopeImpactCorrections.map((item, index) => ({ id: `scope-${index + 1}`, name: item.question }));
+  const input = [headers, [1, "scope-1", "All", "All", "CVI / BP Dönüşümü", "", 1, ""]];
+  const once = applyConversionScopeImpactCorrections(input, questions);
+  const twice = applyConversionScopeImpactCorrections(once, questions);
+  assert.equal(once.length, 21);
+  assert.equal(twice.length, 21);
+  assert.equal(once.slice(1).some(row => row[2] === "All"), false);
+  const simplification = once.slice(1).filter(row => row[1] === "scope-4");
+  assert.deepEqual(simplification.map(row => row[5]), [0.4, 0.3, 0.1, 0.3]);
+  assert.ok(simplification.every(row => row[6] === 1 && row[7] === "Katsayı"));
+  const cvi = once.slice(1).filter(row => row[1] === "scope-1");
+  assert.deepEqual(cvi.map(row => row[5]), [20, 0, 10, 10]);
 });
