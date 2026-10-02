@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { allDevelopmentRestrictionIds, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
+import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -285,7 +285,10 @@ test("SAP CAR maintenance applies modules, questions, impacts, restrictions and 
 
 test("requested development questions receive one active All restriction each", () => {
   const headers = ["Restriction ID", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"];
-  const questions = allDevelopmentRestrictionIds.map((id, index) => ({ id, name: ["LME Entegrasyonu ihtiyacı bulunmakta mıdır?", "Toplam rapor sayısı", "Toplam çıktı sayısı"][index] }));
+  const questions = allDevelopmentRestrictionTargets.map((target, index) => ({
+    id: index === 0 ? target.legacyId : `live-${index + 40}`,
+    name: target.name
+  }));
   const input = [headers, ["old-dev-39", "Geliştirme", "dev-39", "Eski ad", "Perakende", "Greenfield", "SAP CAR", "No"]];
   const once = upsertAllDevelopmentRestrictions(input, questions);
   const twice = upsertAllDevelopmentRestrictions(once, questions);

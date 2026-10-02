@@ -1,4 +1,10 @@
-export const allDevelopmentRestrictionIds = ["dev-39", "dev-40", "dev-41"];
+export const allDevelopmentRestrictionTargets = [
+  { legacyId: "dev-39", name: "LME Entegrasyonu ihtiyacı bulunmakta mıdır?" },
+  { legacyId: "dev-40", name: "Toplam rapor sayısı" },
+  { legacyId: "dev-41", name: "Toplam çıktı sayısı" }
+];
+
+const normalize = value => String(value || "").trim().toLocaleLowerCase("tr-TR");
 
 export function upsertAllDevelopmentRestrictions(matrix, developmentQuestions = []) {
   if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
@@ -16,10 +22,12 @@ export function upsertAllDevelopmentRestrictions(matrix, developmentQuestions = 
     active: at("Active?")
   };
   if (Object.values(indexes).some(index => index < 0)) throw new Error("Question Restrictions columns are incomplete");
-  const questions = new Map(developmentQuestions.map(item => [String(item?.id || "").trim(), item]));
-  for (const questionId of allDevelopmentRestrictionIds) {
-    const question = questions.get(questionId);
-    if (!question) throw new Error(`Development question is missing: ${questionId}`);
+  const questionsById = new Map(developmentQuestions.map(item => [String(item?.id || "").trim(), item]));
+  const questionsByName = new Map(developmentQuestions.map(item => [normalize(item?.name), item]));
+  for (const target of allDevelopmentRestrictionTargets) {
+    const question = questionsById.get(target.legacyId) || questionsByName.get(normalize(target.name));
+    if (!question?.id) throw new Error(`Development question is missing: ${target.name}`);
+    const questionId = String(question.id).trim();
     const matches = rows.slice(1).map((row, index) => ({ row, index: index + 1 }))
       .filter(({ row }) => String(row[indexes.questionId] || "").trim() === questionId);
     const row = matches[0]?.row || Array.from({ length: headers.length }, () => "");
