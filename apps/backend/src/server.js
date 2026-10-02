@@ -11,6 +11,7 @@ import { retailRestrictionRollback } from "./restriction-rollback.js";
 import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js";
 import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
+import { applyCarMaintenance } from "./car-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1556,6 +1557,43 @@ async function migrateLegacyPosModule() {
   }
 }
 
+async function maintainSapCarConfiguration() {
+  const entities = ["moduleCatalog", "projectDefinitions", "scopeQuestions", "developmentQuestions", "scopeSizeImpacts", "fixedDays", "restrictions"];
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["sap-car-maintenance-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(
+      `select entity, payload from admin_config where entity = any($1::text[]) order by entity for update`,
+      [entities]
+    );
+    const current = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    const missing = entities.filter(entity => current[entity] == null);
+    if (missing.length) throw new Error(`SAP CAR maintenance data is missing: ${missing.join(", ")}`);
+    const { config } = applyCarMaintenance(current);
+    for (const entity of entities) {
+      if (JSON.stringify(config[entity]) === JSON.stringify(current[entity])) continue;
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = $2`,
+        [JSON.stringify(config[entity]), entity]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1568,6 +1606,7 @@ async function ensureDatabase() {
   await normalizeScopeQuestionVariableTypes();
   await maintainConversionScopeImpacts();
   await migrateLegacyPosModule();
+  await maintainSapCarConfiguration();
 }
 
 async function ensureBootstrapAdmin() {

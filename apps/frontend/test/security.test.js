@@ -528,3 +528,20 @@ test("admins can reset an unprotected user password through a masked confirmatio
   assert.match(api, /resetUserPassword\(id, newPassword\)/);
   assert.match(api, /\/api\/admin\/users\/\$\{encodeURIComponent\(id\)\}\/password/);
 });
+
+test("SAP CAR modules are available as Advanced Solution modules", () => {
+  const expected = [
+    "CAR -POS Data Transfer and Audit (POSDTA)",
+    "CAR -Multichannel Transaction Data Management",
+    "CAR -Unified Demand Forecast (UDF)",
+    "CAR -Demand Data Foundation (DDF)",
+    "CAR -Omnichannel Promotion Pricing (OPP)",
+    "CAR -Inventory Visibility and Omnichannel Article Availability and Sourcing (OAA)",
+    "CAR -On-Shelf Availability (OSA)",
+    "CAR -SAP Merchandise Planning",
+    "CAR -SAP Assortment Planning",
+    "CAR -SAP Allocation Management",
+    "CAR -SAP Promotion Management"
+  ];
+  expected.forEach(module => assert.match(html, new RegExp(`module:\"${module.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\", group:\"Advanced Solution\"`)));
+});

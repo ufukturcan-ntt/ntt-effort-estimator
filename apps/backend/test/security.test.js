@@ -8,6 +8,7 @@ import { obsoletePosScopeQuestions, posDevelopmentQuestionMaintenance, posScopeQ
 import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } from "../src/pos-effort-maintenance.js";
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
+import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -250,4 +251,33 @@ test("admin password reset is protected, validates length and stores only a hash
   assert.match(server, /normalizeEmail\(target\.rows\[0\]\.email\) === protectedAdminEmail/);
   assert.match(server, /password_hash = crypt\(\$2, gen_salt\('bf'\)\)/);
   assert.doesNotMatch(server, /returning[^;]*password_hash/);
+});
+
+test("SAP CAR maintenance applies modules, questions, impacts, restrictions and all fixed-day phases", () => {
+  const adminDataSource = fs.readFileSync(new URL("../../frontend/public/assets/admin-data.js", import.meta.url), "utf8");
+  const questionSource = fs.readFileSync(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8");
+  const context = { window: {} };
+  vm.runInNewContext(adminDataSource, context);
+  vm.runInNewContext(questionSource, context);
+  const input = {
+    ...context.window.adminSeedData,
+    scopeQuestions: context.window.scopeQuestions,
+    developmentQuestions: context.window.developmentQuestions,
+    moduleCatalog: [{ module: "FI", group: "S4Core", selected: false, team: "" }]
+  };
+  const once = applyCarMaintenance(input);
+  const twice = applyCarMaintenance(once.config);
+  assert.deepEqual(once.skipped, ["Mağaza Testi"]);
+  assert.equal(carModules.every(module => once.config.moduleCatalog.some(item => item.module === module && item.group === "Advanced Solution")), true);
+  assert.equal(once.config.scopeQuestions.filter(item => carScopeQuestions.some(([, name]) => name === item.name)).length, 11);
+  assert.equal(once.config.scopeQuestions.filter(item => item.name === "Mağaza Sayısı").length, 1);
+  assert.equal(once.config.developmentQuestions.filter(item => item.id === "dev-42" && item.name === "Entegrasyon").length, 1);
+  const impactHeaders = once.config.scopeSizeImpacts[0];
+  const impactRows = once.config.scopeSizeImpacts.slice(1).filter(row => carScopeQuestions.some(([, name]) => name === row[impactHeaders.indexOf("Kapsam Sorusu")]));
+  assert.equal(impactRows.filter(row => row[impactHeaders.indexOf("Implementation Type")] === "Greenfield" && row[impactHeaders.indexOf("System Type")] === "All").length, 11);
+  const fixedHeaders = once.config.fixedDays[0];
+  const carFixedRows = once.config.fixedDays.slice(1).filter(row => carModules.includes(row[fixedHeaders.indexOf("Modül")]) && row[fixedHeaders.indexOf("System Type")] === "SAP CAR");
+  assert.equal(carFixedRows.length, 44);
+  assert.ok(carFixedRows.every(row => row[fixedHeaders.indexOf("Canlı Anaveri Kontrol")] !== "" && row[fixedHeaders.indexOf("Canlı Anaveri Aktarım")] !== ""));
+  assert.equal(JSON.stringify(twice.config), JSON.stringify(once.config));
 });
