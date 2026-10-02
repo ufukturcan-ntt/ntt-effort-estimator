@@ -12,6 +12,7 @@ import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js
 import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
 import { applyCarMaintenance } from "./car-maintenance.js";
+import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1594,6 +1595,40 @@ async function maintainSapCarConfiguration() {
   }
 }
 
+async function maintainAllDevelopmentRestrictions() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["development-all-restrictions-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(
+      `select entity, payload from admin_config where entity = any($1::text[]) order by entity for update`,
+      [["developmentQuestions", "restrictions"]]
+    );
+    const config = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    if (!Array.isArray(config.developmentQuestions) || !Array.isArray(config.restrictions)) {
+      throw new Error("Development questions or restrictions are missing");
+    }
+    const payload = upsertAllDevelopmentRestrictions(config.restrictions, config.developmentQuestions);
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'restrictions'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1607,6 +1642,7 @@ async function ensureDatabase() {
   await maintainConversionScopeImpacts();
   await migrateLegacyPosModule();
   await maintainSapCarConfiguration();
+  await maintainAllDevelopmentRestrictions();
 }
 
 async function ensureBootstrapAdmin() {

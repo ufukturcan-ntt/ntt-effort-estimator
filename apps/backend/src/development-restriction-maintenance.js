@@ -1,0 +1,38 @@
+export const allDevelopmentRestrictionIds = ["dev-39", "dev-40", "dev-41"];
+
+export function upsertAllDevelopmentRestrictions(matrix, developmentQuestions = []) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return matrix;
+  const rows = matrix.map(row => [...row]);
+  const headers = rows[0].map(value => String(value || "").trim());
+  const at = header => headers.indexOf(header);
+  const indexes = {
+    restrictionId: at("Restriction ID"),
+    type: at("Variable Type"),
+    questionId: at("Question ID"),
+    question: at("Question"),
+    industries: at("Allowed Industries"),
+    implementations: at("Allowed Implementation Types"),
+    systems: at("Allowed System Types"),
+    active: at("Active?")
+  };
+  if (Object.values(indexes).some(index => index < 0)) throw new Error("Question Restrictions columns are incomplete");
+  const questions = new Map(developmentQuestions.map(item => [String(item?.id || "").trim(), item]));
+  for (const questionId of allDevelopmentRestrictionIds) {
+    const question = questions.get(questionId);
+    if (!question) throw new Error(`Development question is missing: ${questionId}`);
+    const matches = rows.slice(1).map((row, index) => ({ row, index: index + 1 }))
+      .filter(({ row }) => String(row[indexes.questionId] || "").trim() === questionId);
+    const row = matches[0]?.row || Array.from({ length: headers.length }, () => "");
+    if (!matches.length) rows.push(row);
+    row[indexes.restrictionId] = row[indexes.restrictionId] || `restriction-${questionId}`;
+    row[indexes.type] = "Geliştirme";
+    row[indexes.questionId] = questionId;
+    row[indexes.question] = question.name;
+    row[indexes.industries] = "All";
+    row[indexes.implementations] = "All";
+    row[indexes.systems] = "All";
+    row[indexes.active] = "Yes";
+    for (const duplicate of matches.slice(1).reverse()) rows.splice(duplicate.index, 1);
+  }
+  return rows;
+}

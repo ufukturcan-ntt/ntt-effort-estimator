@@ -9,6 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
+import { allDevelopmentRestrictionIds, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -280,4 +281,19 @@ test("SAP CAR maintenance applies modules, questions, impacts, restrictions and 
   assert.equal(carFixedRows.length, 44);
   assert.ok(carFixedRows.every(row => row[fixedHeaders.indexOf("Canlı Anaveri Kontrol")] !== "" && row[fixedHeaders.indexOf("Canlı Anaveri Aktarım")] !== ""));
   assert.equal(JSON.stringify(twice.config), JSON.stringify(once.config));
+});
+
+test("requested development questions receive one active All restriction each", () => {
+  const headers = ["Restriction ID", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"];
+  const questions = allDevelopmentRestrictionIds.map((id, index) => ({ id, name: ["LME Entegrasyonu ihtiyacı bulunmakta mıdır?", "Toplam rapor sayısı", "Toplam çıktı sayısı"][index] }));
+  const input = [headers, ["old-dev-39", "Geliştirme", "dev-39", "Eski ad", "Perakende", "Greenfield", "SAP CAR", "No"]];
+  const once = upsertAllDevelopmentRestrictions(input, questions);
+  const twice = upsertAllDevelopmentRestrictions(once, questions);
+  assert.equal(once.length, 4);
+  assert.equal(JSON.stringify(twice), JSON.stringify(once));
+  for (const question of questions) {
+    const rows = once.slice(1).filter(row => row[2] === question.id);
+    assert.equal(rows.length, 1);
+    assert.deepEqual(rows[0].slice(1), ["Geliştirme", question.id, question.name, "All", "All", "All", "Yes"]);
+  }
 });
