@@ -10,6 +10,7 @@ import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
+import { remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -299,4 +300,35 @@ test("requested development questions receive one active All restriction each", 
     assert.equal(rows.length, 1);
     assert.deepEqual(rows[0].slice(1), ["Geliştirme", question.id, question.name, "All", "All", "All", "Yes"]);
   }
+});
+
+test("question identity repair preserves references and appends inactive All restrictions", () => {
+  const restrictions = [["Restriction ID", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"],
+    ["r-scope", "Kapsam", "scope-40", "3rd Party Entegrasyon Sayısı", "All", "All", "All", "Yes"],
+    ["r-dev", "Geliştirme", "scope-1", "Dev A", "Retail", "Greenfield", "S4", "Yes"]];
+  const config = {
+    scopeQuestions: [{ id: "scope-40", name: "3rd Party Entegrasyon Sayısı" }, { id: "scope-40", name: "WM → EWM Geçişi" }],
+    developmentQuestions: [{ id: "scope-1", name: "Dev A" }, { id: "dev-2", name: "Dev B" }],
+    restrictions,
+    scopeSizeImpacts: [["Question ID", "Kapsam Sorusu", "Puan"], ["scope-40", "WM → EWM Geçişi", 5]],
+    variableModulePhase: [["Kapsam Soru ID", "Kapsam Sorusu", "Geliştirme Soru ID", "Geliştirme Sorusu"], ["scope-40", "WM → EWM Geçişi", "scope-1", "Dev A"]]
+  };
+  const result = repairQuestionIdentities(config);
+  assert.equal(result.stats.scopeIdsRepaired, 1);
+  assert.equal(result.stats.developmentIdsRepaired, 1);
+  assert.equal(result.stats.restrictionsAdded, 2);
+  const repairedScopeId = result.config.scopeQuestions[1].id;
+  const repairedDevId = result.config.developmentQuestions[0].id;
+  assert.notEqual(repairedScopeId, "scope-40");
+  assert.match(repairedDevId, /^dev-/);
+  assert.equal(result.config.scopeSizeImpacts[1][0], repairedScopeId);
+  assert.equal(result.config.variableModulePhase[1][0], repairedScopeId);
+  assert.equal(result.config.variableModulePhase[1][2], repairedDevId);
+  assert.equal(result.config.restrictions[2][2], repairedDevId);
+  const addedRows = result.config.restrictions.slice(-2);
+  assert.ok(addedRows.every(row => row.slice(4, 7).every(value => value === "All") && row[7] === "No"));
+  assert.deepEqual(remapDevelopmentAnswers({ "scope-1": "Evet", "dev-2": "Hayır" }, result.developmentIdMap), {
+    [repairedDevId]: "Evet",
+    "dev-2": "Hayır"
+  });
 });
