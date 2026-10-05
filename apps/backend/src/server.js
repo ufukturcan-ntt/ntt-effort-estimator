@@ -12,6 +12,7 @@ import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js
 import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
 import { applyCarMaintenance } from "./car-maintenance.js";
+import { applyCar2Maintenance } from "./car2-maintenance.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
 
@@ -1596,6 +1597,43 @@ async function maintainSapCarConfiguration() {
   }
 }
 
+async function maintainCar2Configuration() {
+  const entities = ["projectDefinitions", "scopeQuestions", "developmentQuestions", "scopeSizeImpacts", "restrictions", "variableModulePhase", "fixedDays"];
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["car2-maintenance-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(
+      `select entity, payload from admin_config where entity = any($1::text[]) order by entity for update`,
+      [entities]
+    );
+    const current = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    const missing = entities.filter(entity => current[entity] == null);
+    if (missing.length) throw new Error(`CAR2 maintenance data is missing: ${missing.join(", ")}`);
+    const config = applyCar2Maintenance(current);
+    for (const entity of entities) {
+      if (JSON.stringify(config[entity]) === JSON.stringify(current[entity])) continue;
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = $2`,
+        [JSON.stringify(config[entity]), entity]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function maintainAllDevelopmentRestrictions() {
   const client = await pool.connect();
   try {
@@ -1738,6 +1776,7 @@ async function ensureDatabase() {
   await maintainAllDevelopmentRestrictions();
   await repairLiveQuestionIdentities();
   await consolidateLiveDuplicateScopeQuestions();
+  await maintainCar2Configuration();
 }
 
 async function ensureBootstrapAdmin() {

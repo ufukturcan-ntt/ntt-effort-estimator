@@ -2741,6 +2741,7 @@
               <section class="panel admin-section" data-admin-panel="fixed">
                 <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><button class="button primary" id="addFixedDaysModuleButton" type="button">+ Modül</button></div>
                 <div class="fixed-days-filters">
+                  <label><span>Endüstri</span><select id="fixedDaysIndustryFilter"></select></label>
                   <label><span>Size</span><select id="fixedDaysSizeFilter"></select></label>
                   <label><span>İmplementasyon Türü</span><select id="fixedDaysImplementationFilter"></select></label>
                   <label><span>Sistem Türü</span><select id="fixedDaysSystemFilter"></select></label>
@@ -2748,12 +2749,14 @@
                 <div class="fixed-days-copy">
                   <div class="fixed-days-copy-group">
                     <strong>Kaynak</strong>
+                    <label><span>Endüstri</span><select id="fixedCopySourceIndustry"></select></label>
                     <label><span>Size</span><select id="fixedCopySourceSize"></select></label>
                     <label><span>İmplementasyon Türü</span><select id="fixedCopySourceImplementation"></select></label>
                     <label><span>Sistem Türü</span><select id="fixedCopySourceSystem"></select></label>
                   </div>
                   <div class="fixed-days-copy-group">
                     <strong>Hedef</strong>
+                    <label><span>Endüstri</span><select id="fixedCopyTargetIndustry"></select></label>
                     <label><span>Size</span><select id="fixedCopyTargetSize"></select></label>
                     <label><span>İmplementasyon Türü</span><select id="fixedCopyTargetImplementation"></select></label>
                     <label><span>Sistem Türü</span><select id="fixedCopyTargetSystem"></select></label>
@@ -3042,7 +3045,7 @@
       const existingHeader = canonicalRows.find(row => row.includes("System Type") && (row.includes("Modül") || row.includes("Column1")));
       if (existingHeader) {
         const sourceHeaders = existingHeader.map(value => value === "Column1" ? "Modül" : value);
-        const cleanHeaders = ["Modül", "Size", ...allConfiguredPhaseHeaders(false), "Implementation Type", "System Type"];
+        const cleanHeaders = ["Endüstri", "Modül", "Size", ...allConfiguredPhaseHeaders(false), "Implementation Type", "System Type"];
         const sourceIndex = header => sourceHeaders.indexOf(header);
         return [
           cleanHeaders,
@@ -3056,7 +3059,7 @@
         ];
       }
       const fixedPhases = allConfiguredPhaseHeaders(false);
-      const output = [["Modül", "Size", ...fixedPhases, "Implementation Type", "System Type"]];
+      const output = [["Endüstri", "Modül", "Size", ...fixedPhases, "Implementation Type", "System Type"]];
       let implementation = "All";
       let size = "All";
       canonicalRows.forEach(row => {
@@ -3081,7 +3084,7 @@
         const systemType = ["Conversion", "Greenfield"].includes(implementation)
           ? "SAP S/4HANA Private Cloud"
           : "All";
-        output.push([first, size, ...phaseValues, canonicalImplementationList(implementation || "All"), systemType]);
+        output.push(["All", first, size, ...phaseValues, canonicalImplementationList(implementation || "All"), systemType]);
       });
       return output;
     }
@@ -3096,6 +3099,7 @@
         Object.entries(workbookRows).forEach(([module, values]) => {
           if (/^(Implementation Type:|SMALL|MEDIUM|LARGE|X-LARGE)/i.test(module)) return;
           normalized.push([
+            "All",
             module,
             "All",
             ...allConfiguredPhaseHeaders(false).map(phase => Number(values?.[phase]) || 0),
@@ -3107,10 +3111,11 @@
       return normalized;
     }
 
-    function fixedRowsForSelection(implementation, systemType, sizeKey) {
+    function fixedRowsForSelection(implementation, systemType, sizeKey, industry = "All") {
       const rows = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
       const headers = rows[0] || [];
       const moduleIndex = headers.indexOf("Modül");
+      const industryIndex = headers.indexOf("Endüstri");
       const sizeIndex = headers.indexOf("Size");
       const implementationIndex = headers.indexOf("Implementation Type");
       const systemIndex = headers.indexOf("System Type");
@@ -3118,15 +3123,18 @@
       const selected = new Map();
       rows.slice(1).forEach(row => {
         const rowImplementation = row[implementationIndex] || "All";
+        const rowIndustry = industryIndex >= 0 ? (row[industryIndex] || "All") : "All";
         const rowSystem = row[systemIndex] || "All";
         const rowSize = row[sizeIndex] || "All";
         if (![implementation, "All"].includes(rowImplementation)) return;
         if (![systemType, "All"].includes(rowSystem)) return;
         if (![sizeKey, "All"].includes(rowSize)) return;
+        if (![industry, "All"].includes(rowIndustry)) return;
         const module = row[moduleIndex];
         if (!module) return;
         const specificity =
-          (rowImplementation === implementation ? 4 : 0)
+          (rowIndustry === industry ? 8 : 0)
+          + (rowImplementation === implementation ? 4 : 0)
           + (rowSystem === systemType ? 2 : 0)
           + (rowSize === sizeKey ? 1 : 0);
         if ((selected.get(module)?.specificity ?? -1) > specificity) return;
@@ -3140,6 +3148,7 @@
 
     function fixedDaysEditorSelection() {
       return {
+        industry: document.getElementById("fixedDaysIndustryFilter")?.value || "All",
         size: document.getElementById("fixedDaysSizeFilter")?.value || "SMALL",
         implementation: document.getElementById("fixedDaysImplementationFilter")?.value || "All",
         systemType: document.getElementById("fixedDaysSystemFilter")?.value || "All"
@@ -3148,6 +3157,7 @@
 
     function fixedDaysCopySelection(prefix) {
       return {
+        industry: document.getElementById(`${prefix}Industry`)?.value || "All",
         size: document.getElementById(`${prefix}Size`)?.value || "SMALL",
         implementation: document.getElementById(`${prefix}Implementation`)?.value || "All",
         systemType: document.getElementById(`${prefix}System`)?.value || "All"
@@ -3156,6 +3166,7 @@
 
     function fixedDaysSelectOptions() {
       return {
+        industries: ["All", ...adminDefinitionValues(0)],
         sizes: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"],
         implementations: ["All", ...adminDefinitionValues(1)],
         systems: ["All", ...adminDefinitionValues(2)]
@@ -3192,6 +3203,7 @@
         ["fixedCopySource", fixedDaysEditorSelection()],
         ["fixedCopyTarget", fixedDaysEditorSelection()]
       ].forEach(([prefix, defaults]) => {
+        fillSelect(document.getElementById(`${prefix}Industry`), options.industries, defaults.industry);
         fillSelect(document.getElementById(`${prefix}Size`), options.sizes, defaults.size);
         fillSelect(document.getElementById(`${prefix}Implementation`), options.implementations, defaults.implementation);
         fillSelect(document.getElementById(`${prefix}System`), options.systems, defaults.systemType);
@@ -3204,7 +3216,8 @@
     }
 
     function fixedDaysSelectionMatches(row, headers, selection) {
-      return row[headers.indexOf("Size")] === selection.size
+      return row[headers.indexOf("Endüstri")] === selection.industry
+        && row[headers.indexOf("Size")] === selection.size
         && row[headers.indexOf("Implementation Type")] === selection.implementation
         && row[headers.indexOf("System Type")] === selection.systemType;
     }
@@ -3213,7 +3226,7 @@
       persistFixedDaysEditor();
       const source = fixedDaysCopySelection("fixedCopySource");
       const target = fixedDaysCopySelection("fixedCopyTarget");
-      if (source.size === target.size && source.implementation === target.implementation && source.systemType === target.systemType) {
+      if (source.industry === target.industry && source.size === target.size && source.implementation === target.implementation && source.systemType === target.systemType) {
         alert("Kaynak ve hedef aynı olamaz.");
         return;
       }
@@ -3226,11 +3239,13 @@
       }
       if (!confirm("Hedef seçimdeki mevcut Fixed Days kayıtları silinip kaynak kayıtlar kopyalanacak. Devam edilsin mi?")) return;
       const sizeIndex = headers.indexOf("Size");
+      const industryIndex = headers.indexOf("Endüstri");
       const implementationIndex = headers.indexOf("Implementation Type");
       const systemIndex = headers.indexOf("System Type");
       const retained = normalized.slice(1).filter(row => !fixedDaysSelectionMatches(row, headers, target));
       const copied = sourceRows.map(row => {
         const next = [...row];
+        next[industryIndex] = target.industry;
         next[sizeIndex] = target.size;
         next[implementationIndex] = target.implementation;
         next[systemIndex] = target.systemType;
@@ -3238,7 +3253,7 @@
       });
       window.adminSeedData.fixedDays = [headers, ...retained, ...copied];
       const active = fixedDaysEditorSelection();
-      if (active.size === target.size && active.implementation === target.implementation && active.systemType === target.systemType) {
+      if (active.industry === target.industry && active.size === target.size && active.implementation === target.implementation && active.systemType === target.systemType) {
         renderFixedDaysEditor();
       }
       markAdminDirty();
@@ -3265,12 +3280,14 @@
       const normalized = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
       const headers = normalized[0] || [];
       const moduleIndex = headers.indexOf("Modül");
+      const industryIndex = headers.indexOf("Endüstri");
       const sizeIndex = headers.indexOf("Size");
       const implementationIndex = headers.indexOf("Implementation Type");
       const systemIndex = headers.indexOf("System Type");
       const activePhases = phaseHeadersForImplementation(selection.implementation, false);
       const retained = normalized.slice(1).filter(row =>
-        row[sizeIndex] !== selection.size
+        row[industryIndex] !== selection.industry
+        || row[sizeIndex] !== selection.size
         || row[implementationIndex] !== selection.implementation
         || row[systemIndex] !== selection.systemType
       );
@@ -3283,6 +3300,7 @@
         const valueMap = Object.fromEntries(activePhases.map((phase, index) => [phase, values[index] ?? ""]));
         return headers.map(header => {
           if (header === "Modül") return module;
+          if (header === "Endüstri") return selection.industry;
           if (header === "Size") return selection.size;
           if (header === "Implementation Type") return selection.implementation;
           if (header === "System Type") return selection.systemType;
@@ -3300,13 +3318,15 @@
       const rows = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
       const headers = rows[0] || [];
       const indexes = {
+        industry: headers.indexOf("Endüstri"),
         module: headers.indexOf("Modül"),
         size: headers.indexOf("Size"),
         implementation: headers.indexOf("Implementation Type"),
         system: headers.indexOf("System Type")
       };
       const matching = rows.slice(1).filter(row =>
-        row[indexes.size] === selection.size
+        row[indexes.industry] === selection.industry
+        && row[indexes.size] === selection.size
         && row[indexes.implementation] === selection.implementation
         && row[indexes.system] === selection.systemType
       );
@@ -3331,21 +3351,24 @@
     }
 
     function initializeFixedDaysEditor() {
+      const industry = document.getElementById("fixedDaysIndustryFilter");
       const size = document.getElementById("fixedDaysSizeFilter");
       const implementation = document.getElementById("fixedDaysImplementationFilter");
       const system = document.getElementById("fixedDaysSystemFilter");
-      if (!size || !implementation || !system) return;
+      if (!industry || !size || !implementation || !system) return;
       const current = fixedDaysEditorSelection();
       const fixedOptions = fixedDaysSelectOptions();
+      industry.innerHTML = fixedOptions.industries.map(value => `<option>${escapeHtml(value)}</option>`).join("");
       size.innerHTML = fixedOptions.sizes.map(value => `<option>${value}</option>`).join("");
       implementation.innerHTML = fixedOptions.implementations.map(value => `<option>${escapeHtml(value)}</option>`).join("");
       system.innerHTML = fixedOptions.systems.map(value => `<option>${escapeHtml(value)}</option>`).join("");
+      industry.value = fixedOptions.industries.includes(current.industry) ? current.industry : (adminDefinitionValues(0)[0] || "All");
       size.value = current.size;
       implementation.value = current.implementation === "All" ? (adminDefinitionValues(1)[0] || "All") : current.implementation;
       system.value = current.systemType === "All" && ["Conversion", "Greenfield"].includes(implementation.value)
         ? "SAP S/4HANA Private Cloud"
         : current.systemType;
-      [size, implementation, system].forEach(select => {
+      [industry, size, implementation, system].forEach(select => {
         if (select.dataset.fixedFilterBound) return;
         select.dataset.fixedFilterBound = "true";
         select.addEventListener("change", () => {
@@ -3363,12 +3386,12 @@
         addButton.dataset.fixedAddBound = "true";
         addButton.addEventListener("click", () => {
           const used = new Set([...document.querySelectorAll("#adminFixedRows [data-fixed-module]")].map(select => select.value));
-          const module = sortByModuleName(moduleCatalog).find(item => !used.has(item.module))?.module || sortedModuleNames()[0] || "";
+          const module = "";
           const body = document.getElementById("adminFixedRows");
           body.insertAdjacentHTML("beforeend", `
             <tr>
-              ${adminSelectCell(module, sortedModuleNames()).replace("<select", '<select data-fixed-module')}
-              ${phaseHeadersForImplementation(fixedDaysEditorSelection().implementation, false).map(() => '<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value="0"></td>').join("")}
+              ${adminSelectCell(module, ["", ...sortedModuleNames()]).replace("<select", '<select data-fixed-module')}
+              ${phaseHeadersForImplementation(fixedDaysEditorSelection().implementation, false).map(() => '<td><input class="admin-number-input" data-fixed-phase type="number" step="0.5" min="0" value=""></td>').join("")}
               <td><strong data-fixed-total>0</strong></td>
               <td><button class="button danger" data-admin-remove type="button">Sil</button></td>
             </tr>
@@ -5418,8 +5441,9 @@
     function finalRowsForSelectedModules() {
       const implementation = document.getElementById("projectImplementation")?.value || "Conversion";
       const systemType = document.getElementById("projectSystem")?.value || "All";
+      const industry = document.getElementById("projectIndustry")?.value || "All";
       const size = projectSizeFromScore(currentScopeScore());
-      const fixedRows = fixedRowsForSelection(implementation, systemType, size.fixedKey);
+      const fixedRows = fixedRowsForSelection(implementation, systemType, size.fixedKey, industry);
       const sizeRow = {};
       const fixedValues = effectiveFixedEffortValues(fixedEffortState, systemType, questionAnswers.scopeQuestions);
       const selectedNames = selectedModuleNames();
@@ -6660,7 +6684,7 @@
         target.insertAdjacentHTML("beforeend", `<tr data-question-id="${escapeHtml(questionId)}">
           <td class="development-question-row-number">${no}</td>
           ${adminSelectCell("Evet / Hayır", fieldOptions.variableTypes)}
-          ${["Yeni geliştirme", "Açıklama"].map(editableCell).join("")}
+          ${["", ""].map(editableCell).join("")}
           <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
         </tr>`);
         bindAdminEditable(target);
@@ -6673,7 +6697,7 @@
         <td class="scope-question-row-number">${no}</td>
         ${adminSelectCell("Evet / Hayır", fieldOptions.variableTypes)}
         ${adminSelectCell("", fieldOptions.scopeCategories)}
-        ${["Yeni soru", "Açıklama"].map(editableCell).join("")}
+        ${["", ""].map(editableCell).join("")}
         <td><div class="quick-actions"><button class="button" data-admin-copy-question type="button">Kopyala</button><button class="button danger" data-admin-remove type="button">Sil</button></div></td>
       </tr>`);
       bindAdminEditable(target);
@@ -8061,7 +8085,7 @@
       const systemType = offer.system_type || offerJson(offer.project_definition).system || "All";
       const industry = offer.industry || offerJson(offer.project_definition).industry || "All";
       const sizeKey = projectSizeFromScore(offerScopeScore(offer), { industry, implementation, system: systemType }).fixedKey;
-      const fixedRows = fixedRowsForSelection(implementation, systemType, sizeKey);
+      const fixedRows = fixedRowsForSelection(implementation, systemType, sizeKey, industry);
       const sizeRow = {};
       const support = offerJson(offer.hypercare_inputs);
       const fixedValues = effectiveFixedEffortValues(offerFixedEfforts(offer), systemType, offerJson(offer.scope_answers));
