@@ -13,7 +13,7 @@ import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
 import { applyCarMaintenance } from "./car-maintenance.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
-import { remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
+import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1676,6 +1676,52 @@ async function repairLiveQuestionIdentities() {
   }
 }
 
+async function consolidateLiveDuplicateScopeQuestions() {
+  const entities = ["scopeQuestions", "developmentQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"];
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["question-identity-repair-v2"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(
+      `select entity, payload from admin_config where entity = any($1::text[]) order by entity for update`,
+      [entities]
+    );
+    const current = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    const missing = entities.filter(entity => current[entity] == null);
+    if (missing.length) throw new Error(`Scope duplicate consolidation data is missing: ${missing.join(", ")}`);
+    const repaired = consolidateDuplicateScopeQuestions(current);
+    for (const entity of entities) {
+      if (JSON.stringify(repaired.config[entity]) === JSON.stringify(current[entity])) continue;
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = $2`,
+        [JSON.stringify(repaired.config[entity]), entity]
+      );
+    }
+    const offers = await client.query(`select id, scope_answers from offer for update`);
+    for (const offer of offers.rows) {
+      const answers = remapDevelopmentAnswers(offer.scope_answers, repaired.scopeIdMap);
+      if (JSON.stringify(answers) === JSON.stringify(offer.scope_answers)) continue;
+      await client.query(
+        `update offer set scope_answers = $2::jsonb, updated_at = now() where id = $1`,
+        [offer.id, JSON.stringify(answers)]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function ensureDatabase() {
   if (!sessionSecret) throw new Error("SESSION_SECRET must be configured");
   const schema = await fs.readFile(new URL("../sql/schema.sql", import.meta.url), "utf8");
@@ -1691,6 +1737,7 @@ async function ensureDatabase() {
   await maintainSapCarConfiguration();
   await maintainAllDevelopmentRestrictions();
   await repairLiveQuestionIdentities();
+  await consolidateLiveDuplicateScopeQuestions();
 }
 
 async function ensureBootstrapAdmin() {

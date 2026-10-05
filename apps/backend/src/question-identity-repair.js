@@ -1,5 +1,12 @@
 const normalize = value => String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
 
+const duplicateScopeTargets = [
+  { oldId: "scope-78", newId: "scope-76", name: "SLO / TDMS Araç İhtiyacı" },
+  { oldId: "scope-79", newId: "scope-77", name: "TSA / Paralel İşletim" },
+  { oldId: "scope-80", newId: "scope-48", name: "Lokalizasyon / Ülke Versiyonu" },
+  { oldId: "scope-81", newId: "scope-49", name: "Industry Solution Kullanımı" }
+];
+
 function idAllocator(prefix, questions) {
   const used = new Set(questions.map(item => String(item?.id || "").trim()).filter(Boolean));
   let next = Math.max(0, ...[...used].map(id => Number(id.match(new RegExp(`^${prefix}-(\\d+)$`))?.[1]) || 0));
@@ -91,6 +98,21 @@ function rewriteNamedReference(matrix, idHeader, nameHeader, mappings, requireNa
   });
 }
 
+function dedupeMatrix(matrix, keyForRow) {
+  if (!Array.isArray(matrix) || !Array.isArray(matrix[0])) return matrix;
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const seen = new Set();
+  const rows = matrix.slice(1).filter(Array.isArray).filter(row => {
+    const key = keyForRow(row, headers);
+    if (!key || !seen.has(key)) {
+      if (key) seen.add(key);
+      return true;
+    }
+    return false;
+  });
+  return [matrix[0], ...rows];
+}
+
 function appendMissingRestrictions(matrix, scopeQuestions, developmentQuestions) {
   if (!Array.isArray(matrix) || !Array.isArray(matrix[0])) return matrix;
   const rows = matrix.map(row => [...row]);
@@ -156,6 +178,42 @@ export function repairQuestionIdentities(config) {
     },
     developmentIdMap: Object.fromEntries(developmentMappings.map(item => [item.oldId, item.newId])),
     stats: { scopeIdsRepaired: scopeMappings.length, developmentIdsRepaired: developmentMappings.length, restrictionsAdded: appended.added }
+  };
+}
+
+export function consolidateDuplicateScopeQuestions(config) {
+  if (!Array.isArray(config?.scopeQuestions) || !Array.isArray(config?.developmentQuestions) || !Array.isArray(config?.restrictions)) {
+    throw new Error("Scope duplicate consolidation data is incomplete");
+  }
+  const byId = new Map(config.scopeQuestions.map(item => [String(item?.id || "").trim(), item]));
+  const mappings = duplicateScopeTargets.filter(target => {
+    const duplicate = byId.get(target.oldId);
+    const canonical = byId.get(target.newId);
+    return duplicate && canonical && normalize(duplicate.name) === normalize(canonical.name);
+  });
+  const removedIds = new Set(mappings.map(item => item.oldId));
+  const scopeQuestions = config.scopeQuestions.filter(item => !removedIds.has(String(item?.id || "").trim()));
+  let restrictions = rewriteRestrictionReferences(config.restrictions, mappings, []);
+  let scopeSizeImpacts = rewriteNamedReference(config.scopeSizeImpacts, "Question ID", "Kapsam Sorusu", mappings, true);
+  let variableModulePhase = rewriteNamedReference(config.variableModulePhase, "Kapsam Soru ID", "Kapsam Sorusu", mappings, true);
+  restrictions = dedupeMatrix(restrictions, (row, headers) => {
+    const type = normalize(row[headers.indexOf("Variable Type")]);
+    const id = String(row[headers.indexOf("Question ID")] || "").trim();
+    return `${type}::${id}`;
+  });
+  scopeSizeImpacts = dedupeMatrix(scopeSizeImpacts, row => JSON.stringify(row));
+  variableModulePhase = dedupeMatrix(variableModulePhase, row => JSON.stringify(row));
+  const appended = appendMissingRestrictions(restrictions, scopeQuestions, config.developmentQuestions);
+  return {
+    config: {
+      ...config,
+      scopeQuestions,
+      restrictions: appended.rows,
+      scopeSizeImpacts,
+      variableModulePhase
+    },
+    scopeIdMap: Object.fromEntries(mappings.map(item => [item.oldId, item.newId])),
+    stats: { scopeDuplicatesRemoved: mappings.length, restrictionsAdded: appended.added }
   };
 }
 

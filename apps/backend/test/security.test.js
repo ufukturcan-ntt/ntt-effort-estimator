@@ -10,7 +10,7 @@ import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
-import { remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
+import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -331,4 +331,26 @@ test("question identity repair preserves references and appends inactive All res
     [repairedDevId]: "Evet",
     "dev-2": "Hayır"
   });
+});
+
+test("known duplicate scope questions consolidate without orphaning references", () => {
+  const config = {
+    scopeQuestions: [
+      { id: "scope-76", name: "SLO / TDMS Araç İhtiyacı" },
+      { id: "scope-78", name: "SLO / TDMS Araç İhtiyacı" }
+    ],
+    developmentQuestions: [{ id: "dev-1", name: "Development" }],
+    restrictions: [["Restriction ID", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"],
+      ["r-scope", "Kapsam", "scope-76", "SLO / TDMS Araç İhtiyacı", "All", "All", "All", "Yes"],
+      ["r-dev", "Geliştirme", "dev-1", "Development", "All", "All", "All", "Yes"]],
+    scopeSizeImpacts: [["Question ID", "Kapsam Sorusu", "Puan"], ["scope-78", "SLO / TDMS Araç İhtiyacı", 5]],
+    variableModulePhase: [["Kapsam Soru ID", "Kapsam Sorusu"], ["scope-78", "SLO / TDMS Araç İhtiyacı"]]
+  };
+  const result = consolidateDuplicateScopeQuestions(config);
+  assert.equal(result.stats.scopeDuplicatesRemoved, 1);
+  assert.equal(result.stats.restrictionsAdded, 0);
+  assert.deepEqual(result.config.scopeQuestions.map(item => item.id), ["scope-76"]);
+  assert.equal(result.config.scopeSizeImpacts[1][0], "scope-76");
+  assert.equal(result.config.variableModulePhase[1][0], "scope-76");
+  assert.deepEqual(remapDevelopmentAnswers({ "scope-78": "Evet" }, result.scopeIdMap), { "scope-76": "Evet" });
 });
