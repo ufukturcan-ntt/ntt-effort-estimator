@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, developmentDefinitions, effortDefinitions, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -27,6 +27,22 @@ assert.ok(fixedHeaders.includes("Endüstri"));
 const fixedIndustryIndex = fixedHeaders.indexOf("Endüstri");
 const industries = new Set(result.projectDefinitions.slice(1).map(row => row[0]).filter(Boolean));
 assert.deepEqual(new Set(result.fixedDays.slice(1).map(row => row[fixedIndustryIndex])), industries);
+
+const updatedFixedDays = applyRetailPrivateCloudFixedDays(result.fixedDays);
+const fixedAt = Object.fromEntries(updatedFixedDays[0].map((header, index) => [header, index]));
+const expectedAnalysis = { SMALL: 82, MEDIUM: 104, LARGE: 194, "X-LARGE": 304 };
+for (const [size, analysis] of Object.entries(expectedAnalysis)) {
+  for (const module of ["MM", "SD"]) {
+    const row = updatedFixedDays.slice(1).find(item => item[fixedAt.Endüstri] === "Perakende"
+      && item[fixedAt.Modül] === module && item[fixedAt.Size] === size
+      && item[fixedAt["Implementation Type"]] === "Greenfield"
+      && item[fixedAt["System Type"]] === "SAP S/4HANA Private Cloud");
+    assert.ok(row, `missing fixed-day row: ${size}/${module}`);
+    assert.equal(row[fixedAt.Analiz], analysis);
+    if (fixedAt.Hypercare != null) assert.equal(row[fixedAt.Hypercare], "");
+    if (fixedAt["Canlı Destek"] != null) assert.equal(row[fixedAt["Canlı Destek"]], "");
+  }
+}
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

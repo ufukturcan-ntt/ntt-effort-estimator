@@ -79,6 +79,20 @@ const effortDefinitions = [
   ["Küçük ölçekli entegrasyonlar", "MM", "Sabit", 10], ["Orta ölçekli entegrasyonlar", "MM", "Sabit", 15]
 ];
 
+const retailPrivateCloudFixedDays = {
+  SMALL: [82, 3, 1, 2, 2, 2, 3, 11, 14, 1, 2, 6, 6, "", ""],
+  MEDIUM: [104, 5, 2, 3, 3, 3, 4, 20, 30, 2, 4, 10, 12, "", ""],
+  LARGE: [194, 8, 3, 5, 5, 4, 6, 25, 32, 3, 5, 13, 15, "", ""],
+  "X-LARGE": [304, 10, 5, 8, 8, 3, 8, 30, 50, 3, 6, 15, 15, "", ""]
+};
+
+const retailPrivateCloudPhases = [
+  "Analiz", "Dokümantasyon", "Dokümantasyon Onay", "Uyarlama", "Birim Test",
+  "QA Sistem Ayağa Kaldırma", "QA Anaveri Aktarım", "Internal Entegrasyon Testi",
+  "Entegrasyon Testi", "Yetkilendirme", "Canlı Sistem Ayağa Kaldırma",
+  "Canlı Anaveri Kontrol", "Canlı Anaveri Aktarım", "Hypercare", "Canlı Destek"
+];
+
 const normalize = value => String(value || "").trim().toLocaleLowerCase("tr-TR").replace(/\s+/g, " ");
 const splitValues = value => String(value || "").split(",").map(item => item.trim()).filter(Boolean);
 const unionValues = (current, additions) => [...new Set([...splitValues(current), ...additions])].join(", ");
@@ -212,6 +226,36 @@ function addIndustryToFixedDays(matrix, projectDefinitions) {
     unique.set(key, row);
   }
   return [headers, ...unique.values()];
+}
+
+export function applyRetailPrivateCloudFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  for (const [size, values] of Object.entries(retailPrivateCloudFixedDays)) {
+    for (const module of ["MM", "SD"]) {
+      let row = rows.slice(1).find(candidate =>
+        candidate[at.Endüstri] === "Perakende"
+        && candidate[at.Modül] === module
+        && candidate[at.Size] === size
+        && candidate[at["Implementation Type"]] === "Greenfield"
+        && candidate[at["System Type"]] === "SAP S/4HANA Private Cloud"
+      );
+      if (!row) {
+        row = Array(rows[0].length).fill("");
+        rows.push(row);
+      }
+      row[at.Endüstri] = "Perakende";
+      row[at.Modül] = module;
+      row[at.Size] = size;
+      row[at["Implementation Type"]] = "Greenfield";
+      row[at["System Type"]] = "SAP S/4HANA Private Cloud";
+      retailPrivateCloudPhases.forEach((phase, index) => {
+        if (at[phase] != null) row[at[phase]] = values[index];
+      });
+    }
+  }
+  return rows;
 }
 
 export function applyCar2Maintenance(config) {
