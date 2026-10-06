@@ -806,6 +806,12 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
         throw concurrencyConflict("Admin bakım verisi başka bir kullanıcı tarafından güncellendi. Lütfen Admin sayfasını yenileyip tekrar deneyin.");
       }
     }
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select $1, $2, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb)
+       from admin_config`,
+      [req.user.id, "admin_config_save"]
+    );
     for (const [entity] of entries) {
       const payload = config[entity];
       await client.query(
@@ -858,11 +864,12 @@ function cascadeDeletedQuestionReferences(config, previous) {
     const oldIds = questionIdSet(previous[key]);
     if (!nextIds || !oldIds) return new Set();
     const confirmed = new Set(config.__meta?.confirmedQuestionDeletions?.[type] || []);
+    const forced = new Set(config.__meta?.forcedQuestionDeletions?.[type] || []);
     const deleted = new Set([...oldIds].filter(id => !nextIds.has(id)));
-    if ([...deleted].some(id => !confirmed.has(id))) {
+    if ([...deleted].some(id => !confirmed.has(id) && !forced.has(id))) {
       throw concurrencyConflict("Soru silme işlemi için bağlı kayıtları kontrol ederek açık onay verin.");
     }
-    return deleted;
+    return new Set([...deleted].filter(id => !forced.has(id)));
   };
   const scopeIds = deletedIds("scopeQuestions", "scope");
   const developmentIds = deletedIds("developmentQuestions", "development");

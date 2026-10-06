@@ -6361,6 +6361,7 @@
     }
 
     const confirmedQuestionDeletions = { scope: new Set(), development: new Set() };
+    const forcedQuestionDeletions = { scope: new Set(), development: new Set() };
 
     function questionDependencyDefinitions(questionType) {
       const isScope = questionType === "scope";
@@ -6465,12 +6466,23 @@
       }
       const dependencyLines = dependencies.map(item => `- ${item.label}: ${item.count}`).join("\n");
       const message = currentLanguage === "en"
-        ? `\"${questionName}\" has linked records:\n\n${dependencyLines}\n\nThe question and all linked records will be deleted together. Continue?`
-        : `\"${questionName}\" sorusuna bağlı kayıtlar var:\n\n${dependencyLines}\n\nSoru ve tüm bağlı kayıtlar birlikte silinecek. Devam edilsin mi?`;
-      if (!confirm(message)) return false;
-      confirmedQuestionDeletions[questionType].add(questionId);
-      removeQuestionDependencies(questionType, questionId);
-      return true;
+        ? `\"${questionName}\" has linked records:\n\n${dependencyLines}\n\nType LINKED to delete the question with its linked records.\nType FORCE to delete only the question without dependency controls.\nA backup will be created before saving.`
+        : `\"${questionName}\" sorusuna bağlı kayıtlar var:\n\n${dependencyLines}\n\nSoruyu bağlı kayıtlarıyla silmek için BAĞLI yazın.\nYalnızca soruyu, bağımlılık kontrolü olmadan silmek için KONTROLSÜZ yazın.\nKaydetmeden önce yedek alınacaktır.`;
+      const choice = String(prompt(message) || "").trim().toLocaleUpperCase("tr-TR");
+      if (["BAĞLI", "LINKED"].includes(choice)) {
+        confirmedQuestionDeletions[questionType].add(questionId);
+        removeQuestionDependencies(questionType, questionId);
+        return true;
+      }
+      if (["KONTROLSÜZ", "FORCE"].includes(choice)) {
+        const warning = currentLanguage === "en"
+          ? "Linked records will remain and may become orphaned. Continue with force delete?"
+          : "Bağlı kayıtlar yerinde kalacak ve yetim kayıtlar oluşabilecektir. Kontrolsüz silmeye devam edilsin mi?";
+        if (!confirm(warning)) return false;
+        forcedQuestionDeletions[questionType].add(questionId);
+        return true;
+      }
+      return false;
     }
 
     function bindAdminEditable(root = document) {
@@ -7732,11 +7744,17 @@
           confirmedQuestionDeletions: {
             scope: [...confirmedQuestionDeletions.scope],
             development: [...confirmedQuestionDeletions.development]
+          },
+          forcedQuestionDeletions: {
+            scope: [...forcedQuestionDeletions.scope],
+            development: [...forcedQuestionDeletions.development]
           }
         };
         const savedConfig = await window.EffortApi.saveAdminConfig(config);
         confirmedQuestionDeletions.scope.clear();
         confirmedQuestionDeletions.development.clear();
+        forcedQuestionDeletions.scope.clear();
+        forcedQuestionDeletions.development.clear();
         applyAdminConfig(savedConfig || config, { source: "live" });
         renderLocalizationControls();
         renderWorkbookDrivenScreens();

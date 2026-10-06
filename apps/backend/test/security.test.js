@@ -186,6 +186,32 @@ test("admin deletion requires confirmation and preserves unrelated orphan record
   assert.doesNotMatch(server, /await migrateQuestionIds\(\)/);
 });
 
+test("admin force deletion preserves linked records and every save creates a backup", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  const schema = fs.readFileSync(new URL("../sql/schema.sql", import.meta.url), "utf8");
+  const source = server.slice(server.indexOf("function matrixHeaderDetails("), server.indexOf('app.put("/api/admin/:entity"'));
+  const context = { concurrencyConflict: message => new Error(message) };
+  vm.runInNewContext(source, context);
+  const previous = { scopeQuestions: [{ id: "s1" }], developmentQuestions: [] };
+  const config = {
+    scopeQuestions: [], developmentQuestions: [],
+    restrictions: [["Question ID", "Variable Type"], ["s1", "Kapsam"]],
+    scopeSizeImpacts: [["Question ID", "Puan"], ["s1", 4]],
+    variableModulePhase: [["Kapsam Soru ID", "Geliştirme Soru ID"], ["s1", ""]],
+    __meta: {
+      versions: Object.fromEntries(["scopeQuestions", "developmentQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"].map(key => [key, "v1"])),
+      forcedQuestionDeletions: { scope: ["s1"] }
+    }
+  };
+  context.cascadeDeletedQuestionReferences(config, previous);
+  assert.equal(config.restrictions.length, 2);
+  assert.equal(config.scopeSizeImpacts.length, 2);
+  assert.equal(config.variableModulePhase.length, 2);
+  assert.match(schema, /create table if not exists admin_config_backup/);
+  assert.match(server, /insert into admin_config_backup \(created_by, reason, payload\)/);
+  assert.ok(server.indexOf("insert into admin_config_backup") < server.indexOf("insert into admin_config (entity, payload)"));
+});
+
 test("POS Greenfield phase maintenance uses stable question ids and the configured module", () => {
   assert.equal(posGreenfieldEffortMaintenance.length, 32);
   assert.equal(new Set(posGreenfieldEffortMaintenance.map(item => item.id)).size, 32);

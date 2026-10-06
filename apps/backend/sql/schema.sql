@@ -81,6 +81,17 @@ create table if not exists admin_config (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists admin_config_backup (
+  id uuid primary key default gen_random_uuid(),
+  created_by uuid references app_user(id) on delete set null,
+  reason text not null default 'admin_config_save',
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists admin_config_backup_created_at_idx
+  on admin_config_backup (created_at desc);
+
 create table if not exists app_migration (
   name text primary key,
   applied_at timestamptz not null default now()
