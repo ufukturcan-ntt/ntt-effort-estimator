@@ -117,7 +117,7 @@ test("fallback restrictions omit persisted row numbers and sort by question id",
   const rows = context.window.adminSeedData.restrictions;
   const idIndex = rows[0].indexOf("Question ID");
   assert.equal(rows[0].includes("No"), false);
-  assert.equal(rows.length - 1, 131);
+  assert.equal(rows.length - 1, 130);
   assert.ok(rows.slice(1).every(row => row[idIndex]));
   const ids = Array.from(rows.slice(1), row => String(row[idIndex]));
   assert.deepEqual(ids, [...ids].sort((left, right) => String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" })));

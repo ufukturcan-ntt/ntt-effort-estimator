@@ -15,7 +15,7 @@ import { applyCarMaintenance } from "./car-maintenance.js";
 import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays } from "./car2-maintenance.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
-import { mergeFvbVmpRows } from "./vmp-maintenance.js";
+import { mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion } from "./vmp-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1703,6 +1703,57 @@ async function mergeLiveFvbVmpRows() {
   }
 }
 
+async function removeLiveObsoleteTeamSplitQuestion() {
+  const entities = ["scopeQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"];
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["remove-obsolete-team-split-scope-question-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(
+      `select entity, payload from admin_config where entity = any($1::text[]) order by entity for update`,
+      [entities]
+    );
+    const current = Object.fromEntries(result.rows.map(row => [row.entity, row.payload]));
+    const missing = entities.filter(entity => current[entity] == null);
+    if (missing.length) throw new Error(`Team split cleanup data is missing: ${missing.join(", ")}`);
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
+      ["remove-obsolete-team-split-scope-question-v1"]
+    );
+    const cleaned = removeObsoleteTeamSplitScopeQuestion(current);
+    for (const entity of entities) {
+      if (JSON.stringify(cleaned[entity]) === JSON.stringify(current[entity])) continue;
+      await client.query(
+        `update admin_config set payload = $1::jsonb, updated_at = now() where entity = $2`,
+        [JSON.stringify(cleaned[entity]), entity]
+      );
+    }
+    const offers = await client.query(`select id, scope_answers from offer where scope_answers ? 'scope-29' for update`);
+    for (const offer of offers.rows) {
+      const answers = { ...(offer.scope_answers || {}) };
+      delete answers["scope-29"];
+      await client.query(
+        `update offer set scope_answers = $2::jsonb, updated_at = now() where id = $1`,
+        [offer.id, JSON.stringify(answers)]
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function maintainAllDevelopmentRestrictions() {
   const client = await pool.connect();
   try {
@@ -1848,6 +1899,7 @@ async function ensureDatabase() {
   await maintainCar2Configuration();
   await maintainRetailPrivateCloudFixedDays();
   await mergeLiveFvbVmpRows();
+  await removeLiveObsoleteTeamSplitQuestion();
 }
 
 async function ensureBootstrapAdmin() {

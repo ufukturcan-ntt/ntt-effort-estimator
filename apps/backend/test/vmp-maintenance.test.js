@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mergeFvbVmpRows } from "../src/vmp-maintenance.js";
+import { mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion } from "../src/vmp-maintenance.js";
 
 const headers = [
   "Implementation Type", "Kaynak Tipi", "Kapsam Soru ID", "Kapsam Sorusu",
@@ -34,5 +34,16 @@ assert.deepEqual(
 );
 assert.deepEqual(mergeFvbVmpRows(result), result, "merge must be idempotent");
 assert.equal(result.at(-1)[at.Uyarlama], 7, "unrelated rows must remain unchanged");
+
+const cleaned = removeObsoleteTeamSplitScopeQuestion({
+  scopeQuestions: [{ id: "scope-28" }, { id: "scope-29" }, { id: "scope-30" }],
+  restrictions: [["Restriction ID", "Question ID"], ["r-28", "scope-28"], ["r-29", "scope-29"]],
+  scopeSizeImpacts: [["Question ID", "Puan"], ["scope-29", 5], ["scope-30", 2]],
+  variableModulePhase: [["Kapsam Soru ID", "Hedef Modül"], ["scope-29", ""], ["scope-30", "QM"]]
+});
+assert.deepEqual(cleaned.scopeQuestions.map(item => item.id), ["scope-28", "scope-30"]);
+assert.deepEqual(cleaned.restrictions, [["Restriction ID", "Question ID"], ["r-28", "scope-28"]]);
+assert.deepEqual(cleaned.scopeSizeImpacts, [["Question ID", "Puan"], ["scope-30", 2]]);
+assert.deepEqual(cleaned.variableModulePhase, [["Kapsam Soru ID", "Hedef Modül"], ["scope-30", "QM"]]);
 
 console.log("VMP maintenance tests passed");

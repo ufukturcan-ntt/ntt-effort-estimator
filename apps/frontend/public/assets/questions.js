@@ -350,18 +350,6 @@ window.scopeQuestions = [
     "id": "scope-28"
   },
   {
-    "no": 29,
-    "name": "Ekip ayrıştırma gerekecek mi?",
-    "description": "Termin kısıtları vb. gibi sebepler ile ekip ayrıştırma ihtiyacı bulunmakta mıdır?",
-    "answerType": "yesno",
-    "score": null,
-    "industries": "All",
-    "implementationTypes": "Greenfield, Brownfield, Rollout, Migration, Upgrade",
-    "systemTypes": "All",
-    "active": true,
-    "id": "scope-29"
-  },
-  {
     "no": 30,
     "name": "Ambalaj bazlı örneklendirme süreçleri",
     "description": "Ambalaj bazlı örneklendirme süreci bulunmakta mıdır?",

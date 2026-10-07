@@ -364,7 +364,7 @@ test("only requested POS scope questions are bundled and seeded", () => {
     assert.equal(bundled.has(name), false, `Unexpected bundled scope question: ${name}`);
     assert.equal(seeded.has(name), false, `Unexpected seeded scope question: ${name}`);
   });
-  assert.equal(context.window.scopeQuestions.length, 89);
+  assert.equal(context.window.scopeQuestions.length, 88);
   assert.ok(context.window.scopeQuestions.filter(item => expected.includes(item.name)).every(item => item.sizeImpact === false));
 });
 

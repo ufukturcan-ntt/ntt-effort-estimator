@@ -46,3 +46,21 @@ export function mergeFvbVmpRows(matrix) {
 
   return rows.filter((_row, index) => !remove.has(index));
 }
+
+function removeMatrixReferences(matrix, idHeader) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const headerIndex = rows.findIndex(row => Array.isArray(row) && row.includes(idHeader));
+  if (headerIndex < 0) return rows;
+  const idIndex = rows[headerIndex].indexOf(idHeader);
+  return rows.filter((row, index) => index <= headerIndex || row[idIndex] !== "scope-29");
+}
+
+export function removeObsoleteTeamSplitScopeQuestion(config) {
+  const next = structuredClone(config || {});
+  next.scopeQuestions = (next.scopeQuestions || []).filter(question => question?.id !== "scope-29");
+  next.restrictions = removeMatrixReferences(next.restrictions, "Question ID");
+  next.scopeSizeImpacts = removeMatrixReferences(next.scopeSizeImpacts, "Question ID");
+  next.variableModulePhase = removeMatrixReferences(next.variableModulePhase, "Kapsam Soru ID");
+  return next;
+}
