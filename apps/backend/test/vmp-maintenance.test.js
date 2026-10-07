@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion } from "../src/vmp-maintenance.js";
+import { correctFvbAbapCustomizingEffort, mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion } from "../src/vmp-maintenance.js";
 
 const headers = [
   "Implementation Type", "Kaynak Tipi", "Kapsam Soru ID", "Kapsam Sorusu",
@@ -34,6 +34,11 @@ assert.deepEqual(
 );
 assert.deepEqual(mergeFvbVmpRows(result), result, "merge must be idempotent");
 assert.equal(result.at(-1)[at.Uyarlama], 7, "unrelated rows must remain unchanged");
+
+const corrected = correctFvbAbapCustomizingEffort(result);
+assert.equal(corrected.slice(1).find(item => item[at["Geliştirme Soru ID"]] === "dev-59" && item[at["Hedef Modül"]] === "ABAP")[at.Uyarlama], 15);
+assert.equal(corrected.slice(1).find(item => item[at["Geliştirme Soru ID"]] === "dev-59" && item[at["Hedef Modül"]] === "MM")[at.Uyarlama], 8);
+assert.deepEqual(correctFvbAbapCustomizingEffort(corrected), corrected, "correction must be idempotent");
 
 const cleaned = removeObsoleteTeamSplitScopeQuestion({
   scopeQuestions: [{ id: "scope-28" }, { id: "scope-29" }, { id: "scope-30" }],

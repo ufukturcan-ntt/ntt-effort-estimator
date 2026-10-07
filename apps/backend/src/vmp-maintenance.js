@@ -47,6 +47,22 @@ export function mergeFvbVmpRows(matrix) {
   return rows.filter((_row, index) => !remove.has(index));
 }
 
+export function correctFvbAbapCustomizingEffort(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const headerIndex = rows.findIndex(row => Array.isArray(row) && row.includes("Geliştirme Soru ID") && row.includes("Hedef Modül"));
+  if (headerIndex < 0) return rows;
+  const at = Object.fromEntries(rows[headerIndex].map((header, index) => [String(header || "").trim(), index]));
+  rows.slice(headerIndex + 1).forEach(row => {
+    const isFvb = row[at["Geliştirme Soru ID"]] === "dev-59"
+      || row[at["Geliştirme Sorusu"]] === "Üretim ana veri yaratma otomasyonu (FVB)";
+    if (isFvb && row[at["Hedef Modül"]] === "ABAP" && row[at["Efor Bazı"]] === "Sabit") {
+      row[at.Uyarlama] = 15;
+    }
+  });
+  return rows;
+}
+
 function removeMatrixReferences(matrix, idHeader) {
   const rows = structuredClone(matrix || []);
   if (!rows.length) return rows;
