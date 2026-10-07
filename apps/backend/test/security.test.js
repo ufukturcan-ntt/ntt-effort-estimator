@@ -98,7 +98,7 @@ test("users, development questions and restrictions use persistent ids", () => {
   assert.match(server, /function normalizeDevelopmentQuestionStorage/);
   assert.match(server, /delete next\.no/);
   assert.match(server, /ensureMatrixColumn\(original\.restrictions, "Restriction ID", "Variable Type"\)/);
-  assert.match(server, /`restriction-\$\{questionId \|\| type\}`/);
+  assert.match(server, /`restriction-\$\{questionId\}`/);
 });
 
 test("retail POS restriction batch is rolled back exactly once", () => {
@@ -121,6 +121,15 @@ test("fallback restrictions omit persisted row numbers and sort by question id",
   assert.ok(rows.slice(1).every(row => row[idIndex]));
   const ids = Array.from(rows.slice(1), row => String(row[idIndex]));
   assert.deepEqual(ids, [...ids].sort((left, right) => String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" })));
+});
+
+test("restriction saves enforce one row per question and canonical restriction ids", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /duplicateRestrictionQuestionIds\(config\.restrictions\)/);
+  assert.match(server, /Her soru için yalnızca bir Question Restrictions kaydı olabilir/);
+  assert.match(server, /nextRow\[restrictionIdIndex\] = `restriction-\$\{questionId\}`/);
+  assert.match(server, /await standardizeLiveRestrictionIdentities\(\)/);
+  assert.match(server, /standardize-restriction-identities-v1/);
 });
 
 test("local seed only initializes an empty admin configuration", () => {

@@ -119,12 +119,19 @@ test("question restrictions omit notes and usage columns", () => {
   assert.doesNotMatch(html, /row\[idx\("Usage"\)\]/);
 });
 
+test("question restrictions enforce unique question ids and canonical restriction ids", () => {
+  assert.match(html, /const key = row\[3\]/);
+  assert.match(html, /const duplicate = nextId && \[\.\.\.body\.querySelectorAll\("tr"\)\]\.some/);
+  assert.match(html, /Bu soru için Question Restrictions kaydı zaten mevcut/);
+  assert.match(html, /`restriction-\$\{nextId\}`/);
+});
+
 test("duplicate 3rd party integration scope question is canonicalized", () => {
   assert.match(html, /fromIds:\s*\["scope-54"\]/);
   assert.match(html, /fromNames:\s*\["Kaç farklı 3rd party entegrasyon sayısı bulunmaktadır\?"\]/);
   assert.match(html, /toId:\s*"scope-40"/);
   assert.match(html, /toName:\s*"3rd Party Entegrasyon Sayısı"/);
-  assert.match(html, /const key = row\[1\] \|\| \[questionTypeFromLabel\(row\[2\]\), row\[3\] \|\| normalizeQuestionName\(row\[4\]\)\]/);
+  assert.match(html, /const key = row\[3\] \|\| \[questionTypeFromLabel\(row\[2\]\), normalizeQuestionName\(row\[4\]\)\]/);
 });
 
 test("scope restrictions and numeric answers are guarded in the offer flow", () => {

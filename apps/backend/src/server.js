@@ -790,6 +790,15 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
     approval.userApproverEmail = String(approval.userApproverEmail || "").trim();
     approval.offerApproverEmail = String(approval.offerApproverEmail || "").trim();
   }
+  if (config.restrictions) {
+    const duplicateQuestionIds = duplicateRestrictionQuestionIds(config.restrictions);
+    if (duplicateQuestionIds.length) {
+      return res.status(400).json({
+        error: `Her soru için yalnızca bir Question Restrictions kaydı olabilir: ${duplicateQuestionIds.join(", ")}`
+      });
+    }
+    config.restrictions = normalizeRestrictionStorage(config.restrictions);
+  }
   const client = await pool.connect();
   try {
     await client.query("begin");
@@ -1077,19 +1086,40 @@ function normalizeRestrictionStorage(matrix) {
         .slice(0, 48);
       nextRow[idIndex] = `${type}-legacy-${slug || "question"}`;
     }
-    if (restrictionIdIndex >= 0 && !String(nextRow[restrictionIdIndex] || "").trim()) {
-      const questionId = String(nextRow[idIndex] || "").trim();
-      const type = normalizedQuestionKey(nextRow[typeIndex]).includes("geli") ? "development" : "scope";
-      nextRow[restrictionIdIndex] = `restriction-${questionId || type}`;
-    }
+    const questionId = String(nextRow[idIndex] || "").trim();
+    if (restrictionIdIndex >= 0) nextRow[restrictionIdIndex] = `restriction-${questionId}`;
     return nextRow;
   });
-  rows.sort((left, right) =>
+  const uniqueRows = [];
+  const seenQuestionIds = new Set();
+  for (const row of rows) {
+    const questionId = String(row[idIndex] || "").trim();
+    if (!questionId || seenQuestionIds.has(questionId)) continue;
+    seenQuestionIds.add(questionId);
+    uniqueRows.push(row);
+  }
+  uniqueRows.sort((left, right) =>
     String(left[restrictionIdIndex] || "").localeCompare(String(right[restrictionIdIndex] || ""), "en", { numeric: true, sensitivity: "base" })
     || String(left[typeIndex] || "").localeCompare(String(right[typeIndex] || ""), "en", { sensitivity: "base" })
     || String(left[questionIndex] || "").localeCompare(String(right[questionIndex] || ""), "tr", { sensitivity: "base" })
   );
-  return [nextHeaders, ...rows];
+  return [nextHeaders, ...uniqueRows];
+}
+
+function duplicateRestrictionQuestionIds(matrix) {
+  if (!Array.isArray(matrix) || !matrix.length || !Array.isArray(matrix[0])) return [];
+  const headers = matrix[0].map(value => String(value || "").trim());
+  const idIndex = headers.indexOf("Question ID");
+  if (idIndex < 0) return [];
+  const seen = new Set();
+  const duplicates = new Set();
+  matrix.slice(1).filter(Array.isArray).forEach(row => {
+    const id = String(row[idIndex] || "").trim();
+    if (!id) return;
+    if (seen.has(id)) duplicates.add(id);
+    seen.add(id);
+  });
+  return [...duplicates];
 }
 
 function upsertPosScopeImpactRows(matrix) {
@@ -1787,6 +1817,43 @@ async function removeLiveObsoleteTeamSplitQuestion() {
   }
 }
 
+async function standardizeLiveRestrictionIdentities() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["standardize-restriction-identities-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'restrictions' for update`);
+    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Question Restrictions data is missing");
+    const duplicateQuestionIds = duplicateRestrictionQuestionIds(result.rows[0].payload);
+    if (duplicateQuestionIds.length) {
+      throw new Error(`Duplicate Question Restrictions records require review: ${duplicateQuestionIds.join(", ")}`);
+    }
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
+      ["standardize-restriction-identities-v1"]
+    );
+    const payload = normalizeRestrictionStorage(result.rows[0].payload);
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'restrictions'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function maintainAllDevelopmentRestrictions() {
   const client = await pool.connect();
   try {
@@ -1934,6 +2001,7 @@ async function ensureDatabase() {
   await mergeLiveFvbVmpRows();
   await correctLiveFvbAbapEffort();
   await removeLiveObsoleteTeamSplitQuestion();
+  await standardizeLiveRestrictionIdentities();
 }
 
 async function ensureBootstrapAdmin() {

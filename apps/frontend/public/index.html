@@ -6016,7 +6016,7 @@
           question
         );
         const displayName = questionDisplayName(questionType, questionId, question);
-        const restrictionId = String(row[idx("Restriction ID")] || "").trim() || `restriction-${questionId}`;
+        const restrictionId = questionId ? `restriction-${questionId}` : String(row[idx("Restriction ID")] || "").trim();
         const rawImplementationTypes = row[idx("Allowed Implementation Types")] || "All";
         const implementationTypes = displayName.includes("TSA / Paralel İşletim") && String(rawImplementationTypes || "").trim() === "All"
           ? "Carve-out"
@@ -6036,7 +6036,7 @@
       const deduped = [];
       const seen = new Map();
       normalized.forEach(row => {
-        const key = row[1] || [questionTypeFromLabel(row[2]), row[3] || normalizeQuestionName(row[4])].join("\u001f");
+        const key = row[3] || [questionTypeFromLabel(row[2]), normalizeQuestionName(row[4])].join("\u001f");
         if (!seen.has(key)) {
           seen.set(key, deduped.length);
           deduped.push(row);
@@ -6248,6 +6248,7 @@
       if (!body) return;
       const headers = JSON.parse(body.dataset.matrixHeaders || "[]");
       const typeIndex = restrictionHeaderIndex(headers, "Variable Type");
+      const restrictionIdIndex = restrictionHeaderIndex(headers, "Restriction ID");
       const idIndex = restrictionHeaderIndex(headers, "Question ID");
       const questionIndex = restrictionHeaderIndex(headers, "Question");
       if (typeIndex < 0 || questionIndex < 0) return;
@@ -6270,13 +6271,30 @@
           const current = questionDisplayName(questionType, idValue, currentText);
           const options = uniqueOptionValues(["", ...adminQuestionNamesByType(typeSelect.value), current]);
           questionSelect.innerHTML = options.map(option => `<option ${option === current ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+          questionSelect.dataset.acceptedValue = current;
+          questionSelect.dataset.acceptedId = idValue;
           delete questionSelect.dataset.previousValue;
         };
         refreshQuestionOptions();
         if (!questionSelect.dataset.selectBound) {
           questionSelect.dataset.selectBound = "true";
           questionSelect.addEventListener("change", () => {
-            if (idIndex >= 0) row.children[idIndex].textContent = questionIdFromName(questionTypeFromLabel(typeSelect.value), questionSelect.value) || row.children[idIndex].textContent;
+            const nextId = questionIdFromName(questionTypeFromLabel(typeSelect.value), questionSelect.value) || "";
+            const duplicate = nextId && [...body.querySelectorAll("tr")].some(other =>
+              other !== row && adminCellValue(other.children[idIndex]) === nextId
+            );
+            if (duplicate) {
+              alert(currentLanguage === "en"
+                ? "A Question Restrictions record already exists for this question."
+                : "Bu soru için Question Restrictions kaydı zaten mevcut.");
+              questionSelect.value = questionSelect.dataset.acceptedValue || "";
+              if (idIndex >= 0) row.children[idIndex].textContent = questionSelect.dataset.acceptedId || "";
+              return;
+            }
+            if (idIndex >= 0) row.children[idIndex].textContent = nextId;
+            if (restrictionIdIndex >= 0) row.children[restrictionIdIndex].textContent = nextId ? `restriction-${nextId}` : "";
+            questionSelect.dataset.acceptedValue = questionSelect.value;
+            questionSelect.dataset.acceptedId = nextId;
             markAdminDirty();
           });
         }
