@@ -15,6 +15,7 @@ import { applyCarMaintenance } from "./car-maintenance.js";
 import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays } from "./car2-maintenance.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
+import { mergeFvbVmpRows } from "./vmp-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -1669,6 +1670,39 @@ async function maintainRetailPrivateCloudFixedDays() {
   }
 }
 
+async function mergeLiveFvbVmpRows() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["merge-dev-59-vmp-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'variableModulePhase' for update`);
+    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Variable + Module + Phase data is missing");
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
+      ["merge-dev-59-vmp-v1"]
+    );
+    const payload = mergeFvbVmpRows(result.rows[0].payload);
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'variableModulePhase'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function maintainAllDevelopmentRestrictions() {
   const client = await pool.connect();
   try {
@@ -1813,6 +1847,7 @@ async function ensureDatabase() {
   await consolidateLiveDuplicateScopeQuestions();
   await maintainCar2Configuration();
   await maintainRetailPrivateCloudFixedDays();
+  await mergeLiveFvbVmpRows();
 }
 
 async function ensureBootstrapAdmin() {
