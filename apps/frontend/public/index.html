@@ -9544,6 +9544,22 @@
       requestAnimationFrame(runStep);
     }
 
+    function hydrateExistingOfferScreens() {
+      const steps = [
+        () => renderModuleGroups(),
+        () => renderLocalizationControls(),
+        () => refreshQuestionLists({ preserveAnswers: true }),
+        () => renderWorkbookDrivenScreens()
+      ];
+      const runStep = () => {
+        const step = steps.shift();
+        if (!step) return;
+        step();
+        setTimeout(runStep, 0);
+      };
+      requestAnimationFrame(runStep);
+    }
+
     function openScreen(screenId, options = {}) {
       if (screenId === "admin" && !currentUser?.is_admin) {
         screenId = "overview";
@@ -9559,6 +9575,11 @@
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
       document.querySelectorAll(".screen").forEach(x => x.classList.remove("active"));
       document.getElementById(screenId)?.classList.add("active");
+      if (screenId === "scope") scheduleQuestionListRefresh({ preserveAnswers: true }, 0);
+      if (screenId === "developments") scheduleQuestionListRefresh({ preserveAnswers: true }, 0);
+      if (["modules", "library", "fixedefforts", "localization", "hypercare", "effort"].includes(screenId)) {
+        scheduleWorkbookDrivenRender(0);
+      }
       if (currentUser) sessionStorage.setItem(lastScreenKey, screenId);
       if (navigationHistoryReady && !options.skipHistory && history.state?.screenId !== screenId) {
         const state = { screenId, workMode: Boolean(options.workMode) };
@@ -9726,12 +9747,13 @@
         version: "",
         notes: "",
         effort: "0"
-      });
+      }, { renderQuestions: false });
       currentOfferMode = "existing";
-      resetSelectableState("existing", offer);
+      resetSelectableState("existing", offer, { render: false });
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
+      hydrateExistingOfferScreens();
     }
 
     async function openNewOffer() {
@@ -10003,8 +10025,9 @@
     ["projectIndustry", "projectImplementation", "projectSystem"].forEach(id => {
       document.getElementById(id)?.addEventListener("change", () => {
         markDirty();
-        scheduleQuestionListRefresh();
-        scheduleWorkbookDrivenRender(90);
+        const screenId = activeScreenId();
+        if (["scope", "developments"].includes(screenId)) scheduleQuestionListRefresh();
+        if (screenId !== "project") scheduleWorkbookDrivenRender(90);
       });
     });
     document.getElementById("teamSplitSelect")?.addEventListener("change", () => {

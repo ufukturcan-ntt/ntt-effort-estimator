@@ -227,8 +227,18 @@ test("home dashboard distribution panels are translated", () => {
 test("project filter changes defer question list rendering", () => {
   assert.match(html, /let questionListRenderTimer = null/);
   assert.match(html, /function scheduleQuestionListRefresh\(options = \{\}, delay = 40\)/);
-  assert.match(html, /scheduleQuestionListRefresh\(\);\s*scheduleWorkbookDrivenRender\(90\);/);
+  assert.match(html, /if \(\["scope", "developments"\]\.includes\(screenId\)\) scheduleQuestionListRefresh\(\)/);
+  assert.match(html, /if \(screenId !== "project"\) scheduleWorkbookDrivenRender\(90\)/);
   assert.doesNotMatch(html, /document\.getElementById\(id\)\?\.addEventListener\("change", \(\) => \{\s*refreshQuestionLists\(\);\s*scheduleWorkbookDrivenRender\(\);/);
+});
+
+test("project definition selections do not run hidden heavy renders", () => {
+  assert.match(html, /const screenId = activeScreenId\(\);[\s\S]*?if \(\["scope", "developments"\]\.includes\(screenId\)\) scheduleQuestionListRefresh\(\);[\s\S]*?if \(screenId !== "project"\) scheduleWorkbookDrivenRender\(90\);/);
+});
+
+test("existing offer opens before deferred workspace hydration", () => {
+  assert.match(html, /setProjectForm\(offer \? \{[\s\S]*?\}, \{ renderQuestions: false \}\);[\s\S]*?resetSelectableState\("existing", offer, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateExistingOfferScreens\(\);/);
+  assert.match(html, /function hydrateExistingOfferScreens\(\)[\s\S]*?requestAnimationFrame\(runStep\);/);
 });
 
 test("workbook rendering is scoped to the active screen", () => {
