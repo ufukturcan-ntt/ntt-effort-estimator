@@ -4382,6 +4382,7 @@
       "E-Ödeme": "E-Payment",
       "E-Mutabakat": "E-Reconciliation",
       "E-Beyanname": "E-Declaration",
+      "E-Bildirge": "SSI e-Declaration",
       "Gelen Fatura Otomasyon": "Incoming Invoice Automation",
       "Dış Ticaret Çözümü": "Foreign Trade Solution",
       "Seyahat ve Masraf Yönetimi": "Travel and Expense Management",
@@ -4468,8 +4469,8 @@
       "Dış sistem Çizelgeleme Entegrasyonu": "External System Scheduling Integration",
       "Üretim ana veri yaratma otomasyonu (Varyant konfigurasyonlu)": "Production master data creation automation (variant-configured)",
       "Üretim ana veri yaratma otomasyonu (FVB)": "Production master data creation automation (FVB)",
-      "Üretime hazıredim saha uygulamaları": "Production readiness field applications",
-      "Üretime hazıredim tartım uygulamaları": "Production readiness weighing applications",
+      "Üretime hazıredim saha uygulamaları": "Material staging field applications",
+      "Üretime hazıredim tartım uygulamaları": "Material staging weighing applications",
       "It.capacity veya custom çizelgeleme programları": "It.capacity or custom scheduling programs",
       "Kesim-trim planlama": "Cutting-trim planning",
       "Zimmet": "Asset Assignment",
@@ -5444,7 +5445,7 @@
             return `
               <label class="module-choice">
                 <input type="checkbox" data-module-toggle="${item.module}" ${state.selected ? "checked" : ""} />
-                <span>${item.module}</span>
+                <span>${escapeHtml(displayRecord(item.module))}</span>
                 <input type="number" min="1" step="1" placeholder="${t("countPlaceholder")}" data-module-team="${item.module}" value="${state.team || ""}" ${showTeam ? "" : "hidden"} />
               </label>
             `;

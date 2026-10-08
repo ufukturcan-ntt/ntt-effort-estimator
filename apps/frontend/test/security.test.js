@@ -157,6 +157,11 @@ test("NTT own IP records have immediate English labels", () => {
   assert.match(html, /"NTT Own IP": "NTT Own IP"/);
   assert.match(html, /"E-Fatura\/Arşiv": "E-Invoice \/ E-Archive"/);
   assert.match(html, /"Dış Ticaret Çözümü": "Foreign Trade Solution"/);
+  assert.match(html, /"E-Bildirge": "SSI e-Declaration"/);
+  assert.match(html, /<span>\$\{escapeHtml\(displayRecord\(item\.module\)\)\}<\/span>/);
+  assert.match(html, /"Üretime hazıredim saha uygulamaları": "Material staging field applications"/);
+  assert.match(html, /"Üretime hazıredim tartım uygulamaları": "Material staging weighing applications"/);
+  assert.doesNotMatch(html, /Production readiness (?:field|weighing) applications/);
 });
 
 test("login applies selected language before showing the app", () => {
