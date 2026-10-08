@@ -355,6 +355,9 @@ test("localization and hypercare empty states are fully translated", () => {
   assert.match(html, /daysPerWeek: "Days\/Week"/);
   assert.match(html, /setTexts\("#hypercare thead tr:nth-child\(2\) th"/);
   assert.match(html, /<strong>\$\{t\("noCountrySelected"\)\}<\/strong>/);
+  assert.match(html, /"BIRLEŞIK ARAP EMIRLIKLERI": "UNITED ARAB EMIRATES"/);
+  assert.match(html, /"İNGILTERE": "UNITED KINGDOM"/);
+  assert.match(html, /"RUSYA": "RUSSIA"/);
 });
 
 test("live CAR and retail questions have immediate English translations", () => {
