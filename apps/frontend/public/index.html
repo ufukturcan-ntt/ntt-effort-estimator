@@ -5222,14 +5222,15 @@
         input.addEventListener("change", () => {
           moduleState.get(input.dataset.moduleToggle).selected = input.checked;
           markDirty();
-          scheduleWorkbookDrivenRender();
+          updateModuleSelectionMetrics();
+          scheduleEffortRenderIfVisible();
         });
       });
       target.querySelectorAll("[data-module-team]").forEach(input => {
         input.addEventListener("input", () => {
           moduleState.get(input.dataset.moduleTeam).team = input.value;
           markDirty();
-          scheduleWorkbookDrivenRender();
+          scheduleEffortRenderIfVisible();
         });
       });
     }
@@ -5266,7 +5267,8 @@
         select.addEventListener("change", () => {
           setLocalizationCountry(select.dataset.localizationCountry, select.value === "true");
           markDirty();
-          scheduleWorkbookDrivenRender();
+          updateLocalizationMetrics();
+          scheduleEffortRenderIfVisible();
         });
       });
     }
@@ -5304,21 +5306,14 @@
                 <div class="metric"><span>${module}</span><b>${fmt(values[module] || 0)}</b><small>${fixedEffortSummaryLabel(module)}</small></div>
               `).join("");
             }
-            const projectTotal = renderFinalEffort();
-            const developmentTotal = renderDevelopmentEfforts();
-            const localizationTotal = activeLocalizations().reduce((sum, row) => sum + sumPhases(row.values), 0);
-            const support = updateHypercareTotals();
-            const supportTotal = support.hypercare + support.golive;
-            setText("finalHypercareTotal", fmt(supportTotal));
-            setText("finalGrandTotal", fmt(projectTotal + developmentTotal + localizationTotal + supportTotal));
-            renderDashboards({ projectTotal, developmentTotal, localizationTotal, hypercareTotal: supportTotal });
+            scheduleEffortRenderIfVisible();
           });
         });
         target.querySelectorAll("[data-fixed-effort-included]").forEach(input => {
           input.addEventListener("change", () => {
             abapFixedEffortIncluded = input.checked;
             markDirty();
-            scheduleWorkbookDrivenRender();
+            scheduleEffortRenderIfVisible();
           });
         });
       }
@@ -8078,6 +8073,20 @@
       workbookRenderTimer = setTimeout(renderWorkbookDrivenScreens, delay);
     }
 
+    function scheduleEffortRenderIfVisible(delay = 50) {
+      if (activeScreenId() === "effort") scheduleWorkbookDrivenRender(delay);
+    }
+
+    function updateModuleSelectionMetrics() {
+      const selectedCount = selectedModuleNames().length;
+      setText("selectedModuleCount", selectedCount);
+      setText("moduleNavCount", selectedCount);
+    }
+
+    function updateLocalizationMetrics() {
+      setText("localizationNavCount", activeLocalizations().length);
+    }
+
     function offerJson(value, fallback = {}) {
       if (!value) return fallback;
       if (typeof value === "object") return value;
@@ -9109,7 +9118,7 @@
           else delete questionAnswers[targetId][key];
           markDirty();
           updateQuestionMetrics();
-          scheduleWorkbookDrivenRender();
+          scheduleEffortRenderIfVisible();
         };
         if (control.type === "number") {
           control.addEventListener("keydown", event => {
@@ -9528,36 +9537,23 @@
       markClean();
     }
 
-    function hydrateNewOfferScreens() {
-      const steps = [
-        () => renderModuleGroups(),
-        () => renderLocalizationControls(),
-        () => refreshQuestionLists({ preserveAnswers: false }),
-        () => renderWorkbookDrivenScreens()
-      ];
-      const runStep = () => {
-        const step = steps.shift();
-        if (!step) return;
-        step();
-        setTimeout(runStep, 0);
-      };
-      requestAnimationFrame(runStep);
-    }
-
-    function hydrateExistingOfferScreens() {
-      const steps = [
-        () => renderModuleGroups(),
-        () => renderLocalizationControls(),
-        () => refreshQuestionLists({ preserveAnswers: true }),
-        () => renderWorkbookDrivenScreens()
-      ];
-      const runStep = () => {
-        const step = steps.shift();
-        if (!step) return;
-        step();
-        setTimeout(runStep, 0);
-      };
-      requestAnimationFrame(runStep);
+    function renderOfferScreenOnDemand(screenId) {
+      requestAnimationFrame(() => {
+        if (screenId === "modules") renderModuleGroups();
+        if (screenId === "scope") {
+          renderQuestionList("scopeQuestions", window.scopeQuestions || [], { preserveAnswers: true });
+          wakeTranslationQueue();
+        }
+        if (screenId === "developments") {
+          renderQuestionList("developmentQuestions", window.developmentQuestions || [], { preserveAnswers: true });
+          wakeTranslationQueue();
+        }
+        if (screenId === "library") renderLibraryRows();
+        if (screenId === "fixedefforts") renderFixedEfforts();
+        if (screenId === "localization") renderLocalizationControls();
+        if (screenId === "hypercare") renderHypercareRows();
+        if (screenId === "effort") renderWorkbookDrivenScreens();
+      });
     }
 
     function openScreen(screenId, options = {}) {
@@ -9575,11 +9571,7 @@
       document.querySelectorAll(".nav-item").forEach(x => x.classList.toggle("active", x.dataset.screen === screenId));
       document.querySelectorAll(".screen").forEach(x => x.classList.remove("active"));
       document.getElementById(screenId)?.classList.add("active");
-      if (screenId === "scope") scheduleQuestionListRefresh({ preserveAnswers: true }, 0);
-      if (screenId === "developments") scheduleQuestionListRefresh({ preserveAnswers: true }, 0);
-      if (["modules", "library", "fixedefforts", "localization", "hypercare", "effort"].includes(screenId)) {
-        scheduleWorkbookDrivenRender(0);
-      }
+      renderOfferScreenOnDemand(screenId);
       if (currentUser) sessionStorage.setItem(lastScreenKey, screenId);
       if (navigationHistoryReady && !options.skipHistory && history.state?.screenId !== screenId) {
         const state = { screenId, workMode: Boolean(options.workMode) };
@@ -9753,7 +9745,6 @@
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
-      hydrateExistingOfferScreens();
     }
 
     async function openNewOffer() {
@@ -9781,7 +9772,6 @@
       markClean();
       openWork("project");
       applyOfferReadOnlyState();
-      hydrateNewOfferScreens();
     }
 
     function showAuthenticatedApp() {
@@ -10026,14 +10016,15 @@
       document.getElementById(id)?.addEventListener("change", () => {
         markDirty();
         const screenId = activeScreenId();
-        if (["scope", "developments"].includes(screenId)) scheduleQuestionListRefresh();
-        if (screenId !== "project") scheduleWorkbookDrivenRender(90);
+        if (screenId === "scope") renderQuestionList("scopeQuestions", window.scopeQuestions || [], { preserveAnswers: true });
+        if (screenId === "developments") renderQuestionList("developmentQuestions", window.developmentQuestions || [], { preserveAnswers: true });
+        scheduleEffortRenderIfVisible(90);
       });
     });
     document.getElementById("teamSplitSelect")?.addEventListener("change", () => {
       markDirty();
       renderModuleGroups();
-      scheduleWorkbookDrivenRender();
+      scheduleEffortRenderIfVisible();
     });
 
     async function initializeApp() {

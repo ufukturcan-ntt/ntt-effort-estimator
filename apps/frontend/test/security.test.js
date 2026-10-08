@@ -90,9 +90,9 @@ test("admin refresh waits for persisted configuration before rendering", () => {
   assert.match(html, /else if \(screenId !== "admin"\) \{\s*scheduleDeferredAdminConfigHydration\(\);\s*\}/s);
 });
 
-test("new offer screen opens before heavy panel hydration", () => {
-  assert.match(html, /function hydrateNewOfferScreens\(\)/);
-  assert.match(html, /setProjectForm\(\{[\s\S]*?\}, \{ preserveAnswers: false, renderQuestions: false \}\);\s*resetSelectableState\("new", null, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateNewOfferScreens\(\);/s);
+test("new offer screen does not hydrate hidden panels", () => {
+  assert.match(html, /setProjectForm\(\{[\s\S]*?\}, \{ preserveAnswers: false, renderQuestions: false \}\);\s*resetSelectableState\("new", null, \{ render: false \}\);[\s\S]*?openWork\("project"\);/s);
+  assert.doesNotMatch(html, /hydrateNewOfferScreens/);
 });
 
 test("new offer always starts with an empty module selection", () => {
@@ -224,21 +224,28 @@ test("home dashboard distribution panels are translated", () => {
   assert.match(html, /setTexts\("\.home-only \.pill", \[t\("month"\), t\("offer"\), t\("offer"\), t\("offer"\)\]\)/);
 });
 
-test("project filter changes defer question list rendering", () => {
-  assert.match(html, /let questionListRenderTimer = null/);
-  assert.match(html, /function scheduleQuestionListRefresh\(options = \{\}, delay = 40\)/);
-  assert.match(html, /if \(\["scope", "developments"\]\.includes\(screenId\)\) scheduleQuestionListRefresh\(\)/);
-  assert.match(html, /if \(screenId !== "project"\) scheduleWorkbookDrivenRender\(90\)/);
-  assert.doesNotMatch(html, /document\.getElementById\(id\)\?\.addEventListener\("change", \(\) => \{\s*refreshQuestionLists\(\);\s*scheduleWorkbookDrivenRender\(\);/);
+test("project filter changes render only the visible dependent screen", () => {
+  assert.match(html, /if \(screenId === "scope"\) renderQuestionList\("scopeQuestions"/);
+  assert.match(html, /if \(screenId === "developments"\) renderQuestionList\("developmentQuestions"/);
+  assert.match(html, /scheduleEffortRenderIfVisible\(90\)/);
 });
 
 test("project definition selections do not run hidden heavy renders", () => {
-  assert.match(html, /const screenId = activeScreenId\(\);[\s\S]*?if \(\["scope", "developments"\]\.includes\(screenId\)\) scheduleQuestionListRefresh\(\);[\s\S]*?if \(screenId !== "project"\) scheduleWorkbookDrivenRender\(90\);/);
+  assert.match(html, /function scheduleEffortRenderIfVisible\(delay = 50\) \{\s*if \(activeScreenId\(\) === "effort"\) scheduleWorkbookDrivenRender\(delay\);\s*\}/);
+  assert.doesNotMatch(html, /if \(screenId !== "project"\) scheduleWorkbookDrivenRender/);
 });
 
-test("existing offer opens before deferred workspace hydration", () => {
-  assert.match(html, /setProjectForm\(offer \? \{[\s\S]*?\}, \{ renderQuestions: false \}\);[\s\S]*?resetSelectableState\("existing", offer, \{ render: false \}\);[\s\S]*?openWork\("project"\);[\s\S]*?hydrateExistingOfferScreens\(\);/);
-  assert.match(html, /function hydrateExistingOfferScreens\(\)[\s\S]*?requestAnimationFrame\(runStep\);/);
+test("existing offer keeps hidden workspace panels unrendered", () => {
+  assert.match(html, /setProjectForm\(offer \? \{[\s\S]*?\}, \{ renderQuestions: false \}\);[\s\S]*?resetSelectableState\("existing", offer, \{ render: false \}\);[\s\S]*?openWork\("project"\);/);
+  assert.doesNotMatch(html, /hydrateExistingOfferScreens/);
+});
+
+test("offer panels render individually on navigation", () => {
+  assert.match(html, /function renderOfferScreenOnDemand\(screenId\)/);
+  assert.match(html, /if \(screenId === "modules"\) renderModuleGroups\(\)/);
+  assert.match(html, /if \(screenId === "scope"\) \{\s*renderQuestionList\("scopeQuestions"/);
+  assert.match(html, /if \(screenId === "effort"\) renderWorkbookDrivenScreens\(\)/);
+  assert.match(html, /document\.getElementById\(screenId\)\?\.classList\.add\("active"\);\s*renderOfferScreenOnDemand\(screenId\);/);
 });
 
 test("workbook rendering is scoped to the active screen", () => {
