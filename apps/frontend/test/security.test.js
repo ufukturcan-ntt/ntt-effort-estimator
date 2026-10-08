@@ -248,6 +248,21 @@ test("offer panels render individually on navigation", () => {
   assert.match(html, /document\.getElementById\(screenId\)\?\.classList\.add\("active"\);\s*renderOfferScreenOnDemand\(screenId\);/);
 });
 
+test("question and effort configuration lookups are indexed between admin refreshes", () => {
+  assert.match(html, /let questionRestrictionIndex = null/);
+  assert.match(html, /questionRestrictionIndex\.get\(`\$\{expectedType\}\\u001f\$\{expectedId\}`\)/);
+  assert.match(html, /let scopeImpactIndex = null/);
+  assert.match(html, /normalizedVmpRowsCache = normalizeVariableModulePhaseRows/);
+  assert.match(html, /normalizedFixedDaysRowsCache = normalizeFixedDaysRows/);
+  assert.match(html, /normalizedEffortPhaseRowsCache = normalizeEffortPhaseRows/);
+  assert.match(html, /function applyAdminConfig[\s\S]*?questionRestrictionIndex = null;[\s\S]*?normalizedVmpRowsCache = null;/);
+});
+
+test("stale offer screen renders are cancelled after fast navigation", () => {
+  assert.match(html, /const renderToken = \+\+offerScreenRenderToken/);
+  assert.match(html, /if \(renderToken !== offerScreenRenderToken \|\| activeScreenId\(\) !== screenId\) return/);
+});
+
 test("workbook rendering is scoped to the active screen", () => {
   assert.ok(html.includes("function activeScreenId()"));
   assert.ok(html.includes("function calculateProjectEffortTotal()"));

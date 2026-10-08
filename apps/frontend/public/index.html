@@ -3112,7 +3112,8 @@
     }
 
     function fixedRowsForSelection(implementation, systemType, sizeKey, industry = "All") {
-      const rows = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const rows = normalizedFixedDaysRowsCache
+        || (normalizedFixedDaysRowsCache = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []));
       const headers = rows[0] || [];
       const moduleIndex = headers.indexOf("Modül");
       const industryIndex = headers.indexOf("Endüstri");
@@ -3480,7 +3481,8 @@
     }
 
     function effortPhaseRowsForImplementation(implementation = "All", includeVmp = false) {
-      const rows = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases);
+      const rows = normalizedEffortPhaseRowsCache
+        || (normalizedEffortPhaseRowsCache = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases));
       const matches = rows.slice(1)
         .filter(row => implementationMatches(row[0], implementation))
         .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]));
@@ -3502,7 +3504,8 @@
     }
 
     function allConfiguredPhaseHeaders(includeVmp = false) {
-      const rows = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases);
+      const rows = normalizedEffortPhaseRowsCache
+        || (normalizedEffortPhaseRowsCache = normalizeEffortPhaseRows(window.adminSeedData?.effortPhases));
       const configured = rows.slice(1)
         .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]))
         .sort((a, b) => (Number(a[1]) || 0) - (Number(b[1]) || 0))
@@ -3569,7 +3572,8 @@
     }
 
     function developmentEffortDefinitions(implementation = currentImplementationType()) {
-      const rows = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []);
+      const rows = normalizedVmpRowsCache
+        || (normalizedVmpRowsCache = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []));
       const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
       if (headerIndex < 0) return developmentEfforts;
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
@@ -3594,7 +3598,8 @@
     }
 
     function scopeProjectEffortDefinitions(implementation = currentImplementationType()) {
-      const rows = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []);
+      const rows = normalizedVmpRowsCache
+        || (normalizedVmpRowsCache = normalizeVariableModulePhaseRows(window.adminSeedData?.variableModulePhase || []));
       const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
       if (headerIndex < 0) return [];
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
@@ -3865,6 +3870,12 @@
     const adminRenderedSections = new Set();
     let workbookRenderTimer = null;
     let questionListRenderTimer = null;
+    let questionRestrictionIndex = null;
+    let scopeImpactIndex = null;
+    let normalizedVmpRowsCache = null;
+    let normalizedFixedDaysRowsCache = null;
+    let normalizedEffortPhaseRowsCache = null;
+    let offerScreenRenderToken = 0;
     let adminUsersLoading = false;
     let adminUsersLoaded = false;
 
@@ -5900,11 +5911,19 @@
     }
 
     function scopeImpactForQuestion(item, implementationOverride = "", industryOverride = "", systemOverride = "") {
-      const rows = normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts);
       const implementation = implementationOverride || document.getElementById("projectImplementation")?.value || "All";
       const systemType = systemOverride || document.getElementById("projectSystem")?.value || "All";
       const itemId = questionIdFor(item, "scope");
-      const matches = rows.slice(1).filter(row => String(row[1] || "").trim() === itemId || String(row[4] || "").trim() === item.name)
+      if (!scopeImpactIndex) {
+        scopeImpactIndex = new Map();
+        normalizeScopeImpactRows(window.adminSeedData?.scopeSizeImpacts).slice(1).forEach(row => {
+          [String(row[1] || "").trim(), String(row[4] || "").trim()].filter(Boolean).forEach(key => {
+            if (!scopeImpactIndex.has(key)) scopeImpactIndex.set(key, []);
+            scopeImpactIndex.get(key).push(row);
+          });
+        });
+      }
+      const matches = [...new Set([...(scopeImpactIndex.get(itemId) || []), ...(scopeImpactIndex.get(item.name) || [])])]
         .filter(row => sizeRangeDimensionMatches(row[2], implementation))
         .filter(row => sizeRangeDimensionMatches(row[3], systemType));
       const row = matches
@@ -7600,6 +7619,11 @@
     }
 
     function applyAdminConfig(config = {}, options = {}) {
+      questionRestrictionIndex = null;
+      scopeImpactIndex = null;
+      normalizedVmpRowsCache = null;
+      normalizedFixedDaysRowsCache = null;
+      normalizedEffortPhaseRowsCache = null;
       normalizeImplementationTypeReferences(config);
       normalizeConfiguredQuestionIds(config);
       if (options.source !== "live") {
@@ -8913,27 +8937,31 @@
     }
 
     function questionRestriction(item, targetId) {
-      const rows = normalizeRestrictionRows(window.adminSeedData?.restrictions || []);
-      const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
-      if (headerIndex < 0) return null;
-      const headers = rows[headerIndex].map(cell => String(cell || "").trim());
-      const typeIndex = headers.indexOf("Variable Type");
-      const idIndex = headers.indexOf("Question ID");
-      const questionIndex = headers.indexOf("Question");
       const expectedType = targetId === "scopeQuestions" ? "Kapsam" : "Geliştirme";
       const expectedId = questionIdFor(item, expectedType);
-      const row = rows.slice(headerIndex + 1).find(candidate =>
-        String(candidate[typeIndex] || "").trim() === expectedType
-        && String(candidate[idIndex] || "").trim() === expectedId
-      );
-      if (!row) return null;
-      const value = header => row[headers.indexOf(header)];
-      return {
-        industries: value("Allowed Industries"),
-        implementationTypes: value("Allowed Implementation Types"),
-        systemTypes: value("Allowed System Types"),
-        active: String(value("Active?") || "Yes").trim().toLowerCase() !== "no"
-      };
+      if (!questionRestrictionIndex) {
+        questionRestrictionIndex = new Map();
+        const rows = normalizeRestrictionRows(window.adminSeedData?.restrictions || []);
+        const headerIndex = rows.findIndex(row => row.some(cell => String(cell || "").trim() === "Question"));
+        if (headerIndex >= 0) {
+          const headers = rows[headerIndex].map(cell => String(cell || "").trim());
+          const typeIndex = headers.indexOf("Variable Type");
+          const idIndex = headers.indexOf("Question ID");
+          const value = (row, header) => row[headers.indexOf(header)];
+          rows.slice(headerIndex + 1).forEach(row => {
+            const type = String(row[typeIndex] || "").trim();
+            const id = String(row[idIndex] || "").trim();
+            if (!type || !id) return;
+            questionRestrictionIndex.set(`${type}\u001f${id}`, {
+              industries: value(row, "Allowed Industries"),
+              implementationTypes: value(row, "Allowed Implementation Types"),
+              systemTypes: value(row, "Allowed System Types"),
+              active: String(value(row, "Active?") || "Yes").trim().toLowerCase() !== "no"
+            });
+          });
+        }
+      }
+      return questionRestrictionIndex.get(`${expectedType}\u001f${expectedId}`) || null;
     }
 
     function isQuestionApplicable(item, targetId) {
@@ -9538,7 +9566,9 @@
     }
 
     function renderOfferScreenOnDemand(screenId) {
-      requestAnimationFrame(() => {
+      const renderToken = ++offerScreenRenderToken;
+      requestAnimationFrame(() => setTimeout(() => {
+        if (renderToken !== offerScreenRenderToken || activeScreenId() !== screenId) return;
         if (screenId === "modules") renderModuleGroups();
         if (screenId === "scope") {
           renderQuestionList("scopeQuestions", window.scopeQuestions || [], { preserveAnswers: true });
@@ -9553,7 +9583,7 @@
         if (screenId === "localization") renderLocalizationControls();
         if (screenId === "hypercare") renderHypercareRows();
         if (screenId === "effort") renderWorkbookDrivenScreens();
-      });
+      }, 0));
     }
 
     function openScreen(screenId, options = {}) {
