@@ -4070,9 +4070,18 @@
         potentialImpact: "gün potansiyel etki",
         moduleSelection: "Modül Seçimi",
         teamSplit: "Ekip ayrıştırma gerekli mi?",
-        countrySelection: "Ülke ve modül seçimi",
+        countrySelection: "Ülke seçimi",
         localizationEffort: "Lokalizasyon eforu",
         supportPlan: "Destek planı",
+        supportSummary: "Destek özeti",
+        module: "Modül",
+        week: "Hafta",
+        daysPerWeek: "Gün/Hafta",
+        shift: "Vardiya",
+        location: "Lokasyon",
+        goLiveSupport: "Canlı destek",
+        noCountrySelected: "Ülke seçili değil",
+        noLocalizationEffortGenerated: "Lokalizasyon eforu oluşmadı",
         selected: "seçili"
       },
       en: {
@@ -4264,9 +4273,18 @@
         potentialImpact: "days potential impact",
         moduleSelection: "Module Selection",
         teamSplit: "Need team split?",
-        countrySelection: "Country and module selection",
+        countrySelection: "Country selection",
         localizationEffort: "Localization effort",
         supportPlan: "Support plan",
+        supportSummary: "Support summary",
+        module: "Module",
+        week: "Week",
+        daysPerWeek: "Days/Week",
+        shift: "Shift",
+        location: "Location",
+        goLiveSupport: "Go-Live Support",
+        noCountrySelected: "No country selected",
+        noLocalizationEffortGenerated: "No localization effort was generated",
         selected: "selected"
       }
     };
@@ -4512,7 +4530,51 @@
       "Organizasyon Ayrıştırma Kapsamı": "Organization Separation Scope",
       "Shared Master Data Ayrıştırma": "Shared Master Data Separation",
       "SLO / TDMS Araç İhtiyacı": "SLO / TDMS Tool Requirement",
-      "TSA / Paralel İşletim": "TSA / Parallel Run"
+      "TSA / Paralel İşletim": "TSA / Parallel Run",
+      "Entegrasyon Sağlanacak ERP Sayısı": "Number of ERP Systems to Be Integrated",
+      "CAR Modul Sayısı": "Number of CAR Modules",
+      "CAR Add-on Sayısı": "Number of CAR Add-ons",
+      "E-Ticaret Entegrasyonu": "E-Commerce Integration",
+      "Omnichannel Satış Operasyonu": "Omnichannel Sales Operations",
+      "Bayi Yönetimi": "Dealer Management",
+      "Bayi Sayısı": "Number of Dealers",
+      "OPP Engine": "OPP Engine",
+      "CAR Integration": "CAR Integration",
+      "Stok Yönetimi": "Inventory Management",
+      "Satış Kanalları": "Sales Channels",
+      "Dağıtım Merkezi/ Mağaza Sayısı": "Number of Distribution Centers / Stores",
+      "Franchise Mağaza Sayısı": "Number of Franchise Stores",
+      "Üretim Var mı": "Is Production in Scope?",
+      "Omnichannel Satış/ İade": "Omnichannel Sales / Returns",
+      "Perakende Müşteri Takibi": "Retail Customer Tracking",
+      "Loyalty (Sadakat Programı)": "Loyalty Program",
+      "Gift Card Yönetimi": "Gift Card Management",
+      "Kampanya Yönetimi": "Promotion Management",
+      "CRM Entegrasyonu": "CRM Integration",
+      "E-Commerce Entegrasyonu": "E-Commerce Integration",
+      "Marketplace Entegrasyonu": "Marketplace Integration",
+      "S4/ OMS": "S/4 / OMS",
+      "OMS Entegrasyonu": "OMS Integration",
+      "WMS Entegrasyonu": "WMS Integration",
+      "EWM Advanced": "Advanced EWM",
+      "Replenishment Entegrasyonu": "Replenishment Integration",
+      "Kasa Entegrasyonu": "POS Integration",
+      "S4/ POS": "S/4 / POS",
+      "PLM Entegrasyonu": "PLM Integration",
+      "Tedarikçi Portali": "Supplier Portal",
+      "SSH Entegrasyonu": "After-Sales Service Integration",
+      "S4/ SSH": "S/4 / After-Sales Service",
+      "B2B Entegrasyonu": "B2B Integration",
+      "Kurumsal Portal Entegrasyonu": "Corporate Portal Integration",
+      "Hesaplaşma Yönetimi": "Settlement Management",
+      "Satınalma Bütçe Yönetimi": "Procurement Budget Management",
+      "Entegrasyon Sayısı": "Number of Integrations",
+      "it.foreign trade": "it.foreign trade",
+      "LME Entegrasyonu ihtiyacı bulunmakta mıdır?": "Is LME Integration Required?",
+      "LME Entegrasyonu ihtiyacı bulunmakta mdır?": "Is LME Integration Required?",
+      "Entegrasyon": "Integration",
+      "Toplam çıktı sayısı": "Total Number of Outputs",
+      "Toplam rapor sayısı": "Total Number of Reports"
     };
 
     const recordDescriptionTranslations = {
@@ -4648,7 +4710,50 @@
       "Doküman ayrıştırma aktivasyonu gerekiyor mu? Şirket / segment ayrıştırması ve kâr merkezi bazlı bilanço için kritik": "Is document splitting activation required? Critical for company/segment split and profit-center-based balance sheet.",
       "FI-AR-CR → FSCM Credit Management geçişi kapsamda mıdır?": "Is the FI-AR-CR → FSCM Credit Management transition in scope?",
       "SI Check sonucunda çıkan relevant / blocking item sayısı. ▸ Adet = relevant item sayısı (örn. 35 item → 35 yazın)": "Number of relevant / blocking items from the SI Check. ▸ Count = number of relevant items (e.g. 35 items → enter 35)",
-      "Ayrıştırılacak şirket kodu / üretim yeri / satış organizasyonu sayısı. ▸ Adet = ayrıştırılacak org birimi sayısı": "Number of company codes / plants / sales organizations to be separated. ▸ Count = number of org units to be separated"
+      "Ayrıştırılacak şirket kodu / üretim yeri / satış organizasyonu sayısı. ▸ Adet = ayrıştırılacak org birimi sayısı": "Number of company codes / plants / sales organizations to be separated. ▸ Count = number of org units to be separated",
+      "Farklı kırılımlarda mizan ihtiyacı": "Is a trial balance required for different reporting dimensions?",
+      "CAR sistem ile entegrasyon hedeflenen ERP sistem sayısı": "Number of ERP systems targeted for integration with SAP CAR",
+      "Kapsamda olacak CAR modul sayısı": "Number of SAP CAR modules in scope",
+      "Kapsamda olacak CAR Add-on sayısı": "Number of SAP CAR add-ons in scope",
+      "CAR sistem üzerinden e-ticaret ile entegrasyon var mı?": "Is e-commerce integration through SAP CAR required?",
+      "Mağazalarda omnichannel satış operasyonu var mı?": "Are omnichannel sales operations used in stores?",
+      "Kasa satış takibi yapılan bayi var mı?": "Are there dealers whose POS sales are tracked?",
+      "Kasa satış takibi yapılan bayi sayısı": "Number of dealers whose POS sales are tracked",
+      "OPP Java engine kullanılacak mı?": "Will the OPP Java engine be used?",
+      "CAR sistem ile kasa ve e-ticaret harici hedeflenen farklı bir entegrasyon var mı?": "Are integrations other than POS and e-commerce targeted for SAP CAR?",
+      "Özelleştirilmiş stok hesaplama kuralı var mı?": "Are custom inventory calculation rules required?",
+      "Web, Pazaryeri, Mağaza vb. gibi farklı satış kanalları.": "Different sales channels such as web, marketplace and store",
+      "Kaç farklı dağıtım merkezi/ mağaza bulunmaktadır?": "How many different distribution centers / stores are there?",
+      "Franchise mağazaları sistemde takip edilecek mi?": "Will franchise stores be tracked in the system?",
+      "Üretim var mı?": "Is production in scope?",
+      "Omnichannel satış/ iade süreçleri var mı?": "Are omnichannel sales / return processes used?",
+      "Bireysel (B2C) müşteriler kimlik/kart bazında sistemde tanımlı ve takip edilecek mi?": "Will individual (B2C) customers be identified and tracked by ID/card in the system?",
+      "Puan biriktirme/kullanma bazlı sadakat programı olacak mı?": "Will there be a points-based loyalty program for earning and redeeming points?",
+      "Hediye çeki/kart satışı, bakiye takibi ve kullanımı olacak mı?": "Will gift voucher/card sales, balance tracking and redemption be supported?",
+      "Kaç farklı kampanya/promosyon tipi (indirim, N al M öde, bundle vb.) yönetilecek?": "How many promotion types (discount, buy N pay M, bundle, etc.) will be managed?",
+      "E-Commerce entegrasyonu var mı?": "Is e-commerce integration required?",
+      "Marketplace entegrasyonu var mı?": "Is marketplace integration required?",
+      "Stoğun çıkacağı kaynağı belirleme ve alokasyon yapma": "Determine the fulfillment source and allocate inventory",
+      "OMS entegrasyonu": "OMS integration",
+      "3rd party depo entegrasyonu var mı?": "Is third-party warehouse integration required?",
+      "Advanced EWM özelliklerinin kullanım ihtiyacı var mıdır?": "Are Advanced EWM capabilities required?",
+      "3rd party ihtiyaç hesaplama programı kullanılıyor mu? (Invent, Solvoyo vb.)": "Is a third-party replenishment planning solution used (Invent, Solvoyo, etc.)?",
+      "Kasa entegrasyonu var mı?": "Is POS integration required?",
+      "S4 üzerinde POS kullanılacak mı?": "Will POS run on S/4HANA?",
+      "PLM sistemi kullanılıyor mu, SAP ile entegre edilecek mi?": "Is a PLM system used, and will it be integrated with SAP?",
+      "Tedarikçi portali kullanılıyor mu?": "Is a supplier portal used?",
+      "Satış sonrası hizmetler için entegrasyon var mı?": "Is integration required for after-sales services?",
+      "Satış sonrası hizmetler SAP'de mi yürütülecek?": "Will after-sales services be managed in SAP?",
+      "B2B entegrasyonu var mı?": "Is B2B integration required?",
+      "Kurumsal Portal entegrasyonu var mı?": "Is corporate portal integration required?",
+      "Hesaplaşma Yönetimi var mı?": "Is Settlement Management required?",
+      "Miktar bazlı Bütçe Yönetimi var mı?": "Is quantity-based procurement budget management required?",
+      "Öngörülen third party entegrasyon sayısı nedir?": "What is the estimated number of third-party integrations?",
+      "LME entegrasyonu ihtiyacı bulunmakta mıdır?": "Is LME integration required?",
+      "CAR sistemde kasa ve e-ticaret entegrasyonu haricinde 3rd party entegrasyon sayısı": "Number of third-party integrations in SAP CAR excluding POS and e-commerce integrations",
+      "Entegrasyonlar aracılığı ile dış sistemden veri alımı ihtiyacı bulunmakta mıdır?": "Is data acquisition from external systems through integrations required?",
+      "İhtiyaç duyulan toplam çıktı, etiket ve form sayısı": "Total number of required outputs, labels and forms",
+      "İhtiyaç duyulan toplam rapor sayısı": "Total number of required reports"
     };
 
     const recordPhraseTranslations = [
@@ -5029,8 +5134,12 @@
       setTextContent("#localization .grid > .panel:nth-child(1) .panel-title", t("localization"));
       setTextContent("#localization .grid > .panel:nth-child(1) .pill", t("countrySelection"));
       setTextContent("#localization .grid > .panel:nth-child(2) .panel-title", t("localizationEffort"));
-      setTextContent("#hypercare .panel-title", "Hypercare & Go-live Support");
-      setTextContent("#hypercare .pill", t("supportPlan"));
+      setTexts("#hypercare .panel-title", ["Hypercare & Go-live Support", t("supportSummary")]);
+      setTextContent("#hypercare .grid > .panel:first-child .pill", t("supportPlan"));
+      setTexts("#hypercare thead tr:first-child th", [t("module"), "Hypercare", "Go-Live Support"]);
+      setTexts("#hypercare thead tr:nth-child(2) th", [t("week"), t("daysPerWeek"), t("shift"), t("location"), "Hypercare", "Go-Live Support"]);
+      setTexts("#hypercare .phase-list .metric span", ["Hypercare", t("goLiveSupport")]);
+      setTexts("#hypercare .phase-list .metric small", [t("days"), t("days")]);
       setTexts("#effort > .effort-stack > .panel > .panel-head .panel-title", [t("projectEfforts"), t("localizationEfforts"), t("developmentEfforts"), t("finalSummary")]);
       setTexts("#effort > .effort-stack > .panel > .panel-head .pill", ["Final Effort", t("moduleCountryPhase"), t("developmentModule"), `${document.getElementById("finalGrandTotal")?.textContent || "0"}g`]);
       setTexts("#effort .summary-grid .metric span", [t("standardProjectEffort"), t("fixedEffort"), t("developmentEffort"), t("localizationEffortSummary"), t("hypercareGoliveEffort"), t("totalEffortSummary")]);
@@ -5359,7 +5468,7 @@
           <div><strong>${row.country}</strong><span>${row.module} modülü · Seçili ülkeye bağlı lokalizasyon</span></div>
           <b>${fmt(sumPhases(row.values))}g</b>
         </div>
-      `).join("") : `<div class="step"><span class="step-no">0</span><div><strong>Ülke seçili değil</strong><span>Lokalizasyon eforu oluşmadı</span></div><b>0g</b></div>`;
+      `).join("") : `<div class="step"><span class="step-no">0</span><div><strong>${t("noCountrySelected")}</strong><span>${t("noLocalizationEffortGenerated")}</span></div><b>0g</b></div>`;
       const list = document.getElementById("localizationEffortList");
       if (list) list.innerHTML = html;
       renderLocalizationEffortTable(rows);

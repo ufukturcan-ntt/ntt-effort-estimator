@@ -347,6 +347,23 @@ test("seeded question labels do not render mixed Turkish in English mode", () =>
   assert.match(html, /"Benzer işi-süreci olan depolar göz önüne alındığında kaç farklı yapıda depo yapısı bulunmaktadır\.": "Considering warehouses with similar business processes, how many different warehouse structures are there\?"/);
   assert.match(html, /"Teslimat planı kullanımı ihtiyacı bulunmakta mıdır\?": "Is scheduling agreement usage required\?"/);
 });
+
+test("localization and hypercare empty states are fully translated", () => {
+  assert.match(html, /noCountrySelected: "No country selected"/);
+  assert.match(html, /noLocalizationEffortGenerated: "No localization effort was generated"/);
+  assert.match(html, /supportSummary: "Support summary"/);
+  assert.match(html, /daysPerWeek: "Days\/Week"/);
+  assert.match(html, /setTexts\("#hypercare thead tr:nth-child\(2\) th"/);
+  assert.match(html, /<strong>\$\{t\("noCountrySelected"\)\}<\/strong>/);
+});
+
+test("live CAR and retail questions have immediate English translations", () => {
+  assert.match(html, /"Entegrasyon Sağlanacak ERP Sayısı": "Number of ERP Systems to Be Integrated"/);
+  assert.match(html, /"Omnichannel Satış Operasyonu": "Omnichannel Sales Operations"/);
+  assert.match(html, /"CAR sistem ile entegrasyon hedeflenen ERP sistem sayısı": "Number of ERP systems targeted for integration with SAP CAR"/);
+  assert.match(html, /"Toplam rapor sayısı": "Total Number of Reports"/);
+  assert.match(html, /"İhtiyaç duyulan toplam çıktı, etiket ve form sayısı": "Total number of required outputs, labels and forms"/);
+});
 test("admin question seed stays synchronized with bundled questions", () => {
   const questionsJs = fs.readFileSync(new URL("../public/assets/questions.js", import.meta.url), "utf8");
   const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
