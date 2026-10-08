@@ -11,6 +11,17 @@ test("API client sends bearer authentication", () => {
   assert.match(apiClient, /Authorization:\s*`Bearer \$\{accessToken\}`/);
 });
 
+test("pending approvals, localization countries, and admin chrome are translated", () => {
+  assert.match(html, /pendingOffersTitle: "Offers Pending Approval"/);
+  assert.match(html, /setTexts\("#pendingapprovals th"/);
+  assert.match(html, /function applyAdminLanguage\(\)/);
+  assert.match(html, /adminEffortPhases: "Effort Phases"/);
+  assert.match(html, /adminLibrary: "Library Definitions"/);
+  assert.match(html, /"Birleşik Arap Emirlikleri": "United Arab Emirates"/);
+  assert.match(html, /"Hollanda": "Netherlands"/);
+  assert.match(html, /"İngiltere": "United Kingdom"/);
+});
+
 test("API client keeps authorization when sending update precondition headers", () => {
   assert.match(apiClient, /headers:\s*\{\s*"Content-Type":\s*"application\/json",\s*\.\.\.\(accessToken \? \{ Authorization:\s*`Bearer \$\{accessToken\}` \} : \{\}\),\s*\.\.\.optionHeaders/s);
   assert.match(apiClient, /headers:\s*expectedUpdatedAt \? \{ "If-Match": expectedUpdatedAt \} : \{\}/);
