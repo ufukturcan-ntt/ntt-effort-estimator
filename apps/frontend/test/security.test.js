@@ -256,6 +256,10 @@ test("question and effort configuration lookups are indexed between admin refres
   assert.match(html, /normalizedFixedDaysRowsCache = normalizeFixedDaysRows/);
   assert.match(html, /normalizedEffortPhaseRowsCache = normalizeEffortPhaseRows/);
   assert.match(html, /function applyAdminConfig[\s\S]*?questionRestrictionIndex = null;[\s\S]*?normalizedVmpRowsCache = null;/);
+  assert.ok(
+    html.indexOf("let normalizedEffortPhaseRowsCache = null") < html.indexOf("window.adminSeedData.fixedDays = ensureWorkbookFixedDaysRows"),
+    "effort cache must be initialized before the initial fixed-days normalization"
+  );
 });
 
 test("stale offer screen renders are cancelled after fast navigation", () => {

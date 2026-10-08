@@ -2988,6 +2988,10 @@
       return [cleanHeaders, ...cleanedRows];
     }
 
+    let normalizedVmpRowsCache = null;
+    let normalizedFixedDaysRowsCache = null;
+    let normalizedEffortPhaseRowsCache = null;
+
     function normalizeVariableModulePhaseRows(rows = []) {
       const normalizedRows = rows.map(row => [...row]);
       const headerIndex = normalizedRows.findIndex(row => row.some(cell => String(cell || "").trim() === "Kaynak Tipi"));
@@ -3872,9 +3876,6 @@
     let questionListRenderTimer = null;
     let questionRestrictionIndex = null;
     let scopeImpactIndex = null;
-    let normalizedVmpRowsCache = null;
-    let normalizedFixedDaysRowsCache = null;
-    let normalizedEffortPhaseRowsCache = null;
     let offerScreenRenderToken = 0;
     let adminUsersLoading = false;
     let adminUsersLoaded = false;
