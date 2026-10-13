@@ -35,7 +35,7 @@ test("offer actions distinguish owners from viewers", () => {
 test("stored offer text is HTML escaped", () => {
   assert.match(html, /escapeHtml\(displayRecord\(row\.customer_name/);
   assert.match(html, /escapeHtml\(displayRecord\(offer\.customer_name/);
-  assert.match(html, /contenteditable="true">\$\{escapeHtml/);
+  assert.match(html, /contenteditable="true" data-admin-raw-value="\$\{escapeHtml\(rawValue\)\}">\$\{escapeHtml\(displayRecord\(rawValue\)\)\}/);
 });
 
 test("library count only includes visible checked records", () => {
@@ -318,6 +318,14 @@ test("common Turkish admin records have immediate English translations", () => {
   assert.match(html, /looksTurkishText[\s\S]*hizmet/);
   assert.match(html, /looksTurkishText[\s\S]*sayı/);
   assert.match(html, /setTimeout\(flushTranslationQueue, 250\)/);
+});
+
+test("admin data displays translated labels while preserving stored keys", () => {
+  assert.match(html, /data-admin-raw-value="\$\{escapeHtml\(rawValue\)\}"/);
+  assert.match(html, /escapeHtml\(displayRecord\(rawValue\)\)/);
+  assert.match(html, /<option value="\$\{escapeHtml\(option\)\}"[^>]*>\$\{escapeHtml\(displayRecord\(option\)\)\}<\/option>/);
+  assert.match(html, /displayed === displayRecord\(rawValue\) \? rawValue : displayed/);
+  assert.match(html, /JSON\.parse\(body\?\.dataset\.matrixHeaders \|\| "\[\]"\)/);
 });
 
 test("conversion scope questions have immediate English labels", () => {

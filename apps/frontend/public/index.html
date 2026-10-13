@@ -5897,11 +5897,13 @@
     }
 
     function editableCell(value = "") {
-      return `<td contenteditable="true">${escapeHtml(value || "")}</td>`;
+      const rawValue = String(value || "");
+      return `<td contenteditable="true" data-admin-raw-value="${escapeHtml(rawValue)}">${escapeHtml(displayRecord(rawValue))}</td>`;
     }
 
     function editableDiv(value = "") {
-      return `<div class="admin-edit" contenteditable="true">${escapeHtml(value || "")}</div>`;
+      const rawValue = String(value || "");
+      return `<div class="admin-edit" contenteditable="true" data-admin-raw-value="${escapeHtml(rawValue)}">${escapeHtml(displayRecord(rawValue))}</div>`;
     }
 
     function escapeHtml(value = "") {
@@ -6015,7 +6017,7 @@
       const optionValues = options.includes("") ? options : ["", ...options];
       const rendered = optionValues.map(option => {
         const selected = selectedValues.includes(option) || value === option ? "selected" : "";
-        return `<option ${selected}>${escapeHtml(option)}</option>`;
+        return `<option value="${escapeHtml(option)}" ${selected}>${escapeHtml(displayRecord(option))}</option>`;
       }).join("");
       return `<td><select class="admin-select" ${multiple ? "multiple" : ""} ${attributes}>${rendered}</select></td>`;
     }
@@ -6841,7 +6843,7 @@
       target.innerHTML = groups.map(group => `
         <section class="admin-module-group" data-admin-module-group="${group}">
           <div class="admin-module-group-head">
-            <h4>${escapeHtml(group)}</h4>
+            <h4>${escapeHtml(displayRecord(group))}</h4>
             <button class="button" data-add-module-to-group="${escapeHtml(group)}" type="button">${currentLanguage === "en" ? "+ Module" : "+ Modül"}</button>
           </div>
           <div class="admin-module-list">
@@ -6981,12 +6983,14 @@
       }
       const input = cell.querySelector("input");
       if (input) return input.value;
-      return cell.textContent.trim();
+      const displayed = cell.textContent.trim();
+      const rawValue = cell.dataset.adminRawValue;
+      return rawValue !== undefined && displayed === displayRecord(rawValue) ? rawValue : displayed;
     }
 
     function setInlineSelectOptions(select, options = [], value = "") {
       const optionValues = options.includes("") ? options : ["", ...options];
-      select.innerHTML = optionValues.map(option => `<option ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
+      select.innerHTML = optionValues.map(option => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(displayRecord(option))}</option>`).join("");
       select.value = optionValues.includes(value) ? value : "";
     }
 
@@ -7099,7 +7103,11 @@
 
     function collectDefinitionValues(targetId) {
       return [...document.querySelectorAll(`#${targetId} .admin-edit`)]
-        .map(item => item.textContent.trim())
+        .map(item => {
+          const displayed = item.textContent.trim();
+          const rawValue = item.dataset.adminRawValue;
+          return rawValue !== undefined && displayed === displayRecord(rawValue) ? rawValue : displayed;
+        })
         .filter(Boolean);
     }
 
@@ -7124,7 +7132,12 @@
       return [...document.querySelectorAll("[data-admin-module-group]")].flatMap(groupEl => {
         const group = groupEl.dataset.adminModuleGroup;
         return [...groupEl.querySelectorAll(".admin-module-card .admin-edit")]
-          .map(item => ({ module: canonicalModuleName(item.textContent), group: canonicalModuleName(item.textContent) === "NTT Data POS" ? "NTT Own IP" : group, selected: false, team: "" }))
+          .map(item => {
+            const displayed = item.textContent.trim();
+            const rawValue = item.dataset.adminRawValue;
+            const value = rawValue !== undefined && displayed === displayRecord(rawValue) ? rawValue : displayed;
+            return { module: canonicalModuleName(value), group: canonicalModuleName(value) === "NTT Data POS" ? "NTT Own IP" : group, selected: false, team: "" };
+          })
           .filter(item => item.module);
       });
     }
@@ -7169,9 +7182,18 @@
 
     function collectMatrixRows(headId, bodyId) {
       if (bodyId === "adminVmpRows") syncVmpModuleCells(document.getElementById(bodyId));
-      const headers = [...document.querySelectorAll(`#${headId} th`)]
-        .map(th => th.textContent.trim())
-        .filter(value => value && value !== "İşlem");
+      const body = document.getElementById(bodyId);
+      let headers = [];
+      try {
+        headers = JSON.parse(body?.dataset.matrixHeaders || "[]");
+      } catch (_error) {
+        headers = [];
+      }
+      if (!headers.length) {
+        headers = [...document.querySelectorAll(`#${headId} th`)]
+          .map(th => th.textContent.trim())
+          .filter(value => value && !["İşlem", "Action"].includes(value));
+      }
       const sourceTypeIndex = bodyId === "adminVmpRows" ? headers.indexOf("Kaynak Tipi") : -1;
       const moduleIndex = bodyId === "adminVmpRows"
         ? headers.findIndex(header => ["Modül", "Modul", "Module"].includes(String(header || "").trim()))
