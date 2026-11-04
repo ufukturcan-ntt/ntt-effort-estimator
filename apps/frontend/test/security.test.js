@@ -134,6 +134,13 @@ test("fixed days rows show their read-only selection context", () => {
   assert.match(html, /class="fixed-days-context">\$\{escapeHtml\(row\[indexes\.system\] \|\| "All"\)\}<\/td>/);
 });
 
+test("Fixed Days can be exported by implementation type with matching phase headers", () => {
+  assert.match(html, /id="exportFixedDaysExcelButton"/);
+  assert.match(html, /async function exportFixedDaysWorkbook\(\)/);
+  assert.match(html, /const outputHeaders = \["Endüstri", "Size", "Implementation Type", "System Type", "Modül", \.\.\.phases, "Toplam"\]/);
+  assert.match(html, /XLSX\.utils\.book_append_sheet\(workbook, sheet, fixedDaysSheetName\(implementation, usedSheetNames\)\)/);
+});
+
 test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);

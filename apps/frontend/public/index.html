@@ -2768,7 +2768,7 @@
                 <div class="list-table admin-dense-table"><table><thead id="adminRestrictionsHead"></thead><tbody id="adminRestrictionsRows"></tbody></table></div>
               </section>
               <section class="panel admin-section" data-admin-panel="fixed">
-                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><button class="button primary" id="addFixedDaysModuleButton" type="button">+ Modül</button></div>
+                <div class="panel-head"><h3 class="panel-title">Fixed Days</h3><div class="quick-actions"><button class="button" id="exportFixedDaysExcelButton" type="button">Excel'e Aktar</button><button class="button primary" id="addFixedDaysModuleButton" type="button">+ Modül</button></div></div>
                 <div class="fixed-days-filters">
                   <label><span>Endüstri</span><select id="fixedDaysIndustryFilter"></select></label>
                   <label><span>Size</span><select id="fixedDaysSizeFilter"></select></label>
@@ -3319,6 +3319,94 @@
       target.textContent = fmt(total);
     }
 
+    function fixedDaysSheetName(implementation, usedNames) {
+      const base = String(implementation || "All").replace(/[\\/?*\[\]:]/g, "-").slice(0, 31) || "All";
+      let name = base;
+      let suffix = 2;
+      while (usedNames.has(name)) {
+        const tail = `-${suffix++}`;
+        name = `${base.slice(0, 31 - tail.length)}${tail}`;
+      }
+      usedNames.add(name);
+      return name;
+    }
+
+    function styleFixedDaysExportSheet(sheet, rowCount, columnCount) {
+      const headerStyle = {
+        fill: { patternType: "solid", fgColor: { rgb: "005EB8" } },
+        font: { name: "Arial", sz: 10, bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { vertical: "center", horizontal: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "D8DEEA" } },
+          bottom: { style: "thin", color: { rgb: "D8DEEA" } },
+          left: { style: "thin", color: { rgb: "D8DEEA" } },
+          right: { style: "thin", color: { rgb: "D8DEEA" } }
+        }
+      };
+      for (let column = 0; column < columnCount; column += 1) {
+        const header = sheet[XLSX.utils.encode_cell({ r: 0, c: column })];
+        if (header) header.s = headerStyle;
+      }
+      for (let row = 1; row < rowCount; row += 1) {
+        for (let column = 0; column < columnCount; column += 1) {
+          const cell = sheet[XLSX.utils.encode_cell({ r: row, c: column })];
+          if (!cell) continue;
+          cell.s = {
+            font: { name: "Arial", sz: 10, color: { rgb: "172033" } },
+            fill: { patternType: "solid", fgColor: { rgb: row % 2 ? "FFFFFF" : "F7F9FC" } },
+            alignment: { vertical: "center", horizontal: column >= 5 ? "right" : "left" },
+            numFmt: column >= 5 && typeof cell.v === "number" ? "#,##0.00" : undefined
+          };
+        }
+      }
+      sheet["!cols"] = Array.from({ length: columnCount }, (_, index) => ({ wch: index === 0 ? 18 : index === 1 ? 12 : index === 2 ? 24 : index === 3 ? 34 : index === 4 ? 20 : 18 }));
+      sheet["!rows"] = Array.from({ length: rowCount }, (_, index) => ({ hpt: index === 0 ? 30 : 20 }));
+      sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rowCount - 1, 0), c: columnCount - 1 } }) };
+    }
+
+    async function exportFixedDaysWorkbook() {
+      persistFixedDaysEditor();
+      await ensureXlsxLoaded();
+      const normalized = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const headers = normalized[0] || [];
+      const indexes = {
+        industry: headers.indexOf("Endüstri"),
+        size: headers.indexOf("Size"),
+        implementation: headers.indexOf("Implementation Type"),
+        system: headers.indexOf("System Type"),
+        module: headers.indexOf("Modül")
+      };
+      const implementations = uniqueOptionValues(normalized.slice(1).map(row => row[indexes.implementation] || "All"));
+      if (!implementations.length) throw new Error("Fixed Days kaydı bulunamadı.");
+      const workbook = XLSX.utils.book_new();
+      const usedSheetNames = new Set();
+      implementations.forEach(implementation => {
+        const phases = phaseHeadersForImplementation(implementation, false);
+        const outputHeaders = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", ...phases, "Toplam"];
+        const sourceRows = normalized.slice(1)
+          .filter(row => (row[indexes.implementation] || "All") === implementation)
+          .sort((a, b) => [indexes.industry, indexes.size, indexes.system, indexes.module]
+            .map(index => String(a[index] || "").localeCompare(String(b[index] || ""), "tr"))
+            .find(result => result !== 0) || 0);
+        const outputRows = sourceRows.map(row => {
+          const phaseValues = phases.map(phase => Number(row[headers.indexOf(phase)]) || 0);
+          return [
+            row[indexes.industry] || "All",
+            row[indexes.size] || "All",
+            implementation,
+            row[indexes.system] || "All",
+            row[indexes.module] || "",
+            ...phaseValues,
+            phaseValues.reduce((sum, value) => sum + value, 0)
+          ];
+        });
+        const sheet = XLSX.utils.aoa_to_sheet([outputHeaders, ...outputRows]);
+        styleFixedDaysExportSheet(sheet, outputRows.length + 1, outputHeaders.length);
+        XLSX.utils.book_append_sheet(workbook, sheet, fixedDaysSheetName(implementation, usedSheetNames));
+      });
+      downloadXlsxWorkbook(workbook, `Fixed-Days-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
     function persistFixedDaysEditor() {
       const body = document.getElementById("adminFixedRows");
       if (!body?.dataset.fixedEditorReady) return;
@@ -3461,6 +3549,24 @@
           });
           markAdminDirty();
           requestAnimationFrame(syncFixedDaysScrollbars);
+        });
+      }
+      const exportButton = document.getElementById("exportFixedDaysExcelButton");
+      if (exportButton && !exportButton.dataset.fixedExportBound) {
+        exportButton.dataset.fixedExportBound = "true";
+        exportButton.addEventListener("click", async () => {
+          const originalText = exportButton.textContent;
+          exportButton.disabled = true;
+          exportButton.textContent = currentLanguage === "en" ? "Preparing Excel" : "Excel hazırlanıyor";
+          try {
+            await exportFixedDaysWorkbook();
+          } catch (error) {
+            console.error(error);
+            alert(`${currentLanguage === "en" ? "Fixed Days Excel could not be created" : "Fixed Days Excel oluşturulamadı"}: ${error.message}`);
+          } finally {
+            exportButton.disabled = false;
+            exportButton.textContent = originalText;
+          }
         });
       }
       initializeFixedDaysCopyControls();
