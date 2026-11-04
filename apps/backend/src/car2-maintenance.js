@@ -258,6 +258,42 @@ export function applyRetailPrivateCloudFixedDays(matrix) {
   return rows;
 }
 
+const obsoleteLargeGreenfieldIndustries = new Set([
+  "Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Konfeksiyon", "Metal", "Otomotiv"
+]);
+const obsoleteSapCarModules = new Set([
+  "CAR -Demand Data Foundation (DDF)",
+  "CAR -Inventory Visibility and Omnichannel Article Availability and Sourcing (OAA)",
+  "CAR -Multichannel Transaction Data Management",
+  "CAR -Omnichannel Promotion Pricing (OPP)",
+  "CAR -On-Shelf Availability (OSA)",
+  "CAR -POS Data Transfer and Audit (POSDTA)",
+  "CAR -SAP Allocation Management",
+  "CAR -SAP Assortment Planning",
+  "CAR -SAP Merchandise Planning",
+  "CAR -SAP Promotion Management",
+  "CAR -Unified Demand Forecast (UDF)"
+]);
+
+export function removeObsoleteLargeGreenfieldCarFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => {
+      const sharedKey = obsoleteLargeGreenfieldIndustries.has(String(row[at.Endüstri] || "").trim())
+        && String(row[at.Size] || "").trim() === "LARGE"
+        && String(row[at["Implementation Type"]] || "").trim() === "Greenfield";
+      if (!sharedKey) return true;
+      const systemType = String(row[at["System Type"]] || "").trim();
+      const module = String(row[at.Modül] || "").trim();
+      if (systemType === "NTT POS on S4" && module === "NTT Data POS") return false;
+      return !(systemType === "SAP CAR" && obsoleteSapCarModules.has(module));
+    })
+  ];
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");

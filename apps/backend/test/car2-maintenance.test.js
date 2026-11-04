@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -43,6 +43,26 @@ for (const [size, analysis] of Object.entries(expectedAnalysis)) {
     if (fixedAt["Canlı Destek"] != null) assert.equal(row[fixedAt["Canlı Destek"]], "");
   }
 }
+
+const obsoleteIndustries = new Set(["Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Konfeksiyon", "Metal", "Otomotiv"]);
+const preservationRow = Array(updatedFixedDays[0].length).fill("");
+preservationRow[fixedAt.Endüstri] = "Perakende";
+preservationRow[fixedAt.Size] = "LARGE";
+preservationRow[fixedAt["Implementation Type"]] = "Greenfield";
+preservationRow[fixedAt["System Type"]] = "NTT POS on S4";
+preservationRow[fixedAt.Modül] = "NTT Data POS";
+const cleanedFixedDays = removeObsoleteLargeGreenfieldCarFixedDays([...updatedFixedDays, preservationRow]);
+const cleanedAt = Object.fromEntries(cleanedFixedDays[0].map((header, index) => [header, index]));
+const isObsoleteFixedDay = row => obsoleteIndustries.has(row[cleanedAt.Endüstri])
+  && row[cleanedAt.Size] === "LARGE"
+  && row[cleanedAt["Implementation Type"]] === "Greenfield"
+  && ((row[cleanedAt["System Type"]] === "NTT POS on S4" && row[cleanedAt.Modül] === "NTT Data POS")
+    || (row[cleanedAt["System Type"]] === "SAP CAR" && String(row[cleanedAt.Modül] || "").startsWith("CAR -")));
+assert.equal(cleanedFixedDays.slice(1).filter(isObsoleteFixedDay).length, 0);
+assert.deepEqual(removeObsoleteLargeGreenfieldCarFixedDays(cleanedFixedDays), cleanedFixedDays, "Fixed Days cleanup must be idempotent");
+assert.ok(cleanedFixedDays.slice(1).some(row => row[cleanedAt.Endüstri] === "Perakende"
+  && row[cleanedAt.Size] === "LARGE" && row[cleanedAt["Implementation Type"]] === "Greenfield"
+  && row[cleanedAt["System Type"]] === "NTT POS on S4" && row[cleanedAt.Modül] === "NTT Data POS"));
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));
