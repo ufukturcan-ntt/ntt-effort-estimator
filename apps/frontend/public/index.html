@@ -8026,7 +8026,10 @@
       if (config.projectDefinitions) window.adminSeedData.projectDefinitions = config.projectDefinitions;
       if (config.questionFieldOptions) window.adminSeedData.questionFieldOptions = config.questionFieldOptions;
       if (config.restrictions) window.adminSeedData.restrictions = config.restrictions;
-      if (config.effortPhases) window.adminSeedData.effortPhases = config.effortPhases;
+      if (config.effortPhases) {
+        window.adminSeedData.effortPhases = config.effortPhases;
+        normalizedEffortPhaseRowsCache = null;
+      }
       if (config.fixedDays) window.adminSeedData.fixedDays = config.fixedDays;
       if (config.localizationEfforts) window.adminSeedData.localizationEfforts = config.localizationEfforts;
       if (config.variableModulePhase) window.adminSeedData.variableModulePhase = config.variableModulePhase;

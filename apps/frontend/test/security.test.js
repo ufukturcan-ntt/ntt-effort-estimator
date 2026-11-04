@@ -116,6 +116,10 @@ test("effort phase maintenance is sorted by implementation type and numeric orde
   assert.match(html, /localeCompare\(String\(right\[0\][\s\S]*?\|\| \(Number\(left\[1\]\) \|\| 0\) - \(Number\(right\[1\]\) \|\| 0\)/);
 });
 
+test("loading saved effort phase groups invalidates the preloaded phase cache", () => {
+  assert.match(html, /window\.adminSeedData\.effortPhases = config\.effortPhases;\s*normalizedEffortPhaseRowsCache = null;/);
+});
+
 test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);
