@@ -3495,7 +3495,10 @@
         const phase = canonicalPhaseName(row[idx("Efor Başlığı")] || row[idx("Phase")] || row[idx("Başlık")] || "");
         const upperGroup = String(row[idx("Üst Grup")] || row[idx("Upper Group")] || "").trim();
         return [implementation, order, phase, effortPhaseGroupOptions.includes(upperGroup) ? upperGroup : ""];
-      }).filter(row => row[2]);
+      }).filter(row => row[2]).sort((left, right) =>
+        String(left[0] || "").localeCompare(String(right[0] || ""), "en", { numeric: true, sensitivity: "base" })
+        || (Number(left[1]) || 0) - (Number(right[1]) || 0)
+      );
       return [effortPhaseHeaders, ...normalized];
     }
 

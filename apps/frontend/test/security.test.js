@@ -106,6 +106,11 @@ test("effort phases support upper groups and grouped totals across screen and pr
   assert.match(html, /type === "groupTotal"/);
 });
 
+test("effort phase maintenance is sorted by implementation type and numeric order", () => {
+  assert.match(html, /\.filter\(row => row\[2\]\)\.sort\(\(left, right\) =>\s*String\(left\[0\]/s);
+  assert.match(html, /localeCompare\(String\(right\[0\][\s\S]*?\|\| \(Number\(left\[1\]\) \|\| 0\) - \(Number\(right\[1\]\) \|\| 0\)/);
+});
+
 test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);
