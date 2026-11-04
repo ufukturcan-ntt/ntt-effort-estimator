@@ -715,3 +715,16 @@ test("Excel report sanitizes project text and validates merge ranges", () => {
   assert.match(html, /merge\.e\.c >= maxColumns/);
   assert.match(html, /const mergeKeys = new Set\(\)/);
 });
+
+test("Excel exports use an explicit browser download instead of SheetJS writeFile", () => {
+  assert.match(html, /function downloadXlsxWorkbook\(workbook, fileName\)/);
+  assert.match(html, /XLSX\.write\(workbook, \{ bookType: "xlsx", type: "array", compression: true \}\)/);
+  assert.match(html, /link\.download = fileName/);
+  assert.doesNotMatch(html, /XLSX\.writeFile\(workbook/);
+});
+
+test("offer report defines grouped project phases in its own scope", () => {
+  assert.match(html, /function offerPrintHtml\(offer\) \{[\s\S]*?const activePhases = phaseHeadersForImplementation\(implementation, false\);\s*const projectGroupPhases = \[\.\.\.activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"\];/);
+  const backlogBody = html.match(/function buildBacklogWorkbook\(offer\) \{([\s\S]*?)\n    \}/)?.[1] || "";
+  assert.doesNotMatch(backlogBody, /projectGroupPhases/);
+});

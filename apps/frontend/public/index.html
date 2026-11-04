@@ -8648,7 +8648,6 @@
       const definition = offerJson(offer.project_definition);
       const implementation = offer.implementation_type || definition.implementation || "All";
       const activePhases = phaseHeadersForImplementation(implementation, false);
-      const projectGroupPhases = [...activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"];
       const moduleNames = projectRows.map(row => row.module);
       const developmentModules = developmentModuleNames(moduleNames);
       const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
@@ -8688,7 +8687,7 @@
       const safeName = String(offer.offer_no || offer.project_name || "Teklif")
         .replace(/[\\/:*?"<>|]+/g, "-")
         .trim();
-      XLSX.writeFile(workbook, `${safeName}-Backlog.xlsx`, { compression: true });
+      downloadXlsxWorkbook(workbook, `${safeName}-Backlog.xlsx`);
     }
 
     function printTable(headers, rows, emptyText, groupHeaderRow = "") {
@@ -8726,6 +8725,7 @@
       const definition = offerJson(offer.project_definition);
       const implementation = offer.implementation_type || definition.implementation || "All";
       const activePhases = phaseHeadersForImplementation(implementation, false);
+      const projectGroupPhases = [...activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"];
       const projectRows = projectEffortRowsForOffer(offer);
       const moduleNames = projectRows.map(row => row.module);
       const developmentModules = developmentModuleNames(moduleNames);
@@ -8927,6 +8927,23 @@
         .trim();
     }
 
+    function downloadXlsxWorkbook(workbook, fileName) {
+      if (!window.XLSX?.write) throw new Error(currentLanguage === "en" ? "Excel component could not be loaded." : "Excel bileşeni yüklenemedi.");
+      const content = XLSX.write(workbook, { bookType: "xlsx", type: "array", compression: true });
+      const blob = new Blob([content], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        link.remove();
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
+
     function excelReportCellValue(value = "") {
       const safeText = excelSafeText(value);
       const text = safeText.replace(/\s+g$/i, "");
@@ -9125,7 +9142,7 @@
       const safeName = String(offer.offer_no || offer.project_name || t("offer"))
         .replace(/[\\/:*?"<>|]+/g, "-")
         .trim();
-      XLSX.writeFile(workbook, `${safeName}-${currentLanguage === "en" ? "Offer-Report" : "Teklif-Raporu"}.xlsx`, { compression: true });
+      downloadXlsxWorkbook(workbook, `${safeName}-${currentLanguage === "en" ? "Offer-Report" : "Teklif-Raporu"}.xlsx`);
     }
 
     function printOfferPdf(offer, printWindow = window.open("", "_blank")) {
