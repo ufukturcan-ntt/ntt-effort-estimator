@@ -635,3 +635,19 @@ test("SAP CAR modules are available as Advanced Solution modules", () => {
   ];
   expected.forEach(module => assert.match(html, new RegExp(`module:\"${module.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\", group:\"Advanced Solution\"`)));
 });
+
+test("print action offers PDF and Excel report formats", () => {
+  assert.match(html, /id="printFormatModal"/);
+  assert.match(html, /id="printFormatPdf"/);
+  assert.match(html, /id="printFormatExcel"/);
+  assert.match(html, /const selection = await choosePrintFormat\(\)/);
+  assert.match(html, /selection\.format === "pdf" \? t\("pdfPreparingButton"\) : t\("excelPreparing"\)/);
+});
+
+test("Excel print report mirrors the PDF report sections", () => {
+  assert.match(html, /function buildOfferReportWorkbook\(offer\)/);
+  assert.match(html, /new DOMParser\(\)\.parseFromString\(offerPrintHtml\(offer\), "text\/html"\)/);
+  assert.match(html, /querySelectorAll\("h2"\)/);
+  assert.match(html, /currentLanguage === "en" \? "Offer Report" : "Teklif Raporu"/);
+  assert.match(html, /exportOfferReportWorkbook\(offer\)/);
+});

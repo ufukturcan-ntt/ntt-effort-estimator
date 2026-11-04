@@ -2811,6 +2811,18 @@
     </div>
   </div>
 
+  <div class="confirm-modal" id="printFormatModal" role="dialog" aria-modal="true" aria-labelledby="printFormatTitle">
+    <div class="confirm-box">
+      <h3 id="printFormatTitle">Çıktı Formatı</h3>
+      <p id="printFormatDescription">Teklif raporunu hangi dosya tipinde oluşturmak istiyorsunuz?</p>
+      <div class="quick-actions">
+        <button class="button primary" id="printFormatPdf" type="button">PDF</button>
+        <button class="button primary" id="printFormatExcel" type="button">Excel</button>
+        <button class="button" id="printFormatCancel" type="button">Vazgeç</button>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/app-config.js"></script>
   <script src="assets/api-client.js"></script>
   <script src="assets/questions.js"></script>
@@ -3968,6 +3980,11 @@
         pdfPreparingButton: "PDF Hazırlanıyor",
         pdfPopupBlocked: "PDF penceresi açılamadı. Tarayıcı popup iznini kontrol edin.",
         pdfFailed: "PDF çıktısı hazırlanamadı.",
+        printFormatTitle: "Çıktı Formatı",
+        printFormatDescription: "Teklif raporunu hangi dosya tipinde oluşturmak istiyorsunuz?",
+        excelPreparing: "Excel hazırlanıyor",
+        excelFailed: "Excel çıktısı hazırlanamadı.",
+        cancel: "Vazgeç",
         printOutputLead: "Project Definition, size bilgisi ve final efor çıktısı",
         printDocumentTitle: "Teklif Efor Çıktısı",
         printPreparedBy: "NDBS TR Satış Bütçeleme Standardizasyonu",
@@ -4177,6 +4194,11 @@
         pdfPreparingButton: "Preparing PDF",
         pdfPopupBlocked: "The PDF window could not be opened. Please check the browser popup permission.",
         pdfFailed: "The PDF output could not be prepared.",
+        printFormatTitle: "Output Format",
+        printFormatDescription: "Which file type would you like to use for the offer report?",
+        excelPreparing: "Preparing Excel",
+        excelFailed: "The Excel output could not be prepared.",
+        cancel: "Cancel",
         printOutputLead: "Project Definition, size information and final effort output",
         printDocumentTitle: "Offer Effort Output",
         printPreparedBy: "NDBS TR Sales Budgeting Standardization",
@@ -5265,6 +5287,9 @@
       const pendingPill = document.querySelector("#pendingapprovals .pill");
       if (pendingPill) pendingPill.innerHTML = `<span id="pendingApprovalCount">${escapeHtml(document.getElementById("pendingApprovalCount")?.textContent || "0")}</span> ${t("offerCount")}`;
       setTexts("#pendingapprovals th", [t("projectNo"), t("projectName"), t("customer"), t("industry"), t("sender"), t("totalEffort"), t("submittedAt"), t("action")]);
+      setTextContent("#printFormatTitle", t("printFormatTitle"));
+      setTextContent("#printFormatDescription", t("printFormatDescription"));
+      setTextContent("#printFormatCancel", t("cancel"));
       applyAdminLanguage();
       if (currentUser) scheduleLanguageDynamicRefresh();
     }
@@ -8698,6 +8723,98 @@
         </html>`;
     }
 
+    function choosePrintFormat() {
+      const modal = document.getElementById("printFormatModal");
+      const pdfButton = document.getElementById("printFormatPdf");
+      const excelButton = document.getElementById("printFormatExcel");
+      const cancelButton = document.getElementById("printFormatCancel");
+      if (!modal || !pdfButton || !excelButton || !cancelButton) return Promise.resolve(null);
+      setText("printFormatTitle", t("printFormatTitle"));
+      setText("printFormatDescription", t("printFormatDescription"));
+      setText("printFormatCancel", t("cancel"));
+      modal.classList.add("is-open");
+      return new Promise(resolve => {
+        const finish = result => {
+          modal.classList.remove("is-open");
+          pdfButton.onclick = null;
+          excelButton.onclick = null;
+          cancelButton.onclick = null;
+          resolve(result);
+        };
+        pdfButton.onclick = () => {
+          const printWindow = window.open("", "_blank");
+          if (!printWindow) {
+            alert(t("pdfPopupBlocked"));
+            finish(null);
+            return;
+          }
+          printWindow.document.write(`<p style='font-family:Arial,sans-serif'>${escapeHtml(t("pdfPreparing"))}...</p>`);
+          finish({ format: "pdf", printWindow });
+        };
+        excelButton.onclick = () => finish({ format: "excel", printWindow: null });
+        cancelButton.onclick = () => finish(null);
+      });
+    }
+
+    function excelReportCellValue(value = "") {
+      const text = String(value || "").trim().replace(/\s+g$/i, "");
+      if (!/^-?[\d.,]+$/.test(text)) return String(value || "").trim();
+      const normalized = currentLanguage === "en"
+        ? text.replace(/,/g, "")
+        : text.replace(/\./g, "").replace(",", ".");
+      const number = Number(normalized);
+      return Number.isFinite(number) ? number : String(value || "").trim();
+    }
+
+    function buildOfferReportWorkbook(offer) {
+      if (!window.XLSX) throw new Error(currentLanguage === "en" ? "Excel component could not be loaded." : "Excel bileşeni yüklenemedi.");
+      const reportDocument = new DOMParser().parseFromString(offerPrintHtml(offer), "text/html");
+      const rows = [];
+      const reportTitle = reportDocument.querySelector("h1")?.textContent?.trim() || offer.offer_no || t("printDocumentTitle");
+      const reportLead = reportDocument.querySelector(".meta")?.textContent?.trim() || t("printOutputLead");
+      rows.push([reportTitle], [reportLead], []);
+      reportDocument.querySelectorAll("h2").forEach(heading => {
+        rows.push([heading.textContent.trim()]);
+        const content = heading.nextElementSibling;
+        if (content?.matches("table")) {
+          content.querySelectorAll("tr").forEach(row => {
+            rows.push([...row.querySelectorAll("th, td")].map(cell => excelReportCellValue(cell.textContent)));
+          });
+        } else if (content?.classList.contains("grid")) {
+          content.querySelectorAll(".metric").forEach(metric => {
+            rows.push([
+              metric.querySelector("span")?.textContent?.trim() || "",
+              excelReportCellValue(metric.querySelector("strong")?.textContent || "")
+            ]);
+          });
+        } else if (content?.textContent?.trim()) {
+          rows.push([content.textContent.trim()]);
+        }
+        rows.push([]);
+      });
+      const maxColumns = Math.max(2, ...rows.map(row => row.length));
+      const sheet = XLSX.utils.aoa_to_sheet(rows);
+      sheet["!cols"] = Array.from({ length: maxColumns }, (_, index) => ({ wch: index === 0 ? 38 : 20 }));
+      sheet["!merges"] = [XLSX.utils.decode_range(`A1:${XLSX.utils.encode_col(maxColumns - 1)}1`)];
+      const workbook = XLSX.utils.book_new();
+      workbook.Props = {
+        Title: `${offer.offer_no || t("offer")} ${t("printDocumentTitle")}`,
+        Subject: t("printOutputLead"),
+        Author: currentUser?.display_name || "NDBS TR"
+      };
+      XLSX.utils.book_append_sheet(workbook, sheet, currentLanguage === "en" ? "Offer Report" : "Teklif Raporu");
+      return workbook;
+    }
+
+    async function exportOfferReportWorkbook(offer) {
+      await ensureXlsxLoaded();
+      const workbook = buildOfferReportWorkbook(offer);
+      const safeName = String(offer.offer_no || offer.project_name || t("offer"))
+        .replace(/[\\/:*?"<>|]+/g, "-")
+        .trim();
+      XLSX.writeFile(workbook, `${safeName}-${currentLanguage === "en" ? "Offer-Report" : "Teklif-Raporu"}.xlsx`, { compression: true });
+    }
+
     function printOfferPdf(offer, printWindow = window.open("", "_blank")) {
       if (!printWindow) {
         alert(t("pdfPopupBlocked"));
@@ -8987,22 +9104,19 @@
             });
           }
           if (action === "print") {
-            const printWindow = window.open("", "_blank");
-            if (!printWindow) {
-              alert(t("pdfPopupBlocked"));
-              return;
-            }
-            printWindow.document.write(`<p style='font-family:Arial,sans-serif'>${escapeHtml(t("pdfPreparing"))}...</p>`);
+            const selection = await choosePrintFormat();
+            if (!selection) return;
             button.disabled = true;
             const originalText = button.textContent;
-            button.textContent = t("pdfPreparingButton");
+            button.textContent = selection.format === "pdf" ? t("pdfPreparingButton") : t("excelPreparing");
             try {
               const offer = await getOfferDetail(offerId);
-              printOfferPdf(offer, printWindow);
+              if (selection.format === "pdf") printOfferPdf(offer, selection.printWindow);
+              else await exportOfferReportWorkbook(offer);
             } catch (error) {
               console.error(error);
-              printWindow.close();
-              alert(t("pdfFailed"));
+              selection.printWindow?.close();
+              alert(selection.format === "pdf" ? t("pdfFailed") : `${t("excelFailed")} ${error.message}`);
             } finally {
               button.disabled = false;
               button.textContent = originalText;
