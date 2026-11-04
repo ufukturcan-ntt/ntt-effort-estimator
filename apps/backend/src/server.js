@@ -12,7 +12,7 @@ import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js
 import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
 import { applyCarMaintenance } from "./car-maintenance.js";
-import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, removeObsoleteLargeGreenfieldCarFixedDays } from "./car2-maintenance.js";
+import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays } from "./car2-maintenance.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
 import { correctFvbAbapCustomizingEffort, mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion } from "./vmp-maintenance.js";
@@ -1733,6 +1733,39 @@ async function removeLiveObsoleteLargeGreenfieldCarFixedDays() {
   }
 }
 
+async function removeLiveObsoleteForeignTradeFixedDays() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["remove-obsolete-foreign-trade-fixed-days-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'fixedDays' for update`);
+    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Fixed Days data is missing");
+    const payload = removeObsoleteForeignTradeFixedDays(result.rows[0].payload);
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
+      ["remove_obsolete_foreign_trade_fixed_days_v1"]
+    );
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'fixedDays'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function mergeLiveFvbVmpRows() {
   const client = await pool.connect();
   try {
@@ -2032,6 +2065,7 @@ async function ensureDatabase() {
   await maintainCar2Configuration();
   await maintainRetailPrivateCloudFixedDays();
   await removeLiveObsoleteLargeGreenfieldCarFixedDays();
+  await removeLiveObsoleteForeignTradeFixedDays();
   await mergeLiveFvbVmpRows();
   await correctLiveFvbAbapEffort();
   await removeLiveObsoleteTeamSplitQuestion();

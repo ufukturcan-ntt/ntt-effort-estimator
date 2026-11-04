@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -63,6 +63,18 @@ assert.deepEqual(removeObsoleteLargeGreenfieldCarFixedDays(cleanedFixedDays), cl
 assert.ok(cleanedFixedDays.slice(1).some(row => row[cleanedAt.Endüstri] === "Perakende"
   && row[cleanedAt.Size] === "LARGE" && row[cleanedAt["Implementation Type"]] === "Greenfield"
   && row[cleanedAt["System Type"]] === "NTT POS on S4" && row[cleanedAt.Modül] === "NTT Data POS"));
+
+const foreignTradeIndustries = new Set(["Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Konfeksiyon", "Metal", "Otomotiv", "Perakende"]);
+const foreignTradeSizes = new Set(["SMALL", "MEDIUM", "LARGE", "X-LARGE"]);
+const cleanedForeignTrade = removeObsoleteForeignTradeFixedDays(updatedFixedDays);
+const foreignTradeAt = Object.fromEntries(cleanedForeignTrade[0].map((header, index) => [header, index]));
+const isObsoleteForeignTrade = row => foreignTradeIndustries.has(row[foreignTradeAt.Endüstri])
+  && foreignTradeSizes.has(row[foreignTradeAt.Size])
+  && row[foreignTradeAt["Implementation Type"]] === "Greenfield"
+  && row[foreignTradeAt["System Type"]] === "SAP S/4HANA Private Cloud"
+  && row[foreignTradeAt.Modül] === "Dış Ticaret Çözümü";
+assert.equal(cleanedForeignTrade.slice(1).filter(isObsoleteForeignTrade).length, 0);
+assert.deepEqual(removeObsoleteForeignTradeFixedDays(cleanedForeignTrade), cleanedForeignTrade, "Foreign Trade cleanup must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

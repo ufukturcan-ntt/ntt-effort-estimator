@@ -294,6 +294,27 @@ export function removeObsoleteLargeGreenfieldCarFixedDays(matrix) {
   ];
 }
 
+const obsoleteForeignTradeIndustries = new Set([
+  "Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Konfeksiyon", "Metal", "Otomotiv", "Perakende"
+]);
+const obsoleteForeignTradeSizes = new Set(["SMALL", "MEDIUM", "LARGE", "X-LARGE"]);
+
+export function removeObsoleteForeignTradeFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => !(
+      obsoleteForeignTradeIndustries.has(String(row[at.Endüstri] || "").trim())
+      && obsoleteForeignTradeSizes.has(String(row[at.Size] || "").trim())
+      && String(row[at["Implementation Type"]] || "").trim() === "Greenfield"
+      && String(row[at["System Type"]] || "").trim() === "SAP S/4HANA Private Cloud"
+      && String(row[at.Modül] || "").trim() === "Dış Ticaret Çözümü"
+    ))
+  ];
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");
