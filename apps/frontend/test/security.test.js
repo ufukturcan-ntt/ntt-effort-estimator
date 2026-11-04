@@ -708,3 +708,10 @@ test("Excel print report mirrors the PDF report sections", () => {
   assert.match(html, /currentLanguage === "en" \? "Offer Report" : "Teklif Raporu"/);
   assert.match(html, /exportOfferReportWorkbook\(offer\)/);
 });
+
+test("Excel report sanitizes project text and validates merge ranges", () => {
+  assert.match(html, /function excelSafeText\(value = ""\)/);
+  assert.match(html, /replace\(\/\[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\]\/g, " "\)/);
+  assert.match(html, /merge\.e\.c >= maxColumns/);
+  assert.match(html, /const mergeKeys = new Set\(\)/);
+});

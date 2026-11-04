@@ -8920,14 +8920,22 @@
       });
     }
 
+    function excelSafeText(value = "") {
+      return String(value ?? "")
+        .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, " ")
+        .slice(0, 32767)
+        .trim();
+    }
+
     function excelReportCellValue(value = "") {
-      const text = String(value || "").trim().replace(/\s+g$/i, "");
-      if (!/^-?[\d.,]+$/.test(text)) return String(value || "").trim();
+      const safeText = excelSafeText(value);
+      const text = safeText.replace(/\s+g$/i, "");
+      if (!/^-?[\d.,]+$/.test(text)) return safeText;
       const normalized = currentLanguage === "en"
         ? text.replace(/,/g, "")
         : text.replace(/\./g, "").replace(",", ".");
       const number = Number(normalized);
-      return Number.isFinite(number) ? number : String(value || "").trim();
+      return Number.isFinite(number) ? number : safeText;
     }
 
     function buildOfferReportWorkbook(offer) {
@@ -9089,14 +9097,23 @@
       });
       sheet["!cols"] = Array.from({ length: maxColumns }, (_, index) => ({ wch: index === 0 ? 42 : 18 }));
       sheet["!rows"] = rowHeights;
-      sheet["!merges"] = merges;
+      const mergeKeys = new Set();
+      sheet["!merges"] = merges.filter(merge => {
+        if (!merge?.s || !merge?.e) return false;
+        if (merge.s.r < 0 || merge.s.c < 0 || merge.e.r < merge.s.r || merge.e.c < merge.s.c) return false;
+        if (merge.s.r >= rows.length || merge.e.r >= rows.length || merge.e.c >= maxColumns) return false;
+        const key = `${merge.s.r}:${merge.s.c}:${merge.e.r}:${merge.e.c}`;
+        if (mergeKeys.has(key)) return false;
+        mergeKeys.add(key);
+        return true;
+      });
       sheet["!autofilter"] = undefined;
       sheet["!views"] = [{ state: "frozen", ySplit: 3, topLeftCell: "A4", activePane: "bottomLeft" }];
       const workbook = XLSX.utils.book_new();
       workbook.Props = {
-        Title: `${offer.offer_no || t("offer")} ${t("printDocumentTitle")}`,
-        Subject: t("printOutputLead"),
-        Author: currentUser?.display_name || "NDBS TR"
+        Title: excelSafeText(`${offer.offer_no || t("offer")} ${t("printDocumentTitle")}`),
+        Subject: excelSafeText(t("printOutputLead")),
+        Author: excelSafeText(currentUser?.display_name || "NDBS TR")
       };
       XLSX.utils.book_append_sheet(workbook, sheet, currentLanguage === "en" ? "Offer Report" : "Teklif Raporu");
       return workbook;
