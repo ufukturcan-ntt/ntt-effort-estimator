@@ -100,10 +100,15 @@ test("effort phases support upper groups and grouped totals across screen and pr
   assert.match(html, /const effortPhaseGroupOptions = \["", "Explore", "Realise", "Deploy", "Canlı Geçiş"\]/);
   assert.match(html, /function phaseGroupSummary\(/);
   assert.match(html, /function phaseGroupSummaryCells\(/);
+  assert.match(html, /function phaseGroupHeaderSegments\(/);
+  assert.match(html, /function phaseGroupHeaderRow\(/);
   assert.match(html, /class="phase-group-total-row"/);
+  assert.match(html, /class="phase-group-head"/);
   assert.match(html, /currentLanguage === "en" \? "Upper Group Total" : "Üst Grup Toplamı"/);
   assert.match(html, /row\.classList\.contains\("group-total-row"\)/);
   assert.match(html, /type === "groupTotal"/);
+  assert.match(html, /const contentMerges = \[\]/);
+  assert.match(html, /columnSpan > 1/);
 });
 
 test("effort phase maintenance is sorted by implementation type and numeric order", () => {
