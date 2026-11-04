@@ -307,6 +307,14 @@ test("offer panels render individually on navigation", () => {
   assert.match(html, /document\.getElementById\(screenId\)\?\.classList\.add\("active"\);\s*renderOfferScreenOnDemand\(screenId\);/);
 });
 
+test("unchanged offer screens reuse their rendered DOM", () => {
+  assert.match(html, /let offerDataRevision = 0/);
+  assert.match(html, /const offerScreenRenderRevisions = new Map\(\)/);
+  assert.match(html, /if \(offerScreenRenderRevisions\.get\(screenId\) === offerDataRevision\) return/);
+  assert.match(html, /offerScreenRenderRevisions\.set\(screenId, offerDataRevision\)/);
+  assert.match(html, /offerDataRevision \+= 1/);
+});
+
 test("question and effort configuration lookups are indexed between admin refreshes", () => {
   assert.match(html, /let questionRestrictionIndex = null/);
   assert.match(html, /questionRestrictionIndex\.get\(`\$\{expectedType\}\\u001f\$\{expectedId\}`\)/);

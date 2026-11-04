@@ -3975,6 +3975,8 @@
     let questionRestrictionIndex = null;
     let scopeImpactIndex = null;
     let offerScreenRenderToken = 0;
+    let offerDataRevision = 0;
+    const offerScreenRenderRevisions = new Map();
     let adminUsersLoading = false;
     let adminUsersLoaded = false;
 
@@ -5116,11 +5118,11 @@
       if (!currentUser) return;
       clearTimeout(languageDynamicRenderTimer);
       languageDynamicRenderTimer = setTimeout(() => {
+        offerScreenRenderRevisions.clear();
         const screenId = activeScreenId();
         if (["overview", "allworks"].includes(screenId)) renderAllWorks?.();
         if (["project", "modules"].includes(screenId)) refreshProjectDefinitionSelects?.();
         if (screenId === "modules") renderModuleGroups?.();
-        if (screenId === "localization") renderLocalizationControls?.();
         if (["scope", "developments"].includes(screenId)) refreshQuestionLists?.();
         if (["fixedefforts", "localization", "hypercare", "effort"].includes(screenId)) renderWorkbookDrivenScreens?.();
         if (screenId === "admin") renderAdminPageIfNeeded?.(true);
@@ -5482,11 +5484,16 @@
 
     function markDirty() {
       if (isCurrentOfferReadOnly()) return;
-      if (currentOfferMode) hasUnsavedChanges = true;
+      if (currentOfferMode) {
+        hasUnsavedChanges = true;
+        offerDataRevision += 1;
+      }
     }
 
     function markClean() {
       hasUnsavedChanges = false;
+      offerDataRevision += 1;
+      offerScreenRenderRevisions.clear();
     }
 
     function markAdminDirty() {
@@ -7992,6 +7999,7 @@
       normalizedVmpRowsCache = null;
       normalizedFixedDaysRowsCache = null;
       normalizedEffortPhaseRowsCache = null;
+      offerScreenRenderRevisions.clear();
       normalizeImplementationTypeReferences(config);
       normalizeConfiguredQuestionIds(config);
       if (options.source !== "live") {
@@ -10197,6 +10205,7 @@
     }
 
     function renderOfferScreenOnDemand(screenId) {
+      if (offerScreenRenderRevisions.get(screenId) === offerDataRevision) return;
       const renderToken = ++offerScreenRenderToken;
       requestAnimationFrame(() => setTimeout(() => {
         if (renderToken !== offerScreenRenderToken || activeScreenId() !== screenId) return;
@@ -10214,6 +10223,7 @@
         if (screenId === "localization") renderLocalizationControls();
         if (screenId === "hypercare") renderHypercareRows();
         if (screenId === "effort") renderWorkbookDrivenScreens();
+        offerScreenRenderRevisions.set(screenId, offerDataRevision);
       }, 0));
     }
 
