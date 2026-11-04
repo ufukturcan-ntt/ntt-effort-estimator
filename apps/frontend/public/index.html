@@ -8513,7 +8513,7 @@
     }
 
     function ensureXlsxLoaded() {
-      return loadScriptOnce("assets/xlsx.full.min.js", "XLSX");
+      return loadScriptOnce("assets/xlsx-js-style.min.js", "XLSX");
     }
 
     function buildBacklogWorkbook(offer) {
@@ -8770,32 +8770,114 @@
       if (!window.XLSX) throw new Error(currentLanguage === "en" ? "Excel component could not be loaded." : "Excel bileşeni yüklenemedi.");
       const reportDocument = new DOMParser().parseFromString(offerPrintHtml(offer), "text/html");
       const rows = [];
+      const rowTypes = [];
+      const addRow = (values, type = "body") => {
+        rows.push(values);
+        rowTypes.push(type);
+      };
       const reportTitle = reportDocument.querySelector("h1")?.textContent?.trim() || offer.offer_no || t("printDocumentTitle");
       const reportLead = reportDocument.querySelector(".meta")?.textContent?.trim() || t("printOutputLead");
-      rows.push([reportTitle], [reportLead], []);
+      addRow([reportTitle], "title");
+      addRow([reportLead], "lead");
+      addRow([], "spacer");
       reportDocument.querySelectorAll("h2").forEach(heading => {
-        rows.push([heading.textContent.trim()]);
+        addRow([heading.textContent.trim()], "section");
         const content = heading.nextElementSibling;
         if (content?.matches("table")) {
           content.querySelectorAll("tr").forEach(row => {
-            rows.push([...row.querySelectorAll("th, td")].map(cell => excelReportCellValue(cell.textContent)));
+            const values = [...row.querySelectorAll("th, td")].map(cell => excelReportCellValue(cell.textContent));
+            const isHeader = row.querySelectorAll("th").length === row.children.length;
+            const isTotal = /^(Toplam|Total)$/i.test(String(values[0] || "").trim());
+            addRow(values, isHeader ? "tableHeader" : isTotal ? "total" : "body");
           });
         } else if (content?.classList.contains("grid")) {
-          content.querySelectorAll(".metric").forEach(metric => {
-            rows.push([
-              metric.querySelector("span")?.textContent?.trim() || "",
-              excelReportCellValue(metric.querySelector("strong")?.textContent || "")
-            ]);
-          });
+          const metrics = [...content.querySelectorAll(".metric")];
+          addRow(metrics.map(metric => metric.querySelector("span")?.textContent?.trim() || ""), "metricLabel");
+          addRow(metrics.map(metric => excelReportCellValue(metric.querySelector("strong")?.textContent || "")), "metricValue");
         } else if (content?.textContent?.trim()) {
-          rows.push([content.textContent.trim()]);
+          addRow([content.textContent.trim()], "body");
         }
-        rows.push([]);
+        addRow([], "spacer");
       });
       const maxColumns = Math.max(2, ...rows.map(row => row.length));
       const sheet = XLSX.utils.aoa_to_sheet(rows);
-      sheet["!cols"] = Array.from({ length: maxColumns }, (_, index) => ({ wch: index === 0 ? 38 : 20 }));
-      sheet["!merges"] = [XLSX.utils.decode_range(`A1:${XLSX.utils.encode_col(maxColumns - 1)}1`)];
+      const endColumn = XLSX.utils.encode_col(maxColumns - 1);
+      const border = {
+        top: { style: "thin", color: { rgb: "D8DEEA" } },
+        bottom: { style: "thin", color: { rgb: "D8DEEA" } },
+        left: { style: "thin", color: { rgb: "D8DEEA" } },
+        right: { style: "thin", color: { rgb: "D8DEEA" } }
+      };
+      const merges = [XLSX.utils.decode_range(`A1:${endColumn}1`), XLSX.utils.decode_range(`A2:${endColumn}2`)];
+      const rowHeights = [];
+      rowTypes.forEach((type, rowIndex) => {
+        const rowNumber = rowIndex + 1;
+        if (type === "section") merges.push(XLSX.utils.decode_range(`A${rowNumber}:${endColumn}${rowNumber}`));
+        const height = type === "title" ? 28 : type === "section" ? 23 : type === "metricValue" ? 26 : type === "spacer" ? 8 : 20;
+        rowHeights.push({ hpt: height });
+        for (let columnIndex = 0; columnIndex < maxColumns; columnIndex += 1) {
+          const address = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+          const cell = sheet[address];
+          if (!cell) continue;
+          const baseStyle = {
+            font: { name: "Arial", sz: 10, color: { rgb: "172033" } },
+            alignment: { vertical: "center", wrapText: true },
+            border
+          };
+          if (type === "title") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 18, bold: true, color: { rgb: "FFFFFF" } },
+            fill: { patternType: "solid", fgColor: { rgb: "005EB8" } },
+            alignment: { vertical: "center", horizontal: "left" }
+          };
+          else if (type === "lead") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 10, italic: true, color: { rgb: "5A6475" } },
+            fill: { patternType: "solid", fgColor: { rgb: "EEF3FB" } }
+          };
+          else if (type === "section") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 12, bold: true, color: { rgb: "FFFFFF" } },
+            fill: { patternType: "solid", fgColor: { rgb: "005EB8" } }
+          };
+          else if (type === "tableHeader") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 10, bold: true, color: { rgb: "172033" } },
+            fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
+            alignment: { vertical: "center", horizontal: columnIndex ? "center" : "left", wrapText: true }
+          };
+          else if (type === "metricLabel") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 9, color: { rgb: "5A6475" } },
+            fill: { patternType: "solid", fgColor: { rgb: "EEF3FB" } },
+            alignment: { vertical: "center", horizontal: "center", wrapText: true }
+          };
+          else if (type === "metricValue") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 14, bold: true, color: { rgb: "005EB8" } },
+            alignment: { vertical: "center", horizontal: "center" },
+            numFmt: "#,##0.00"
+          };
+          else if (type === "total") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 10, bold: true, color: { rgb: "172033" } },
+            fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
+            alignment: { vertical: "center", horizontal: columnIndex ? "right" : "left" },
+            numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
+          };
+          else cell.s = {
+            ...baseStyle,
+            fill: { patternType: "solid", fgColor: { rgb: rowIndex % 2 ? "F7F9FC" : "FFFFFF" } },
+            alignment: { vertical: "center", horizontal: columnIndex && typeof cell.v === "number" ? "right" : "left", wrapText: true },
+            numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
+          };
+        }
+      });
+      sheet["!cols"] = Array.from({ length: maxColumns }, (_, index) => ({ wch: index === 0 ? 42 : 18 }));
+      sheet["!rows"] = rowHeights;
+      sheet["!merges"] = merges;
+      sheet["!autofilter"] = undefined;
+      sheet["!views"] = [{ state: "frozen", ySplit: 3, topLeftCell: "A4", activePane: "bottomLeft" }];
       const workbook = XLSX.utils.book_new();
       workbook.Props = {
         Title: `${offer.offer_no || t("offer")} ${t("printDocumentTitle")}`,

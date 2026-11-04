@@ -82,7 +82,17 @@ test("admin save preserves in-progress restriction edits", () => {
 test("large Excel library is lazy-loaded", () => {
   assert.doesNotMatch(html, /<script src="assets\/xlsx\.full\.min\.js"><\/script>/);
   assert.match(html, /function ensureXlsxLoaded\(\)/);
+  assert.match(html, /assets\/xlsx-js-style\.min\.js/);
   assert.match(html, /await ensureXlsxLoaded\(\)/);
+});
+
+test("Excel print report applies PDF-aligned report styling", () => {
+  assert.match(html, /const rowTypes = \[\]/);
+  assert.match(html, /"metricLabel"/);
+  assert.match(html, /"metricValue"/);
+  assert.match(html, /fgColor: \{ rgb: "005EB8" \}/);
+  assert.match(html, /fgColor: \{ rgb: "D9E8F5" \}/);
+  assert.match(html, /sheet\["!merges"\] = merges/);
 });
 
 test("screen data is loaded lazily after authentication", () => {
