@@ -3546,6 +3546,7 @@
         const isSpecific = !sizeRangeDimensionValues(row[0]).includes("All");
         if (!mapped.has(phase) || isSpecific) mapped.set(phase, group);
       });
+      mapped.set("Sabit Efor", "Realise");
       return mapped;
     }
 

@@ -122,6 +122,12 @@ test("loading saved effort phase groups invalidates the preloaded phase cache", 
   assert.match(html, /window\.adminSeedData\.effortPhases = config\.effortPhases;\s*normalizedEffortPhaseRowsCache = null;/);
 });
 
+test("fixed effort is included in the Realise upper group", () => {
+  assert.match(html, /mapped\.set\("Sabit Efor", "Realise"\)/);
+  assert.match(html, /projectGroupTotals = \{ \.\.\.phaseTotals, "Sabit Efor": fixedEffortTotal/);
+  assert.match(html, /projectGroupTotals = \{ \.\.\.projectTotals, "Sabit Efor": fixedEffortPrintTotal/);
+});
+
 test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);
