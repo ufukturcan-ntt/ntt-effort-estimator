@@ -3355,7 +3355,7 @@
             font: { name: "Arial", sz: 10, color: { rgb: "172033" } },
             fill: { patternType: "solid", fgColor: { rgb: row % 2 ? "FFFFFF" : "F7F9FC" } },
             alignment: { vertical: "center", horizontal: column >= 5 ? "right" : "left" },
-            numFmt: column >= 5 && typeof cell.v === "number" ? "#,##0.00" : undefined
+            numFmt: column >= 5 && typeof cell.v === "number" ? "#,##0.000" : undefined
           };
         }
       }
@@ -5525,7 +5525,10 @@
       ["NTT-2026-000001", "Referans teklif kopyası", "Ufuk Tekstil AŞ", "Tekstil", "DRAFT", "22.06.2026"]
     ];
 
-    const fmt = value => Number(value).toLocaleString("tr-TR", {maximumFractionDigits: 1});
+    const fmt = value => Number(value).toLocaleString("tr-TR", {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    });
 
     function initials(name) {
       return name.split(/[ /-]/).filter(Boolean).slice(0,2).map(x => x[0]).join("").toUpperCase();
@@ -9190,14 +9193,14 @@
             ...baseStyle,
             font: { name: "Arial", sz: 14, bold: true, color: { rgb: "005EB8" } },
             alignment: { vertical: "center", horizontal: "center" },
-            numFmt: "#,##0.00"
+            numFmt: "#,##0.000"
           };
           else if (type === "total") cell.s = {
             ...baseStyle,
             font: { name: "Arial", sz: 10, bold: true, color: { rgb: "172033" } },
             fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
             alignment: { vertical: "center", horizontal: columnIndex ? "right" : "left" },
-            numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
+            numFmt: typeof cell.v === "number" ? "#,##0.000" : undefined
           };
           else if (type === "groupTotal") cell.s = {
             ...baseStyle,
@@ -9208,13 +9211,13 @@
               top: { style: "medium", color: { rgb: "005EB8" } }
             },
             alignment: { vertical: "center", horizontal: columnIndex ? "right" : "left", wrapText: true },
-            numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
+            numFmt: typeof cell.v === "number" ? "#,##0.000" : undefined
           };
           else cell.s = {
             ...baseStyle,
             fill: { patternType: "solid", fgColor: { rgb: rowIndex % 2 ? "F7F9FC" : "FFFFFF" } },
             alignment: { vertical: "center", horizontal: columnIndex && typeof cell.v === "number" ? "right" : "left", wrapText: true },
-            numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
+            numFmt: typeof cell.v === "number" ? "#,##0.000" : undefined
           };
         }
       });

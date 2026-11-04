@@ -95,6 +95,12 @@ test("Excel print report applies PDF-aligned report styling", () => {
   assert.match(html, /sheet\["!merges"\] = merges/);
 });
 
+test("effort values use three decimal places on screen and in Excel exports", () => {
+  assert.match(html, /minimumFractionDigits:\s*3,\s*maximumFractionDigits:\s*3/);
+  assert.match(html, /numFmt:\s*"#,##0\.000"/);
+  assert.doesNotMatch(html, /numFmt:\s*"#,##0\.00"(?!0)/);
+});
+
 test("effort phases support upper groups and grouped totals across screen and print", () => {
   assert.match(html, /const effortPhaseHeaders = \["Implementation Type", "Sıra", "Efor Başlığı", "Üst Grup"\]/);
   assert.match(html, /const effortPhaseGroupOptions = \["", "Explore", "Realise", "Deploy", "Canlı Geçiş"\]/);
