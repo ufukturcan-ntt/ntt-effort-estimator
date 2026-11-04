@@ -128,6 +128,12 @@ test("fixed effort is included in the Realise upper group", () => {
   assert.match(html, /projectGroupTotals = \{ \.\.\.projectTotals, "Sabit Efor": fixedEffortPrintTotal/);
 });
 
+test("fixed days rows show their read-only selection context", () => {
+  assert.match(html, /<th>\$\{t\("industry"\)\}<\/th><th>Size<\/th><th>\$\{t\("implementationType"\)\}<\/th><th>\$\{t\("systemType"\)\}<\/th><th>\$\{t\("module"\)\}<\/th>/);
+  assert.match(html, /class="fixed-days-context">\$\{escapeHtml\(row\[indexes\.industry\] \|\| "All"\)\}<\/td>/);
+  assert.match(html, /class="fixed-days-context">\$\{escapeHtml\(row\[indexes\.system\] \|\| "All"\)\}<\/td>/);
+});
+
 test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);
