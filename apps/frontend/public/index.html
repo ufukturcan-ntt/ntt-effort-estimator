@@ -861,6 +861,12 @@
       min-width: 260px;
     }
 
+    .phase-group-total-row td {
+      background: #d9e8f5 !important;
+      color: #172033;
+      border-top: 2px solid #005eb8;
+    }
+
     .summary-grid {
       padding: 18px;
       display: grid;
@@ -3458,7 +3464,8 @@
 
     const phaseHeaders = ["Analiz","Dokümantasyon","Dokümantasyon Onay","Uyarlama","Birim Test","QA Sistem Ayağa Kaldırma","QA Anaveri Aktarım","Internal Entegrasyon Testi","Entegrasyon Testi","Eğitim","Yetkilendirme","Canlı Sistem Ayağa Kaldırma","Canlı Anaveri Kontrol","Canlı Anaveri Aktarım"];
     const vmpPhaseHeaders = [...phaseHeaders, "Hypercare", "Canlı Destek"];
-    const effortPhaseHeaders = ["Implementation Type", "Sıra", "Efor Başlığı"];
+    const effortPhaseHeaders = ["Implementation Type", "Sıra", "Efor Başlığı", "Üst Grup"];
+    const effortPhaseGroupOptions = ["", "Explore", "Realise", "Deploy", "Canlı Geçiş"];
     const supportPhaseHeaders = new Set(["Hypercare", "Canlı Destek"]);
 
     function defaultEffortPhaseRows() {
@@ -3469,7 +3476,8 @@
           vmpPhaseHeaders.map((phase, index) => [
             implementation,
             index + 1,
-            phase
+            phase,
+            ""
           ])
         )
       ];
@@ -3485,7 +3493,8 @@
         const implementation = canonicalImplementationList(row[idx("Implementation Type")] || row[idx("İmplementasyon Türü")] || "All");
         const order = Number(row[idx("Sıra")] || row[idx("Order")] || index + 1) || index + 1;
         const phase = canonicalPhaseName(row[idx("Efor Başlığı")] || row[idx("Phase")] || row[idx("Başlık")] || "");
-        return [implementation, order, phase];
+        const upperGroup = String(row[idx("Üst Grup")] || row[idx("Upper Group")] || "").trim();
+        return [implementation, order, phase, effortPhaseGroupOptions.includes(upperGroup) ? upperGroup : ""];
       }).filter(row => row[2]);
       return [effortPhaseHeaders, ...normalized];
     }
@@ -3502,13 +3511,48 @@
       const matches = rows.slice(1)
         .filter(row => implementationMatches(row[0], implementation))
         .filter(row => includeVmp || !supportPhaseHeaders.has(row[2]));
-      const fallback = (includeVmp ? vmpPhaseHeaders : phaseHeaders).map((phase, index) => ["All", index + 1, phase]);
+      const fallback = (includeVmp ? vmpPhaseHeaders : phaseHeaders).map((phase, index) => ["All", index + 1, phase, ""]);
       return (matches.length ? matches : fallback)
         .sort((a, b) => (Number(a[1]) || 0) - (Number(b[1]) || 0));
     }
 
     function phaseHeadersForImplementation(implementation = "All", includeVmp = false) {
       return uniqueOptionValues(effortPhaseRowsForImplementation(implementation, includeVmp).map(row => canonicalPhaseName(row[2])));
+    }
+
+    function phaseGroupMapForImplementation(implementation = "All", includeVmp = false) {
+      const mapped = new Map();
+      effortPhaseRowsForImplementation(implementation, includeVmp).forEach(row => {
+        const phase = canonicalPhaseName(row[2]);
+        const group = String(row[3] || "").trim();
+        if (!group || !effortPhaseGroupOptions.includes(group)) return;
+        const isSpecific = !sizeRangeDimensionValues(row[0]).includes("All");
+        if (!mapped.has(phase) || isSpecific) mapped.set(phase, group);
+      });
+      return mapped;
+    }
+
+    function phaseGroupSummary(implementation = "All", phaseTotals = {}, includeVmp = false) {
+      const grouped = new Map();
+      phaseGroupMapForImplementation(implementation, includeVmp).forEach((group, phase) => {
+        grouped.set(group, (grouped.get(group) || 0) + (Number(phaseTotals[phase]) || 0));
+      });
+      return effortPhaseGroupOptions.slice(1)
+        .filter(group => grouped.has(group))
+        .map(group => ({ group, total: grouped.get(group) || 0 }));
+    }
+
+    function phaseGroupSummaryCells(implementation = "All", activePhases = [], phaseTotals = {}) {
+      const summary = phaseGroupSummary(implementation, phaseTotals, false);
+      const groupsByPhase = phaseGroupMapForImplementation(implementation, false);
+      const renderedGroups = new Set();
+      const totals = new Map(summary.map(item => [item.group, item.total]));
+      return activePhases.map(phase => {
+        const group = groupsByPhase.get(phase);
+        if (!group || renderedGroups.has(group)) return "";
+        renderedGroups.add(group);
+        return `${displayRecord(group)}: ${fmt(totals.get(group) || 0)}`;
+      });
     }
 
     function currentImplementationType() {
@@ -4349,6 +4393,9 @@
       "Değişken Tip": "Variable Type",
       "Kapsam Tanımı": "Scope Definition",
       "Efor Başlığı": "Effort Phase",
+      "Üst Grup": "Upper Group",
+      "Üst Grup Toplamı": "Upper Group Total",
+      "Canlı Geçiş": "Go-Live",
       "Sıra": "Order",
       "Kapsam Sorusu": "Scope Question",
       "Geliştirme Sorusu": "Development Question",
@@ -5632,7 +5679,11 @@
         `;
       }).join("");
       const totalRow = `<tr><td colspan="2"><strong>${displayRecord("Toplam")}</strong></td>${activePhases.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`;
-      body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${activePhases.length + 3}">${currentLanguage === "en" ? "Localization selection is pending." : "Lokalizasyon seçimi yapılmadı."}</td></tr>`;
+      const groupCells = phaseGroupSummaryCells(currentImplementationType(), activePhases, phaseTotals);
+      const groupTotalRow = groupCells.some(Boolean)
+        ? `<tr class="phase-group-total-row"><td colspan="2"><strong>${displayRecord("Üst Grup Toplamı")}</strong></td>${groupCells.map(value => `<td><strong>${escapeHtml(value)}</strong></td>`).join("")}<td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`
+        : "";
+      body.innerHTML = rows.length ? rowHtml + totalRow + groupTotalRow : `<tr><td colspan="${activePhases.length + 3}">${currentLanguage === "en" ? "Localization selection is pending." : "Lokalizasyon seçimi yapılmadı."}</td></tr>`;
     }
 
     function hypercareValue(moduleName) {
@@ -5752,7 +5803,11 @@
         const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
         const goliveTotal = rows.reduce((sum, row) => sum + (Number(hypercareState.get(row.module)?.goliveDays) || 0), 0);
         const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${activePhases.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
-        body.innerHTML = rows.length ? rowHtml + totalRow : `<tr><td colspan="${activePhases.length + 5}">${currentLanguage === "en" ? "Module selection is pending." : "Modül seçimi yapılmadı."}</td></tr>`;
+        const groupCells = phaseGroupSummaryCells(currentImplementationType(), activePhases, phaseTotals);
+        const groupTotalRow = groupCells.some(Boolean)
+          ? `<tr class="phase-group-total-row"><td><strong>${displayRecord("Üst Grup Toplamı")}</strong></td>${groupCells.map(value => `<td><strong>${escapeHtml(value)}</strong></td>`).join("")}<td></td><td></td><td></td><td><strong>${fmt(sumValues(phaseTotals))}</strong></td></tr>`
+          : "";
+        body.innerHTML = rows.length ? rowHtml + totalRow + groupTotalRow : `<tr><td colspan="${activePhases.length + 5}">${currentLanguage === "en" ? "Module selection is pending." : "Modül seçimi yapılmadı."}</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
       setText("projectEffortTotal", fmt(total));
@@ -6238,6 +6293,7 @@
       }
       if (bodyId === "adminEffortPhaseRows") {
         if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: false };
+        if (normalized === "Üst Grup") return { options: effortPhaseGroupOptions, multiple: false };
       }
       if (["adminLocalizationRows", "adminVmpRows"].includes(bodyId) && normalized === "Implementation Type") {
         return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
@@ -6453,6 +6509,7 @@
         defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("Sıra")] = Math.max(0, ...[...body.querySelectorAll("tr")].map(row => Number(adminCellValue(row.children[1])) || 0)) + 1;
         defaultRow[headers.indexOf("Efor Başlığı")] = "Yeni Efor Başlığı";
+        defaultRow[headers.indexOf("Üst Grup")] = "";
       }
       if (bodyId === "adminScopeImpactRows") {
         const firstQuestion = (window.scopeQuestions || [])[0] || {};
@@ -7770,8 +7827,9 @@
         const implementation = String(item.implementation || "").trim();
         const phase = canonicalPhaseName(item.phase || "");
         if (!implementation || !phase) return;
-        const nextRow = [implementation, Number(item.order) || rows.length, phase];
         const key = `${implementation}\u001f${phase}`;
+        const existingRow = rowIndexByKey.has(key) ? rows[rowIndexByKey.get(key)] : null;
+        const nextRow = [implementation, Number(item.order) || rows.length, phase, existingRow?.[3] || ""];
         if (rowIndexByKey.has(key)) rows[rowIndexByKey.get(key)] = nextRow;
         else {
           rowIndexByKey.set(key, rows.length);
@@ -8569,7 +8627,13 @@
       return `
         <table>
           <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
-          <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody>
+          <tbody>${rows.map(row => {
+            const firstCell = String(row[0] || "").trim();
+            const rowClass = /^(Üst Grup Toplamı|Upper Group Total)$/i.test(firstCell)
+              ? "group-total-row"
+              : /^(Toplam|Total)$/i.test(firstCell) ? "total-row" : "";
+            return `<tr class="${rowClass}">${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`;
+          }).join("")}</tbody>
         </table>
       `;
     }
@@ -8638,6 +8702,17 @@
       });
       if (projectRows.length) {
         projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...activePhases.map(phase => fmt(projectTotals[phase])), fmt(fixedEffortPrintTotal), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
+        const groupCells = phaseGroupSummaryCells(implementation, activePhases, projectTotals);
+        if (groupCells.some(Boolean)) {
+          projectTableRows.push([
+            currentLanguage === "en" ? "Upper Group Total" : "Üst Grup Toplamı",
+            ...groupCells,
+            "",
+            "",
+            "",
+            fmt(sumValues(projectTotals))
+          ]);
+        }
       }
       const localizationTableRows = localizationRows.map(row => [
         row.module,
@@ -8645,6 +8720,27 @@
         ...activePhases.map(phase => fmt(row.values[phase] || 0)),
         fmt(sumPhases(row.values))
       ]);
+      if (localizationTableRows.length) {
+        const localizationPhaseTotals = Object.fromEntries(activePhases.map(phase => [phase, 0]));
+        localizationRows.forEach(row => activePhases.forEach(phase => {
+          localizationPhaseTotals[phase] += Number(row.values[phase]) || 0;
+        }));
+        localizationTableRows.push([
+          currentLanguage === "en" ? "Total" : "Toplam",
+          "",
+          ...activePhases.map(phase => fmt(localizationPhaseTotals[phase])),
+          fmt(sumValues(localizationPhaseTotals))
+        ]);
+        const groupCells = phaseGroupSummaryCells(implementation, activePhases, localizationPhaseTotals);
+        if (groupCells.some(Boolean)) {
+          localizationTableRows.push([
+            currentLanguage === "en" ? "Upper Group Total" : "Üst Grup Toplamı",
+            "",
+            ...groupCells,
+            fmt(sumValues(localizationPhaseTotals))
+          ]);
+        }
+      }
       const developmentTableRows = developmentRows.map(row => {
         const rowTotal = developmentModules.reduce((sum, module) => sum + (Number(row.values[module]) || 0), 0);
         return { row: [row.name, ...developmentModules.map(module => row.values[module] ? fmt(row.values[module]) : ""), fmt(rowTotal)], total: rowTotal };
@@ -8682,18 +8778,21 @@
             .letterhead-title { text-align: right; }
             .letterhead-title strong { display: block; font-size: 18px; color: #005eb8; }
             .letterhead-title span { display: block; margin-top: 3px; color: #5a6475; }
-            h1 { margin: 0 0 4px; font-size: 22px; }
-            h2 { margin: 18px 0 8px; font-size: 15px; page-break-after: avoid; }
-            .meta { color: #5a6475; margin-bottom: 12px; }
-            .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
-            .metric { border: 1px solid #d8deea; border-radius: 6px; padding: 8px; }
-            .metric span { display: block; color: #5a6475; font-size: 9px; }
-            .metric strong { display: block; margin-top: 4px; font-size: 15px; }
+            h1 { margin: 0; padding: 9px 10px; font-size: 22px; color: #fff; background: #005eb8; }
+            h2 { margin: 18px 0 8px; padding: 6px 8px; font-size: 15px; color: #fff; background: #005eb8; page-break-after: avoid; }
+            .meta { color: #5a6475; background: #eef3fb; padding: 7px 10px; margin-bottom: 12px; }
+            .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 12px 0; }
+            .metric { border: 1px solid #d8deea; border-radius: 6px; overflow: hidden; }
+            .metric span { display: block; color: #5a6475; background: #eef3fb; padding: 6px 8px; font-size: 9px; }
+            .metric strong { display: block; padding: 7px 8px; font-size: 15px; color: #005eb8; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 12px; page-break-inside: auto; }
             th, td { border: 1px solid #d8deea; padding: 4px 5px; text-align: left; vertical-align: top; }
-            th { background: #eef3fb; font-weight: 700; }
+            th { background: #d9e8f5; font-weight: 700; }
+            tbody tr:nth-child(even) td { background: #f7f9fc; }
+            tr.total-row td { background: #d9e8f5; font-weight: 700; }
+            tr.group-total-row td { background: #d9e8f5; border-top: 2px solid #005eb8; font-weight: 700; }
             tr { page-break-inside: avoid; page-break-after: auto; }
-            .info-table { width: 65%; }
+            .info-table { width: 100%; }
             .info-table th { width: 180px; }
             .empty { color: #5a6475; border: 1px solid #d8deea; padding: 8px; border-radius: 6px; }
           </style>
@@ -8788,7 +8887,12 @@
             const values = [...row.querySelectorAll("th, td")].map(cell => excelReportCellValue(cell.textContent));
             const isHeader = row.querySelectorAll("th").length === row.children.length;
             const isTotal = /^(Toplam|Total)$/i.test(String(values[0] || "").trim());
-            addRow(values, isHeader ? "tableHeader" : isTotal ? "total" : "body");
+            const isGroupTotal = row.classList.contains("group-total-row")
+              || /^(Üst Grup Toplamı|Upper Group Total)$/i.test(String(values[0] || "").trim());
+            const rowType = content.classList.contains("info-table")
+              ? "info"
+              : isHeader ? "tableHeader" : isGroupTotal ? "groupTotal" : isTotal ? "total" : "body";
+            addRow(values, rowType);
           });
         } else if (content?.classList.contains("grid")) {
           const metrics = [...content.querySelectorAll(".metric")];
@@ -8813,6 +8917,7 @@
       rowTypes.forEach((type, rowIndex) => {
         const rowNumber = rowIndex + 1;
         if (type === "section") merges.push(XLSX.utils.decode_range(`A${rowNumber}:${endColumn}${rowNumber}`));
+        if (type === "info" && maxColumns > 2) merges.push(XLSX.utils.decode_range(`B${rowNumber}:${endColumn}${rowNumber}`));
         const height = type === "title" ? 28 : type === "section" ? 23 : type === "metricValue" ? 26 : type === "spacer" ? 8 : 20;
         rowHeights.push({ hpt: height });
         for (let columnIndex = 0; columnIndex < maxColumns; columnIndex += 1) {
@@ -8846,6 +8951,12 @@
             fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
             alignment: { vertical: "center", horizontal: columnIndex ? "center" : "left", wrapText: true }
           };
+          else if (type === "info") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 10, bold: columnIndex === 0, color: { rgb: "172033" } },
+            fill: { patternType: "solid", fgColor: { rgb: columnIndex === 0 ? "D9E8F5" : "FFFFFF" } },
+            alignment: { vertical: "center", horizontal: "left", wrapText: true }
+          };
           else if (type === "metricLabel") cell.s = {
             ...baseStyle,
             font: { name: "Arial", sz: 9, color: { rgb: "5A6475" } },
@@ -8863,6 +8974,17 @@
             font: { name: "Arial", sz: 10, bold: true, color: { rgb: "172033" } },
             fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
             alignment: { vertical: "center", horizontal: columnIndex ? "right" : "left" },
+            numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
+          };
+          else if (type === "groupTotal") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 10, bold: true, color: { rgb: "172033" } },
+            fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
+            border: {
+              ...border,
+              top: { style: "medium", color: { rgb: "005EB8" } }
+            },
+            alignment: { vertical: "center", horizontal: columnIndex ? "right" : "left", wrapText: true },
             numFmt: typeof cell.v === "number" ? "#,##0.00" : undefined
           };
           else cell.s = {

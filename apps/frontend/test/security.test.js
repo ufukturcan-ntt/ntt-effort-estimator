@@ -95,6 +95,17 @@ test("Excel print report applies PDF-aligned report styling", () => {
   assert.match(html, /sheet\["!merges"\] = merges/);
 });
 
+test("effort phases support upper groups and grouped totals across screen and print", () => {
+  assert.match(html, /const effortPhaseHeaders = \["Implementation Type", "Sıra", "Efor Başlığı", "Üst Grup"\]/);
+  assert.match(html, /const effortPhaseGroupOptions = \["", "Explore", "Realise", "Deploy", "Canlı Geçiş"\]/);
+  assert.match(html, /function phaseGroupSummary\(/);
+  assert.match(html, /function phaseGroupSummaryCells\(/);
+  assert.match(html, /class="phase-group-total-row"/);
+  assert.match(html, /currentLanguage === "en" \? "Upper Group Total" : "Üst Grup Toplamı"/);
+  assert.match(html, /row\.classList\.contains\("group-total-row"\)/);
+  assert.match(html, /type === "groupTotal"/);
+});
+
 test("screen data is loaded lazily after authentication", () => {
   assert.match(html, /function ensureAdminConfigLoaded\(options = \{\}\) \{\s*if \(!currentUser\) return Promise\.resolve\(\)/s);
   assert.match(html, /function scheduleDeferredAdminConfigHydration\(delay = 8000\) \{\s*if \(!currentUser \|\| adminConfigLoaded/s);
