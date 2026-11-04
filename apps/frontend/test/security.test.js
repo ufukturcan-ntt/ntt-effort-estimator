@@ -109,6 +109,8 @@ test("effort phases support upper groups and grouped totals across screen and pr
   assert.match(html, /type === "groupTotal"/);
   assert.match(html, /const contentMerges = \[\]/);
   assert.match(html, /columnSpan > 1/);
+  assert.match(html, /const groupHeaderStarts = new Set\(\)/);
+  assert.match(html, /type === "groupHeader"/);
 });
 
 test("effort phase maintenance is sorted by implementation type and numeric order", () => {

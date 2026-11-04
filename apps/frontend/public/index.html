@@ -877,6 +877,10 @@
       font-weight: 800;
     }
 
+    .phase-group-head th:not(:first-child) {
+      border-left: 3px solid #005eb8;
+    }
+
     .summary-grid {
       padding: 18px;
       display: grid;
@@ -3555,9 +3559,9 @@
         .map(group => ({ group, total: grouped.get(group) || 0 }));
     }
 
-    function phaseGroupSummaryCells(implementation = "All", activePhases = [], phaseTotals = {}) {
-      const summary = phaseGroupSummary(implementation, phaseTotals, false);
-      const groupsByPhase = phaseGroupMapForImplementation(implementation, false);
+    function phaseGroupSummaryCells(implementation = "All", activePhases = [], phaseTotals = {}, includeVmp = false) {
+      const summary = phaseGroupSummary(implementation, phaseTotals, includeVmp);
+      const groupsByPhase = phaseGroupMapForImplementation(implementation, includeVmp);
       const renderedGroups = new Set();
       const totals = new Map(summary.map(item => [item.group, item.total]));
       return activePhases.map(phase => {
@@ -3568,8 +3572,8 @@
       });
     }
 
-    function phaseGroupHeaderSegments(implementation = "All", activePhases = []) {
-      const groupsByPhase = phaseGroupMapForImplementation(implementation, false);
+    function phaseGroupHeaderSegments(implementation = "All", activePhases = [], includeVmp = false) {
+      const groupsByPhase = phaseGroupMapForImplementation(implementation, includeVmp);
       return activePhases.reduce((segments, phase) => {
         const group = groupsByPhase.get(phase) || "";
         const previous = segments[segments.length - 1];
@@ -3579,8 +3583,8 @@
       }, []);
     }
 
-    function phaseGroupHeaderRow(implementation = "All", activePhases = [], leadingColumns = 1, trailingColumns = 0) {
-      const segments = phaseGroupHeaderSegments(implementation, activePhases);
+    function phaseGroupHeaderRow(implementation = "All", activePhases = [], leadingColumns = 1, trailingColumns = 0, includeVmp = false) {
+      const segments = phaseGroupHeaderSegments(implementation, activePhases, includeVmp);
       const leading = leadingColumns ? `<th colspan="${leadingColumns}"></th>` : "";
       const trailing = trailingColumns ? `<th colspan="${trailingColumns}"></th>` : "";
       return `<tr class="phase-group-head">${leading}${segments.map(segment =>
@@ -3588,8 +3592,8 @@
       ).join("")}${trailing}</tr>`;
     }
 
-    function phaseGroupedTotal(implementation = "All", phaseTotals = {}) {
-      return phaseGroupSummary(implementation, phaseTotals, false).reduce((sum, item) => sum + item.total, 0);
+    function phaseGroupedTotal(implementation = "All", phaseTotals = {}, includeVmp = false) {
+      return phaseGroupSummary(implementation, phaseTotals, includeVmp).reduce((sum, item) => sum + item.total, 0);
     }
 
     function currentImplementationType() {
@@ -5813,7 +5817,8 @@
       const head = document.getElementById("projectEffortHead");
       const body = document.getElementById("moduleRowsFull");
       const activePhases = currentPhaseHeaders(false);
-      if (head) head.innerHTML = `${phaseGroupHeaderRow(currentImplementationType(), activePhases, 1, 4)}<tr><th>${displayRecord("Modül")}</th>${activePhases.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Sabit Efor")}</th><th>Hypercare</th><th>Go-Live Support</th><th>${displayRecord("Toplam")}</th></tr>`;
+      const projectGroupPhases = [...activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"];
+      if (head) head.innerHTML = `${phaseGroupHeaderRow(currentImplementationType(), projectGroupPhases, 1, 0, true)}<tr><th>${displayRecord("Modül")}</th>${activePhases.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Sabit Efor")}</th><th>Hypercare</th><th>Go-Live Support</th><th>${displayRecord("Toplam")}</th></tr>`;
       const rows = finalRowsForSelectedModules();
       const phaseTotals = Object.fromEntries(activePhases.map(phase => [phase, 0]));
       let fixedEffortTotal = 0;
@@ -5838,8 +5843,9 @@
         const hypercareTotal = rows.reduce((sum, row) => sum + hypercareValue(row.module), 0);
         const goliveTotal = rows.reduce((sum, row) => sum + (Number(hypercareState.get(row.module)?.goliveDays) || 0), 0);
         const totalRow = `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${activePhases.map(phase => `<td><strong>${fmt(phaseTotals[phase])}</strong></td>`).join("")}<td><strong>${fmt(fixedEffortTotal)}</strong></td><td><strong>${fmt(hypercareTotal)}</strong></td><td><strong>${fmt(goliveTotal)}</strong></td><td><strong>${fmt(sumValues(phaseTotals) + fixedEffortTotal + hypercareTotal + goliveTotal)}</strong></td></tr>`;
-        const groupCells = phaseGroupSummaryCells(currentImplementationType(), activePhases, phaseTotals);
-        const groupTotalRow = `<tr class="phase-group-total-row"><td><strong>${displayRecord("Üst Grup Toplamı")}</strong></td>${groupCells.map(value => `<td><strong>${escapeHtml(value)}</strong></td>`).join("")}<td></td><td></td><td></td><td><strong>${fmt(phaseGroupedTotal(currentImplementationType(), phaseTotals))}</strong></td></tr>`;
+        const projectGroupTotals = { ...phaseTotals, "Sabit Efor": fixedEffortTotal, Hypercare: hypercareTotal, "Canlı Destek": goliveTotal };
+        const groupCells = phaseGroupSummaryCells(currentImplementationType(), projectGroupPhases.slice(0, -1), projectGroupTotals, true);
+        const groupTotalRow = `<tr class="phase-group-total-row"><td><strong>${displayRecord("Üst Grup Toplamı")}</strong></td>${groupCells.map(value => `<td><strong>${escapeHtml(value)}</strong></td>`).join("")}<td><strong>${fmt(phaseGroupedTotal(currentImplementationType(), projectGroupTotals, true))}</strong></td></tr>`;
         body.innerHTML = rows.length ? rowHtml + totalRow + groupTotalRow : `<tr><td colspan="${activePhases.length + 5}">${currentLanguage === "en" ? "Module selection is pending." : "Modül seçimi yapılmadı."}</td></tr>`;
       }
       const total = rows.reduce((sum, row) => sum + row.total, 0);
@@ -8616,6 +8622,7 @@
       const definition = offerJson(offer.project_definition);
       const implementation = offer.implementation_type || definition.implementation || "All";
       const activePhases = phaseHeadersForImplementation(implementation, false);
+      const projectGroupPhases = [...activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"];
       const moduleNames = projectRows.map(row => row.module);
       const developmentModules = developmentModuleNames(moduleNames);
       const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
@@ -8738,14 +8745,12 @@
       });
       if (projectRows.length) {
         projectTableRows.push([currentLanguage === "en" ? "Total" : "Toplam", ...activePhases.map(phase => fmt(projectTotals[phase])), fmt(fixedEffortPrintTotal), fmt(hypercareTotal), fmt(goliveTotal), fmt(projectTotal + hypercareTotal + goliveTotal)]);
-        const groupCells = phaseGroupSummaryCells(implementation, activePhases, projectTotals);
+        const projectGroupTotals = { ...projectTotals, "Sabit Efor": fixedEffortPrintTotal, Hypercare: hypercareTotal, "Canlı Destek": goliveTotal };
+        const groupCells = phaseGroupSummaryCells(implementation, projectGroupPhases.slice(0, -1), projectGroupTotals, true);
         projectTableRows.push([
           currentLanguage === "en" ? "Upper Group Total" : "Üst Grup Toplamı",
           ...groupCells,
-          "",
-          "",
-          "",
-          fmt(phaseGroupedTotal(implementation, projectTotals))
+          fmt(phaseGroupedTotal(implementation, projectGroupTotals, true))
         ]);
       }
       const localizationTableRows = localizationRows.map(row => [
@@ -8823,6 +8828,8 @@
             tbody tr:nth-child(even) td { background: #f7f9fc; }
             tr.total-row td { background: #d9e8f5; font-weight: 700; }
             tr.group-total-row td { background: #d9e8f5; border-top: 2px solid #005eb8; font-weight: 700; }
+            tr.phase-group-head th { color: #005eb8; text-align: center; font-weight: 800; }
+            tr.phase-group-head th:not(:first-child) { border-left: 3px solid #005eb8; }
             tr { page-break-inside: avoid; page-break-after: auto; }
             .info-table { width: 100%; }
             .info-table th { width: 180px; }
@@ -8845,7 +8852,7 @@
           <h2>${escapeHtml(t("finalSummary"))}</h2>
           <div class="grid">${summaryRows.map(([key, value]) => `<div class="metric"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)} g</strong></div>`).join("")}</div>
           <h2>${escapeHtml(t("projectEfforts"))}</h2>
-          ${printTable([t("modules"), ...activePhases, currentLanguage === "en" ? "Fixed Effort" : "Sabit Efor", "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"), phaseGroupHeaderRow(implementation, activePhases, 1, 4))}
+          ${printTable([t("modules"), ...activePhases, currentLanguage === "en" ? "Fixed Effort" : "Sabit Efor", "Hypercare", "Go-Live Support", currentLanguage === "en" ? "Total" : "Toplam"], projectTableRows, t("noProjectEffort"), phaseGroupHeaderRow(implementation, projectGroupPhases, 1, 0, true))}
           <h2>${escapeHtml(t("localizationEfforts"))}</h2>
           ${printTable([t("modules"), currentLanguage === "en" ? "Country" : "Ülke", ...activePhases, currentLanguage === "en" ? "Total" : "Toplam"], localizationTableRows, t("noLocalizationEffort"), phaseGroupHeaderRow(implementation, activePhases, 2, 1))}
           <h2>${escapeHtml(t("developmentEfforts"))}</h2>
@@ -8903,6 +8910,7 @@
       const rows = [];
       const rowTypes = [];
       const contentMerges = [];
+      const groupHeaderStarts = new Set();
       const addRow = (values, type = "body") => {
         rows.push(values);
         rowTypes.push(type);
@@ -8920,9 +8928,11 @@
             const rowIndex = rows.length;
             const values = [];
             let columnIndex = 0;
+            const isGroupHeader = row.classList.contains("phase-group-head");
             [...row.querySelectorAll("th, td")].forEach(cell => {
               const columnSpan = Math.max(Number(cell.colSpan) || 1, 1);
               values.push(excelReportCellValue(cell.textContent), ...Array(columnSpan - 1).fill(""));
+              if (isGroupHeader) groupHeaderStarts.add(`${rowIndex}:${columnIndex}`);
               if (columnSpan > 1) contentMerges.push({
                 s: { r: rowIndex, c: columnIndex },
                 e: { r: rowIndex, c: columnIndex + columnSpan - 1 }
@@ -8935,7 +8945,7 @@
               || /^(Üst Grup Toplamı|Upper Group Total)$/i.test(String(values[0] || "").trim());
             const rowType = content.classList.contains("info-table")
               ? "info"
-              : isHeader ? "tableHeader" : isGroupTotal ? "groupTotal" : isTotal ? "total" : "body";
+              : isGroupHeader ? "groupHeader" : isHeader ? "tableHeader" : isGroupTotal ? "groupTotal" : isTotal ? "total" : "body";
             addRow(values, rowType);
           });
         } else if (content?.classList.contains("grid")) {
@@ -8994,6 +9004,18 @@
             font: { name: "Arial", sz: 10, bold: true, color: { rgb: "172033" } },
             fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
             alignment: { vertical: "center", horizontal: columnIndex ? "center" : "left", wrapText: true }
+          };
+          else if (type === "groupHeader") cell.s = {
+            ...baseStyle,
+            font: { name: "Arial", sz: 10, bold: true, color: { rgb: "005EB8" } },
+            fill: { patternType: "solid", fgColor: { rgb: "D9E8F5" } },
+            border: {
+              ...border,
+              left: groupHeaderStarts.has(`${rowIndex}:${columnIndex}`) && columnIndex > 0
+                ? { style: "medium", color: { rgb: "005EB8" } }
+                : border.left
+            },
+            alignment: { vertical: "center", horizontal: "center", wrapText: true }
           };
           else if (type === "info") cell.s = {
             ...baseStyle,
