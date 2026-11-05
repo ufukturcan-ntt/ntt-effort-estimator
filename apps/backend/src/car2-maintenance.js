@@ -428,6 +428,19 @@ export function removeAllPmoAndAbapFixedDays(matrix) {
   ];
 }
 
+export function removeZeroEffortBasisFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => {
+      if (String(row[at.Modül] || "").trim() !== "BASIS") return true;
+      return glasswingPrivateCloudPhases.some(phase => Number(row[at[phase]] || 0) !== 0);
+    })
+  ];
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removeZeroEffortBasisFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -131,6 +131,16 @@ const withoutPmoAndAbap = removeAllPmoAndAbapFixedDays(basisZeroRows);
 assert.equal(withoutPmoAndAbap.slice(1).some(row => ["PMO", "ABAP"].includes(String(row[basisAt.Modül] || "").trim())), false);
 assert.ok(withoutPmoAndAbap.slice(1).some(row => String(row[basisAt.Modül] || "").trim() === "BASIS"));
 assert.deepEqual(removeAllPmoAndAbapFixedDays(withoutPmoAndAbap), withoutPmoAndAbap, "PMO and ABAP cleanup must be idempotent");
+
+const basisWithEffort = [...maintainedBasisRows[0]];
+basisWithEffort[basisAt["Implementation Type"]] = "Data Migration";
+basisWithEffort[basisAt.Yetkilendirme] = 3;
+const withoutZeroBasis = removeZeroEffortBasisFixedDays([...basisZeroRows, basisWithEffort]);
+assert.equal(withoutZeroBasis.slice(1).some(row => String(row[basisAt.Modül] || "").trim() === "BASIS"
+  && !row[basisAt.Yetkilendirme]), false);
+assert.ok(withoutZeroBasis.slice(1).some(row => String(row[basisAt.Modül] || "").trim() === "BASIS"
+  && row[basisAt["Implementation Type"]] === "Data Migration" && row[basisAt.Yetkilendirme] === 3));
+assert.deepEqual(removeZeroEffortBasisFixedDays(withoutZeroBasis), withoutZeroBasis, "zero BASIS cleanup must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));
