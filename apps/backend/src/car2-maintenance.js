@@ -328,6 +328,69 @@ const glasswingPrivateCloudPhases = [
   "Eğitim", "Yetkilendirme", "Canlı Sistem Ayağa Kaldırma", "Canlı Anaveri Kontrol", "Canlı Anaveri Aktarım"
 ];
 
+const requestedModuleFixedDays = {
+  SMALL: {
+    "E-Fatura/Arşiv": [3, 1, 0, 1, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-İrsaliye": [3, 1, 0, 1, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-Defter": [2, 1, 0, 1, 2, 0, 1, 1, 0, 0, 0, 0, 2, 1, 0],
+    "E-Hesap Özeti": [4, 1, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 1, 1, 0],
+    "E-Ödeme": [4, 1, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 1, 1, 0],
+    "E-Mutabakat": [2, 1, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 1, 1, 0],
+    "E-Beyanname": [4, 2, 0, 4, 3, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0],
+    "Gelen Fatura Otomasyon": [4, 1, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 1, 1, 0],
+    COMMODITY: [42, 6, 2, 5, 6, 0, 2, 1, 12, 2, 0, 0, 2, 3, 5]
+  },
+  MEDIUM: {
+    "E-Fatura/Arşiv": [4, 1, 0, 2, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-İrsaliye": [4, 1, 0, 2, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-Defter": [3, 1, 0, 2, 2, 0, 1, 1, 0, 0, 0, 0, 3, 1, 0],
+    "E-Hesap Özeti": [5, 1, 0, 4, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    "E-Ödeme": [5, 1, 0, 4, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    "E-Mutabakat": [4, 1, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    "E-Beyanname": [5, 2, 0, 5, 3, 0, 1, 0, 0, 0, 0, 0, 4, 1, 0],
+    "Gelen Fatura Otomasyon": [5, 1, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    COMMODITY: [65, 7, 2, 8, 7, 0, 2, 1, 20, 3, 0, 0, 2, 4, 9]
+  },
+  LARGE: {
+    "E-Fatura/Arşiv": [5, 1, 0, 2, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-İrsaliye": [5, 1, 0, 2, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-Defter": [3, 1, 0, 3, 3, 0, 1, 1, 0, 0, 0, 0, 3, 1, 0],
+    "E-Hesap Özeti": [5, 2, 0, 4, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    "E-Ödeme": [5, 2, 0, 4, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    "E-Mutabakat": [5, 2, 0, 3, 3, 0, 1, 0, 2, 0, 0, 0, 2, 1, 0],
+    "E-Beyanname": [6, 3, 0, 6, 3, 0, 2, 0, 0, 0, 0, 0, 3, 1, 0],
+    "Gelen Fatura Otomasyon": [5, 2, 0, 3, 4, 0, 2, 0, 2, 0, 0, 0, 2, 1, 0],
+    COMMODITY: [80, 9, 3, 10, 12, 0, 2, 1, 25, 6, 0, 0, 2, 5, 10]
+  },
+  "X-LARGE": {
+    "E-Fatura/Arşiv": [5, 2, 0, 2, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-İrsaliye": [5, 2, 0, 2, 2, 0, 1, 1, 3, 0, 0, 0, 1, 1, 0],
+    "E-Defter": [3, 2, 0, 3, 3, 0, 1, 1, 0, 0, 0, 0, 3, 1, 0],
+    "E-Hesap Özeti": [5, 3, 0, 4, 3, 0, 1, 0, 3, 0, 0, 0, 2, 1, 0],
+    "E-Ödeme": [5, 3, 0, 4, 3, 0, 1, 0, 3, 0, 0, 0, 2, 1, 0],
+    "E-Mutabakat": [5, 3, 0, 3, 3, 0, 1, 0, 3, 0, 0, 0, 2, 1, 0],
+    "E-Beyanname": [6, 3, 0, 6, 3, 0, 2, 0, 0, 0, 0, 0, 4, 2, 0],
+    "Gelen Fatura Otomasyon": [5, 2, 0, 3, 4, 0, 2, 0, 2, 0, 0, 0, 4, 1, 0],
+    COMMODITY: [100, 9, 3, 15, 15, 0, 2, 1, 30, 10, 0, 0, 2, 8, 15]
+  }
+};
+
+export function applyRequestedModuleFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  for (const row of rows.slice(1)) {
+    const size = String(row[at.Size] || "").trim().toUpperCase();
+    const module = String(row[at.Modül] || "").trim();
+    const values = requestedModuleFixedDays[size]?.[module];
+    if (!values) continue;
+    glasswingPrivateCloudPhases.forEach((phase, index) => {
+      if (at[phase] != null) row[at[phase]] = values[index];
+    });
+  }
+  return rows;
+}
+
 export function applyFixedDaysDocumentMaintenance(matrix) {
   const source = structuredClone(matrix || []);
   if (!source.length) return source;

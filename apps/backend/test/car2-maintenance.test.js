@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removeZeroEffortBasisFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRequestedModuleFixedDays, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removeZeroEffortBasisFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -141,6 +141,22 @@ assert.equal(withoutZeroBasis.slice(1).some(row => String(row[basisAt.Modül] ||
 assert.ok(withoutZeroBasis.slice(1).some(row => String(row[basisAt.Modül] || "").trim() === "BASIS"
   && row[basisAt["Implementation Type"]] === "Data Migration" && row[basisAt.Yetkilendirme] === 3));
 assert.deepEqual(removeZeroEffortBasisFixedDays(withoutZeroBasis), withoutZeroBasis, "zero BASIS cleanup must be idempotent");
+
+const commodityTarget = Array(basisZeroRows[0].length).fill(99);
+commodityTarget[basisAt.Endüstri] = "Perakende";
+commodityTarget[basisAt.Size] = "X-LARGE";
+commodityTarget[basisAt["Implementation Type"]] = "Greenfield";
+commodityTarget[basisAt["System Type"]] = "SAP S/4HANA Private Cloud";
+commodityTarget[basisAt.Modül] = "COMMODITY";
+const requestedRows = applyRequestedModuleFixedDays([...basisZeroRows, commodityTarget]);
+const maintainedCommodity = requestedRows.at(-1);
+assert.equal(maintainedCommodity[basisAt.Analiz], 100);
+assert.equal(maintainedCommodity[basisAt["Internal Entegrasyon Testi"]], 30);
+assert.equal(maintainedCommodity[basisAt["Entegrasyon Testi"]], 10);
+assert.equal(maintainedCommodity[basisAt.Eğitim], 0);
+assert.equal(maintainedCommodity[basisAt.Yetkilendirme], 0);
+assert.equal(maintainedCommodity[basisAt["Canlı Anaveri Aktarım"]], 15);
+assert.deepEqual(applyRequestedModuleFixedDays(requestedRows), requestedRows, "requested Fixed Days maintenance must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));
