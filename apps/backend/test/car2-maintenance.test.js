@@ -156,6 +156,10 @@ assert.equal(maintainedCommodity[basisAt["Entegrasyon Testi"]], 10);
 assert.equal(maintainedCommodity[basisAt.Eğitim], 0);
 assert.equal(maintainedCommodity[basisAt.Yetkilendirme], 0);
 assert.equal(maintainedCommodity[basisAt["Canlı Anaveri Aktarım"]], 15);
+const nonGreenfieldTarget = [...commodityTarget];
+nonGreenfieldTarget[basisAt["Implementation Type"]] = "Data Migration";
+const greenfieldOnlyRows = applyRequestedModuleFixedDays([...basisZeroRows, nonGreenfieldTarget]);
+assert.deepEqual(greenfieldOnlyRows.at(-1), nonGreenfieldTarget, "non-Greenfield Fixed Days must remain unchanged");
 assert.deepEqual(applyRequestedModuleFixedDays(requestedRows), requestedRows, "requested Fixed Days maintenance must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));

@@ -1964,25 +1964,32 @@ async function removeLiveZeroEffortBasisFixedDays() {
   }
 }
 
-async function updateLiveRequestedModuleFixedDays() {
+async function restoreAndApplyGreenfieldRequestedModuleFixedDays() {
   const client = await pool.connect();
   try {
     await client.query("begin");
     const marker = await client.query(
       `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
-      ["update-requested-module-fixed-days-v1"]
+      ["restore-and-apply-greenfield-module-fixed-days-v1"]
     );
     if (!marker.rowCount) {
       await client.query("commit");
       return;
     }
-    const result = await client.query(`select payload from admin_config where entity = 'fixedDays' for update`);
-    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Fixed Days data is missing");
-    const payload = applyRequestedModuleFixedDays(result.rows[0].payload);
+    const backup = await client.query(
+      `select payload->'fixedDays' as fixed_days from admin_config_backup
+       where reason = $1 order by created_at desc limit 1`,
+      ["update_requested_module_fixed_days_v1"]
+    );
+    if (!backup.rowCount || !Array.isArray(backup.rows[0].fixed_days)) {
+      throw new Error("Previous Fixed Days backup was not found; refusing to overwrite live data");
+    }
+    await client.query(`select 1 from admin_config where entity = 'fixedDays' for update`);
+    const payload = applyRequestedModuleFixedDays(backup.rows[0].fixed_days);
     await client.query(
       `insert into admin_config_backup (created_by, reason, payload)
        select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
-      ["update_requested_module_fixed_days_v1"]
+      ["restore_previous_and_apply_greenfield_module_fixed_days_v1"]
     );
     await client.query(
       `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'fixedDays'`,
@@ -2303,7 +2310,7 @@ async function ensureDatabase() {
   await removeLiveKonfeksiyonMediumPrivateCloudPmoFixedDays();
   await removeLiveAllPmoAndAbapFixedDays();
   await removeLiveZeroEffortBasisFixedDays();
-  await updateLiveRequestedModuleFixedDays();
+  await restoreAndApplyGreenfieldRequestedModuleFixedDays();
   await mergeLiveFvbVmpRows();
   await correctLiveFvbAbapEffort();
   await removeLiveObsoleteTeamSplitQuestion();

@@ -380,6 +380,7 @@ export function applyRequestedModuleFixedDays(matrix) {
   if (!rows.length) return rows;
   const at = indexes(rows[0]);
   for (const row of rows.slice(1)) {
+    if (String(row[at["Implementation Type"]] || "").trim() !== "Greenfield") continue;
     const size = String(row[at.Size] || "").trim().toUpperCase();
     const module = String(row[at.Modül] || "").trim();
     const values = requestedModuleFixedDays[size]?.[module];
