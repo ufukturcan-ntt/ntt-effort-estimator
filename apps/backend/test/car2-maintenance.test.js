@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -94,6 +94,21 @@ assert.equal(glasswingSmall[documentAt.Analiz], 15);
 assert.equal(glasswingSmall[documentAt["Internal Entegrasyon Testi"]], 8);
 assert.equal(glasswingSmall[documentAt["Canlı Anaveri Aktarım"]], 3);
 assert.deepEqual(applyFixedDaysDocumentMaintenance(maintainedDocumentRows), maintainedDocumentRows, "Document maintenance must be idempotent");
+
+const basisZeroRows = applySmallPrivateCloudBasisZeroEfforts(maintainedDocumentRows);
+const basisAt = Object.fromEntries(basisZeroRows[0].map((header, index) => [header, index]));
+const maintainedBasisRows = basisZeroRows.slice(1).filter(row => foreignTradeIndustries.has(row[basisAt.Endüstri])
+  && row[basisAt.Size] === "SMALL"
+  && row[basisAt["Implementation Type"]] === "Greenfield"
+  && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud"
+  && row[basisAt.Modül] === "BASIS");
+assert.equal(maintainedBasisRows.length, 9);
+for (const row of maintainedBasisRows) {
+  for (const phase of ["Analiz", "Dokümantasyon", "Dokümantasyon Onay", "Uyarlama", "Birim Test", "Geliştirme", "QA Sistem Ayağa Kaldırma", "QA Anaveri Aktarım", "Internal Entegrasyon Testi", "Entegrasyon Testi", "Eğitim", "Yetkilendirme", "Canlı Sistem Ayağa Kaldırma", "Canlı Anaveri Kontrol", "Canlı Anaveri Aktarım"]) {
+    if (basisAt[phase] != null) assert.equal(row[basisAt[phase]], 0, `BASIS ${phase} must be zero`);
+  }
+}
+assert.deepEqual(applySmallPrivateCloudBasisZeroEfforts(basisZeroRows), basisZeroRows, "BASIS zero maintenance must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

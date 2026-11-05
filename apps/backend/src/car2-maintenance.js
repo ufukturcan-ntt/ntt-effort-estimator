@@ -370,6 +370,34 @@ export function applyFixedDaysDocumentMaintenance(matrix) {
   return [source[0], ...rows];
 }
 
+export function applySmallPrivateCloudBasisZeroEfforts(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  for (const industry of obsoleteForeignTradeIndustries) {
+    let row = rows.slice(1).find(candidate =>
+      String(candidate[at.Endüstri] || "").trim() === industry
+      && String(candidate[at.Size] || "").trim() === "SMALL"
+      && String(candidate[at["Implementation Type"]] || "").trim() === "Greenfield"
+      && String(candidate[at["System Type"]] || "").trim() === "SAP S/4HANA Private Cloud"
+      && String(candidate[at.Modül] || "").trim() === "BASIS"
+    );
+    if (!row) {
+      row = Array(rows[0].length).fill("");
+      rows.push(row);
+    }
+    row[at.Endüstri] = industry;
+    row[at.Size] = "SMALL";
+    row[at["Implementation Type"]] = "Greenfield";
+    row[at["System Type"]] = "SAP S/4HANA Private Cloud";
+    row[at.Modül] = "BASIS";
+    glasswingPrivateCloudPhases.forEach(phase => {
+      if (at[phase] != null) row[at[phase]] = 0;
+    });
+  }
+  return rows;
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");
