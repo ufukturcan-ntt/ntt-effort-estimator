@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -75,6 +75,25 @@ const isObsoleteForeignTrade = row => foreignTradeIndustries.has(row[foreignTrad
   && row[foreignTradeAt.Modül] === "Dış Ticaret Çözümü";
 assert.equal(cleanedForeignTrade.slice(1).filter(isObsoleteForeignTrade).length, 0);
 assert.deepEqual(removeObsoleteForeignTradeFixedDays(cleanedForeignTrade), cleanedForeignTrade, "Foreign Trade cleanup must be idempotent");
+
+const maintainedDocumentRows = applyFixedDaysDocumentMaintenance(updatedFixedDays);
+const documentAt = Object.fromEntries(maintainedDocumentRows[0].map((header, index) => [header, index]));
+assert.equal(maintainedDocumentRows.slice(1).filter(row => obsoleteIndustries.has(row[documentAt.Endüstri])
+  && new Set(["SMALL", "MEDIUM", "X-LARGE"]).has(row[documentAt.Size])
+  && row[documentAt["Implementation Type"]] === "Greenfield"
+  && ((row[documentAt["System Type"]] === "NTT POS on S4" && row[documentAt.Modül] === "NTT Data POS")
+    || (row[documentAt["System Type"]] === "SAP CAR" && String(row[documentAt.Modül] || "").startsWith("CAR -")))).length, 0);
+const glasswingRows = maintainedDocumentRows.slice(1).filter(row => foreignTradeIndustries.has(row[documentAt.Endüstri])
+  && foreignTradeSizes.has(row[documentAt.Size])
+  && row[documentAt["Implementation Type"]] === "Greenfield"
+  && row[documentAt["System Type"]] === "SAP S/4HANA Private Cloud"
+  && row[documentAt.Modül] === "GLASSWING");
+assert.equal(glasswingRows.length, 36);
+const glasswingSmall = glasswingRows.find(row => row[documentAt.Endüstri] === "Perakende" && row[documentAt.Size] === "SMALL");
+assert.equal(glasswingSmall[documentAt.Analiz], 15);
+assert.equal(glasswingSmall[documentAt["Internal Entegrasyon Testi"]], 8);
+assert.equal(glasswingSmall[documentAt["Canlı Anaveri Aktarım"]], 3);
+assert.deepEqual(applyFixedDaysDocumentMaintenance(maintainedDocumentRows), maintainedDocumentRows, "Document maintenance must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

@@ -315,6 +315,61 @@ export function removeObsoleteForeignTradeFixedDays(matrix) {
   ];
 }
 
+const documentCarCleanupSizes = new Set(["SMALL", "MEDIUM", "X-LARGE"]);
+const glasswingPrivateCloudEfforts = {
+  SMALL: [15, 2, 1, 3, 3, 0, 1, 0, 8, 10, 0, 4, 1, 2, 3],
+  MEDIUM: [20, 3, 1, 5, 4, 0, 1, 0, 10, 12, 0, 5, 1, 3, 4],
+  LARGE: [24, 4, 1, 7, 5, 0, 1, 0, 12, 15, 0, 6, 1, 4, 5],
+  "X-LARGE": [30, 6, 1, 9, 7, 0, 1, 0, 15, 20, 0, 6, 1, 6, 8]
+};
+const glasswingPrivateCloudPhases = [
+  "Analiz", "Dokümantasyon", "Dokümantasyon Onay", "Uyarlama", "Birim Test", "Geliştirme",
+  "QA Sistem Ayağa Kaldırma", "QA Anaveri Aktarım", "Internal Entegrasyon Testi", "Entegrasyon Testi",
+  "Eğitim", "Yetkilendirme", "Canlı Sistem Ayağa Kaldırma", "Canlı Anaveri Kontrol", "Canlı Anaveri Aktarım"
+];
+
+export function applyFixedDaysDocumentMaintenance(matrix) {
+  const source = structuredClone(matrix || []);
+  if (!source.length) return source;
+  const at = indexes(source[0]);
+  const rows = source.slice(1).filter(row => {
+    const industry = String(row[at.Endüstri] || "").trim();
+    const size = String(row[at.Size] || "").trim();
+    const implementation = String(row[at["Implementation Type"]] || "").trim();
+    const systemType = String(row[at["System Type"]] || "").trim();
+    const module = String(row[at.Modül] || "").trim();
+    if (!obsoleteLargeGreenfieldIndustries.has(industry)
+      || !documentCarCleanupSizes.has(size)
+      || implementation !== "Greenfield") return true;
+    if (systemType === "NTT POS on S4" && module === "NTT Data POS") return false;
+    return !(systemType === "SAP CAR" && obsoleteSapCarModules.has(module));
+  });
+  for (const industry of obsoleteForeignTradeIndustries) {
+    for (const [size, values] of Object.entries(glasswingPrivateCloudEfforts)) {
+      let row = rows.find(candidate =>
+        String(candidate[at.Endüstri] || "").trim() === industry
+        && String(candidate[at.Size] || "").trim() === size
+        && String(candidate[at["Implementation Type"]] || "").trim() === "Greenfield"
+        && String(candidate[at["System Type"]] || "").trim() === "SAP S/4HANA Private Cloud"
+        && String(candidate[at.Modül] || "").trim() === "GLASSWING"
+      );
+      if (!row) {
+        row = Array(source[0].length).fill("");
+        rows.push(row);
+      }
+      row[at.Endüstri] = industry;
+      row[at.Size] = size;
+      row[at["Implementation Type"]] = "Greenfield";
+      row[at["System Type"]] = "SAP S/4HANA Private Cloud";
+      row[at.Modül] = "GLASSWING";
+      glasswingPrivateCloudPhases.forEach((phase, index) => {
+        if (at[phase] != null) row[at[phase]] = values[index];
+      });
+    }
+  }
+  return [source[0], ...rows];
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");
