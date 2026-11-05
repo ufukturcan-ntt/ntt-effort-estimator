@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { fixedDaysModulePhases } from "../src/fixed-days-module-data.js";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRequestedModuleFixedDays, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removeZeroEffortBasisFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRequestedModuleFixedDays, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removeZeroEffortBasisFixedDays, replaceGreenfieldFixedDayModules, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -161,6 +162,36 @@ nonGreenfieldTarget[basisAt["Implementation Type"]] = "Data Migration";
 const greenfieldOnlyRows = applyRequestedModuleFixedDays([...basisZeroRows, nonGreenfieldTarget]);
 assert.deepEqual(greenfieldOnlyRows.at(-1), nonGreenfieldTarget, "non-Greenfield Fixed Days must remain unchanged");
 assert.deepEqual(applyRequestedModuleFixedDays(requestedRows), requestedRows, "requested Fixed Days maintenance must be idempotent");
+
+const replacementHeaders = basisZeroRows[0];
+const replacementAt = Object.fromEntries(replacementHeaders.map((header, index) => [header, index]));
+const replacementInput = [replacementHeaders];
+for (const industry of ["Perakende", "FMCG"]) {
+  for (const size of ["SMALL", "MEDIUM", "LARGE", "X-LARGE"]) {
+    const glasswingRow = Array(replacementHeaders.length).fill("");
+    glasswingRow[replacementAt.Endüstri] = industry;
+    glasswingRow[replacementAt.Size] = size;
+    glasswingRow[replacementAt["Implementation Type"]] = "Greenfield";
+    glasswingRow[replacementAt["System Type"]] = "SAP S/4HANA Private Cloud";
+    glasswingRow[replacementAt.Modül] = "GLASSWING";
+    fixedDaysModulePhases.forEach((phase, index) => { glasswingRow[replacementAt[phase]] = index + 1; });
+    replacementInput.push(glasswingRow);
+  }
+}
+const untouchedRow = Array(replacementHeaders.length).fill("");
+untouchedRow[replacementAt.Endüstri] = "Perakende";
+untouchedRow[replacementAt.Size] = "SMALL";
+untouchedRow[replacementAt["Implementation Type"]] = "Greenfield";
+untouchedRow[replacementAt["System Type"]] = "SAP ECC";
+untouchedRow[replacementAt.Modül] = "Unrelated Module";
+replacementInput.push(untouchedRow);
+const replacedFixedRows = replaceGreenfieldFixedDayModules(replacementInput);
+const advancedEwmRows = replacedFixedRows.slice(1).filter(row => row[replacementAt.Modül] === "Advanced EWM");
+assert.equal(advancedEwmRows.length, 24, "all sizes and systems must be populated across both industries");
+assert.equal(advancedEwmRows.find(row => row[replacementAt.Size] === "SMALL" && row[replacementAt["System Type"]] === "SAP ECC")[replacementAt.Analiz], 30);
+assert.equal(replacedFixedRows.slice(1).filter(row => row[replacementAt.Modül] === "GLASSWING").length, 24);
+assert.equal(replacedFixedRows.slice(1).find(row => row[replacementAt.Modül] === "GLASSWING" && row[replacementAt["System Type"]] === "SAP S/4HANA On-Premise")[replacementAt.Analiz], 1);
+assert.equal(replacedFixedRows.slice(1).filter(row => row[replacementAt.Modül] === "Unrelated Module").length, 1);
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

@@ -1,3 +1,5 @@
+import { fixedDaysModuleEfforts, fixedDaysModuleNames, fixedDaysModulePhases } from "./fixed-days-module-data.js";
+
 const scopeDefinitions = [
   ["Farklı Şirket Yapısı", "Benzer işi-süreci olan şirketler göz önüne alındığında kaç farklı yapıda şirket bulunmaktadır.", "Sayı", 5],
   ["Satış Kanalları", "Web, Pazaryeri, Mağaza vb. gibi farklı satış kanalları.", "Sayı", 5],
@@ -390,6 +392,65 @@ export function applyRequestedModuleFixedDays(matrix) {
     });
   }
   return rows;
+}
+
+export function replaceGreenfieldFixedDayModules(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  const industries = [...new Set(rows.slice(1).map(row => String(row[at.Endüstri] || "").trim()).filter(Boolean))];
+  const systems = ["SAP S/4HANA Private Cloud", "SAP ECC", "SAP S/4HANA On-Premise"];
+  const greenfield = "Greenfield";
+  const glasswing = "GLASSWING";
+  const sourceGlasswing = new Map();
+  for (const row of rows.slice(1)) {
+    if (row[at["Implementation Type"]] !== greenfield || row[at["System Type"]] !== systems[0]
+      || String(row[at.Modül] || "").trim().toUpperCase() !== glasswing) continue;
+    sourceGlasswing.set(`${row[at.Endüstri]}|${row[at.Size]}`, structuredClone(row));
+  }
+  for (const industry of industries) {
+    for (const size of ["SMALL", "MEDIUM", "LARGE", "X-LARGE"]) {
+      if (!sourceGlasswing.has(`${industry}|${size}`)) throw new Error(`Missing Private Cloud GLASSWING row: ${industry}/${size}`);
+    }
+  }
+
+  const targets = new Set(fixedDaysModuleNames.map(name => name.toUpperCase()));
+  targets.add(glasswing);
+  const kept = rows.slice(1).filter(row => {
+    const module = String(row[at.Modül] || "").trim().toUpperCase();
+    if (row[at["Implementation Type"]] !== greenfield || !targets.has(module)) return true;
+    const system = String(row[at["System Type"]] || "").trim();
+    if (module === glasswing) return system === systems[0];
+    return !systems.includes(system);
+  });
+
+  const additions = [];
+  const addEffortRow = (industry, size, module, system, values) => {
+    const row = Array(rows[0].length).fill("");
+    row[at.Endüstri] = industry;
+    row[at.Size] = size;
+    row[at["Implementation Type"]] = greenfield;
+    row[at["System Type"]] = system;
+    row[at.Modül] = module;
+    fixedDaysModulePhases.forEach((phase, index) => {
+      if (at[phase] != null) row[at[phase]] = values[index];
+    });
+    additions.push(row);
+  };
+
+  for (const [module, size, ...values] of fixedDaysModuleEfforts) {
+    for (const industry of industries) {
+      for (const system of systems) addEffortRow(industry, size, module, system, values);
+    }
+  }
+  for (const industry of industries) {
+    for (const size of ["SMALL", "MEDIUM", "LARGE", "X-LARGE"]) {
+      const source = sourceGlasswing.get(`${industry}|${size}`);
+      const values = fixedDaysModulePhases.map(phase => source[at[phase]] ?? 0);
+      for (const system of systems.slice(1)) addEffortRow(industry, size, glasswing, system, values);
+    }
+  }
+  return [rows[0], ...kept, ...additions];
 }
 
 export function applyFixedDaysDocumentMaintenance(matrix) {
