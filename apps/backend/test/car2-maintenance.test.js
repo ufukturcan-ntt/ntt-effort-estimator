@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -109,6 +109,23 @@ for (const row of maintainedBasisRows) {
   }
 }
 assert.deepEqual(applySmallPrivateCloudBasisZeroEfforts(basisZeroRows), basisZeroRows, "BASIS zero maintenance must be idempotent");
+
+const pmoTarget = Array(basisZeroRows[0].length).fill("");
+pmoTarget[basisAt.Endüstri] = "FMCG";
+pmoTarget[basisAt.Size] = "MEDIUM";
+pmoTarget[basisAt["Implementation Type"]] = "Greenfield";
+pmoTarget[basisAt["System Type"]] = "SAP S/4HANA Private Cloud";
+pmoTarget[basisAt.Modül] = "PMO";
+const pmoPreserved = [...pmoTarget];
+pmoPreserved[basisAt.Endüstri] = "Konfeksiyon";
+const pmoCleanedRows = removeObsoleteMediumPrivateCloudPmoFixedDays([...basisZeroRows, pmoTarget, pmoPreserved]);
+assert.equal(pmoCleanedRows.slice(1).some(row => row[basisAt.Endüstri] === "FMCG"
+  && row[basisAt.Size] === "MEDIUM" && row[basisAt["Implementation Type"]] === "Greenfield"
+  && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud" && row[basisAt.Modül] === "PMO"), false);
+assert.equal(pmoCleanedRows.slice(1).some(row => row[basisAt.Endüstri] === "Konfeksiyon"
+  && row[basisAt.Size] === "MEDIUM" && row[basisAt["Implementation Type"]] === "Greenfield"
+  && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud" && row[basisAt.Modül] === "PMO"), true);
+assert.deepEqual(removeObsoleteMediumPrivateCloudPmoFixedDays(pmoCleanedRows), pmoCleanedRows, "PMO cleanup must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

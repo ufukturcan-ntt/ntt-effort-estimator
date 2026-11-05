@@ -398,6 +398,26 @@ export function applySmallPrivateCloudBasisZeroEfforts(matrix) {
   return rows;
 }
 
+const obsoleteMediumPmoIndustries = new Set([
+  "Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Metal", "Otomotiv", "Perakende"
+]);
+
+export function removeObsoleteMediumPrivateCloudPmoFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => !(
+      obsoleteMediumPmoIndustries.has(String(row[at.Endüstri] || "").trim())
+      && String(row[at.Size] || "").trim() === "MEDIUM"
+      && String(row[at["Implementation Type"]] || "").trim() === "Greenfield"
+      && String(row[at["System Type"]] || "").trim() === "SAP S/4HANA Private Cloud"
+      && String(row[at.Modül] || "").trim() === "PMO"
+    ))
+  ];
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");
