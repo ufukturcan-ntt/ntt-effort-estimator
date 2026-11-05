@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import vm from "node:vm";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, developmentDefinitions, effortDefinitions, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, scopeDefinitions } from "../src/car2-maintenance.js";
 
 const context = { window: {} };
 vm.runInNewContext(await fs.readFile(new URL("../../frontend/public/assets/questions.js", import.meta.url), "utf8"), context);
@@ -126,6 +126,11 @@ assert.equal(pmoCleanedRows.slice(1).some(row => row[basisAt.Endüstri] === "Kon
   && row[basisAt.Size] === "MEDIUM" && row[basisAt["Implementation Type"]] === "Greenfield"
   && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud" && row[basisAt.Modül] === "PMO"), false);
 assert.deepEqual(removeObsoleteMediumPrivateCloudPmoFixedDays(pmoCleanedRows), pmoCleanedRows, "PMO cleanup must be idempotent");
+
+const withoutPmoAndAbap = removeAllPmoAndAbapFixedDays(basisZeroRows);
+assert.equal(withoutPmoAndAbap.slice(1).some(row => ["PMO", "ABAP"].includes(String(row[basisAt.Modül] || "").trim())), false);
+assert.ok(withoutPmoAndAbap.slice(1).some(row => String(row[basisAt.Modül] || "").trim() === "BASIS"));
+assert.deepEqual(removeAllPmoAndAbapFixedDays(withoutPmoAndAbap), withoutPmoAndAbap, "PMO and ABAP cleanup must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
 const vmpAt = Object.fromEntries(vmpHeaders.map((header, index) => [header, index]));

@@ -418,6 +418,16 @@ export function removeObsoleteMediumPrivateCloudPmoFixedDays(matrix) {
   ];
 }
 
+export function removeAllPmoAndAbapFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => !new Set(["PMO", "ABAP"]).has(String(row[at.Modül] || "").trim()))
+  ];
+}
+
 export function applyCar2Maintenance(config) {
   const next = structuredClone(config);
   next.scopeQuestions = upsertQuestions(next.scopeQuestions, scopeDefinitions, "scope", "Kapsam");
