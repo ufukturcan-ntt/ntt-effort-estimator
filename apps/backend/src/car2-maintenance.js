@@ -399,7 +399,7 @@ export function applySmallPrivateCloudBasisZeroEfforts(matrix) {
 }
 
 const obsoleteMediumPmoIndustries = new Set([
-  "Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Metal", "Otomotiv", "Perakende"
+  "Demir & Çelik", "FMCG", "Hizmet", "İlaç", "Kimya", "Konfeksiyon", "Metal", "Otomotiv", "Perakende"
 ]);
 
 export function removeObsoleteMediumPrivateCloudPmoFixedDays(matrix) {

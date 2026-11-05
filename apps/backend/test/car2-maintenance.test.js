@@ -124,7 +124,7 @@ assert.equal(pmoCleanedRows.slice(1).some(row => row[basisAt.Endüstri] === "FMC
   && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud" && row[basisAt.Modül] === "PMO"), false);
 assert.equal(pmoCleanedRows.slice(1).some(row => row[basisAt.Endüstri] === "Konfeksiyon"
   && row[basisAt.Size] === "MEDIUM" && row[basisAt["Implementation Type"]] === "Greenfield"
-  && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud" && row[basisAt.Modül] === "PMO"), true);
+  && row[basisAt["System Type"]] === "SAP S/4HANA Private Cloud" && row[basisAt.Modül] === "PMO"), false);
 assert.deepEqual(removeObsoleteMediumPrivateCloudPmoFixedDays(pmoCleanedRows), pmoCleanedRows, "PMO cleanup must be idempotent");
 
 const vmpHeaders = result.variableModulePhase.find(row => row.includes("Kaynak Tipi"));
