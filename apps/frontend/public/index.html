@@ -3930,11 +3930,11 @@
     const bundledScopeQuestions = (window.scopeQuestions || []).map(item => ({ ...item }));
     const bundledDevelopmentQuestions = (window.developmentQuestions || []).map(item => ({ ...item }));
 
-    const fixedEffortModules = ["PMO", "Governance", "BASIS", "ABAP", "MES Development"];
+    const fixedEffortModules = ["PMO", "Governance", "QA", "BASIS", "ABAP", "MES Development"];
     const fixedEffortState = new Map(fixedEffortModules.map(module => [module, ""]));
     let abapFixedEffortIncluded = false;
-    const fixedOnlyModules = new Set(["PMO", "Governance", "BASIS", "MES Development"]);
-    const developmentExcludedModules = new Set(["PMO", "Governance", "BASIS", "MES Development"]);
+    const fixedOnlyModules = new Set(["PMO", "Governance", "QA", "BASIS", "MES Development"]);
+    const developmentExcludedModules = new Set(["PMO", "Governance", "QA", "BASIS", "MES Development"]);
     const mesBasisMultiplierSystemTypes = [
       "SAP DM",
       "Siemens OPCenter - Dicrete",
@@ -4057,7 +4057,7 @@
       const [weeks="", daysPerWeek="", shifts="", locations="", goliveDays=""] = hypercareDefaults[item.module] || ["","","","",""];
       return [item.module, { weeks, daysPerWeek, shifts, locations, goliveDays }];
     }));
-    const hypercareExcludedModules = new Set(["PMO", "Governance", "BASIS", "MES Development"]);
+    const hypercareExcludedModules = new Set(["PMO", "Governance", "QA", "BASIS", "MES Development"]);
     function hypercareModuleNames() {
       return selectedModuleNames().filter(name => !hypercareExcludedModules.has(name));
     }
@@ -4242,7 +4242,7 @@
         scopeInfo: "Size skoru ve kapsam soruları",
         developmentInfo: "Ek geliştirme ve entegrasyonlar",
         libraryInfo: "Teklif kütüphanesi ve referans içerikler",
-        fixedEffortInfo: "PMO, Governance, BASIS, ABAP ve MES Development sabit eforları",
+        fixedEffortInfo: "PMO, Governance, QA, BASIS, ABAP ve MES Development sabit eforları",
         moduleInfo: "SAP modül seçimi",
         localizationInfo: "Ülke bazlı lokalizasyon",
         hypercareInfo: "Go-live sonrası destek parametreleri",
@@ -4456,7 +4456,7 @@
         scopeInfo: "Size score and scope questions",
         developmentInfo: "Additional developments and integrations",
         libraryInfo: "Offer library and reference content",
-        fixedEffortInfo: "Fixed PMO, Governance, BASIS, ABAP and MES Development efforts",
+        fixedEffortInfo: "Fixed PMO, Governance, QA, BASIS, ABAP and MES Development efforts",
         moduleInfo: "SAP module selection",
         localizationInfo: "Country-based localization",
         hypercareInfo: "Post go-live support parameters",

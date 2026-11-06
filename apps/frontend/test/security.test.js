@@ -134,6 +134,13 @@ test("fixed effort is included in the Realise upper group", () => {
   assert.match(html, /projectGroupTotals = \{ \.\.\.projectTotals, "Sabit Efor": fixedEffortPrintTotal/);
 });
 
+test("QA is a manually entered fixed-only effort like PMO and Governance", () => {
+  assert.match(html, /const fixedEffortModules = \["PMO", "Governance", "QA", "BASIS", "ABAP", "MES Development"\]/);
+  assert.match(html, /const fixedOnlyModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
+  assert.match(html, /const developmentExcludedModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
+  assert.match(html, /const hypercareExcludedModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
+});
+
 test("fixed days rows show their read-only selection context", () => {
   assert.match(html, /<th>\$\{t\("industry"\)\}<\/th><th>Size<\/th><th>\$\{t\("implementationType"\)\}<\/th><th>\$\{t\("systemType"\)\}<\/th><th>\$\{t\("module"\)\}<\/th>/);
   assert.match(html, /class="fixed-days-context">\$\{escapeHtml\(row\[indexes\.industry\] \|\| "All"\)\}<\/td>/);
