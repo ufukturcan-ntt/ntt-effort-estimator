@@ -147,6 +147,12 @@ test("fixed days rows show their read-only selection context", () => {
   assert.match(html, /class="fixed-days-context">\$\{escapeHtml\(row\[indexes\.system\] \|\| "All"\)\}<\/td>/);
 });
 
+test("fixed days copy supports stored legacy implementations and only warns before overwriting", () => {
+  assert.match(html, /storedImplementations = uniqueOptionValues\(rows\.slice\(1\)/);
+  assert.match(html, /uniqueOptionValues\(\[\.\.\.adminDefinitionValues\(1\), \.\.\.storedImplementations\]\)/);
+  assert.match(html, /if \(targetRows\.length && !confirm\("Hedef seçimdeki mevcut Fixed Days kayıtları silinip kaynak kayıtlar kopyalanacak\. Devam edilsin mi\?"\)\) return/);
+});
+
 test("Fixed Days can be exported by implementation type with matching phase headers", () => {
   assert.match(html, /id="exportFixedDaysExcelButton"/);
   assert.match(html, /async function exportFixedDaysWorkbook\(\)/);

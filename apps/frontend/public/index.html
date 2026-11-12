@@ -3211,10 +3211,15 @@
     }
 
     function fixedDaysSelectOptions() {
+      const rows = normalizeFixedDaysRows(window.adminSeedData?.fixedDays || []);
+      const implementationIndex = (rows[0] || []).indexOf("Implementation Type");
+      const storedImplementations = uniqueOptionValues(rows.slice(1)
+        .map(row => row[implementationIndex])
+        .filter(value => value && value !== "All"));
       return {
         industries: ["All", ...adminDefinitionValues(0)],
         sizes: ["SMALL", "MEDIUM", "LARGE", "X-LARGE"],
-        implementations: ["All", ...adminDefinitionValues(1)],
+        implementations: ["All", ...uniqueOptionValues([...adminDefinitionValues(1), ...storedImplementations])],
         systems: ["All", ...adminDefinitionValues(2)]
       };
     }
@@ -3283,7 +3288,8 @@
         alert("Kaynak seçim için kopyalanacak kayıt bulunamadı.");
         return;
       }
-      if (!confirm("Hedef seçimdeki mevcut Fixed Days kayıtları silinip kaynak kayıtlar kopyalanacak. Devam edilsin mi?")) return;
+      const targetRows = normalized.slice(1).filter(row => fixedDaysSelectionMatches(row, headers, target));
+      if (targetRows.length && !confirm("Hedef seçimdeki mevcut Fixed Days kayıtları silinip kaynak kayıtlar kopyalanacak. Devam edilsin mi?")) return;
       const sizeIndex = headers.indexOf("Size");
       const industryIndex = headers.indexOf("Endüstri");
       const implementationIndex = headers.indexOf("Implementation Type");
