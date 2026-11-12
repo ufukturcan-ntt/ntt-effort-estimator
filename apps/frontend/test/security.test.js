@@ -151,6 +151,8 @@ test("fixed days copy supports stored legacy implementations and only warns befo
   assert.match(html, /storedImplementations = uniqueOptionValues\(rows\.slice\(1\)/);
   assert.match(html, /uniqueOptionValues\(\[\.\.\.adminDefinitionValues\(1\), \.\.\.storedImplementations\]\)/);
   assert.match(html, /if \(targetRows\.length && !confirm\("Hedef seçimdeki mevcut Fixed Days kayıtları silinip kaynak kayıtlar kopyalanacak\. Devam edilsin mi\?"\)\) return/);
+  assert.match(html, /copyButton\.title = `\$\{copied\.length\} Fixed Days kaydı hedef seçime kopyalandı\.`/);
+  assert.doesNotMatch(html, /alert\(`\$\{copied\.length\} Fixed Days kaydı hedef seçime kopyalandı\.`\)/);
 });
 
 test("Fixed Days can be exported by implementation type with matching phase headers", () => {

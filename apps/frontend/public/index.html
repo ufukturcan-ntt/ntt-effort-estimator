@@ -3309,7 +3309,8 @@
         renderFixedDaysEditor();
       }
       markAdminDirty();
-      alert(`${copied.length} Fixed Days kaydı hedef seçime kopyalandı.`);
+      const copyButton = document.getElementById("copyFixedDaysButton");
+      if (copyButton) copyButton.title = `${copied.length} Fixed Days kaydı hedef seçime kopyalandı.`;
     }
 
     function fixedDaysRowTotal(row, headers) {
