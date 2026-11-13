@@ -9,6 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
+import { keepGreenfieldNttDataPosOnlyForRetail } from "../src/car2-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
@@ -44,6 +45,24 @@ test("VMP implementation selections are expanded without losing effort values", 
     ["Brownfield Conversion", "Değişken", "FI", 4.5, 7],
     ["Data Migration", "Değişken", "FI", 4.5, 7],
     ["All", "Modül", "CO", 2, 3]
+  ]);
+});
+
+test("Greenfield NTT Data POS fixed days remain only for retail", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz"];
+  const matrix = [
+    headers,
+    ["Perakende", "SMALL", "Greenfield", "NTT POS on S4", "NTT Data POS", 10],
+    ["Otomotiv", "SMALL", "Greenfield", "NTT POS on S4", "NTT Data POS", 20],
+    ["Ambalaj", "LARGE", "Greenfield", "SAP ECC", "NTT Data POS", 30],
+    ["Otomotiv", "SMALL", "Rollout", "NTT POS on S4", "NTT Data POS", 40],
+    ["Otomotiv", "SMALL", "Greenfield", "NTT POS on S4", "FI", 50]
+  ];
+  assert.deepEqual(keepGreenfieldNttDataPosOnlyForRetail(matrix), [
+    headers,
+    matrix[1],
+    matrix[4],
+    matrix[5]
   ]);
 });
 

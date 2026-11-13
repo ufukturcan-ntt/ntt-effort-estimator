@@ -553,6 +553,20 @@ export function removeAllPmoAndAbapFixedDays(matrix) {
   ];
 }
 
+export function keepGreenfieldNttDataPosOnlyForRetail(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => !(
+      String(row[at["Implementation Type"]] || "").trim() === "Greenfield"
+      && String(row[at.Modül] || "").trim() === "NTT Data POS"
+      && String(row[at.Endüstri] || "").trim() !== "Perakende"
+    ))
+  ];
+}
+
 export function removeZeroEffortBasisFixedDays(matrix) {
   const rows = structuredClone(matrix || []);
   if (!rows.length) return rows;
