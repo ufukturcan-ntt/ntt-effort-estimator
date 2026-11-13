@@ -128,6 +128,22 @@ test("Fixed Days source rows are upserted by their complete business key", () =>
   assert.deepEqual(upsertFixedDaysFromMatrix(updated, source), updated);
 });
 
+test("Fixed Days upsert adds source effort headers missing from the live matrix", () => {
+  const matrix = [
+    ["Endüstri", "Size", "Analiz", "Implementation Type", "System Type", "Modül"],
+    ["Perakende", "SMALL", 2, "Greenfield", "SAP S/4HANA Private Cloud", "FI"]
+  ];
+  const source = [
+    ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz", "Geliştirme", "Toplam"],
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 9, 10, 19]
+  ];
+  assert.deepEqual(upsertFixedDaysFromMatrix(matrix, source), [
+    ["Endüstri", "Size", "Analiz", "Geliştirme", "Implementation Type", "System Type", "Modül"],
+    ["Perakende", "SMALL", 2, "", "Greenfield", "SAP S/4HANA Private Cloud", "FI"],
+    ["Ambalaj", "SMALL", 9, 10, "Greenfield", "SAP S/4HANA Private Cloud", "FI"]
+  ]);
+});
+
 test("packaging Greenfield source has unique complete keys and recalculated totals", () => {
   const headers = packagingGreenfieldEfforts[0];
   const rows = packagingGreenfieldEfforts.slice(1);

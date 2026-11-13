@@ -2109,7 +2109,7 @@ async function upsertLivePackagingGreenfieldEfforts() {
     await client.query("begin");
     const marker = await client.query(
       `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
-      ["upsert-packaging-greenfield-efforts-from-2026-11-13-v1"]
+      ["upsert-packaging-greenfield-efforts-from-2026-11-13-v2"]
     );
     if (!marker.rowCount) {
       await client.query("commit");
@@ -2121,7 +2121,7 @@ async function upsertLivePackagingGreenfieldEfforts() {
     await client.query(
       `insert into admin_config_backup (created_by, reason, payload)
        select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
-      ["upsert_packaging_greenfield_efforts_from_2026_11_13_v1"]
+      ["upsert_packaging_greenfield_efforts_from_2026_11_13_v2"]
     );
     await client.query(
       `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'fixedDays'`,

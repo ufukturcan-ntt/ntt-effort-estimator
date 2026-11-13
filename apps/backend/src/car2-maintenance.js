@@ -612,11 +612,23 @@ export function upsertFixedDaysFromMatrix(matrix, sourceMatrix) {
   const rows = structuredClone(matrix || []);
   const source = structuredClone(sourceMatrix || []);
   if (!rows.length || !source.length) return rows;
-  const headers = rows[0];
+  const originalHeaders = rows[0];
   const sourceHeaders = source[0];
+  const keyHeaders = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül"];
+  const missingEffortHeaders = sourceHeaders.filter(header =>
+    header !== "Toplam"
+    && !keyHeaders.includes(header)
+    && !originalHeaders.includes(header)
+  );
+  const headers = [...originalHeaders];
+  const implementationIndex = headers.indexOf("Implementation Type");
+  headers.splice(implementationIndex >= 0 ? implementationIndex : headers.length, 0, ...missingEffortHeaders);
+  const mappedRows = rows.slice(1).map(row => headers.map(header => {
+    const originalIndex = originalHeaders.indexOf(header);
+    return originalIndex < 0 ? "" : row[originalIndex];
+  }));
   const at = indexes(headers);
   const sourceAt = indexes(sourceHeaders);
-  const keyHeaders = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül"];
   if (keyHeaders.some(header => at[header] == null || sourceAt[header] == null)) {
     throw new Error("Fixed Days source key headers are missing");
   }
@@ -630,7 +642,7 @@ export function upsertFixedDaysFromMatrix(matrix, sourceMatrix) {
   }));
   return [
     headers,
-    ...rows.slice(1).filter(row => !sourceKeys.has(key(row, at))),
+    ...mappedRows.filter(row => !sourceKeys.has(key(row, at))),
     ...mappedSourceRows
   ];
 }
