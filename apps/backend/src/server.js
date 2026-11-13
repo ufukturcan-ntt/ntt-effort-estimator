@@ -12,7 +12,8 @@ import { applyPosGreenfieldEffortMaintenance } from "./pos-effort-maintenance.js
 import { applyConversionScopeImpactCorrections } from "./conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "./pos-module-migration.js";
 import { applyCarMaintenance } from "./car-maintenance.js";
-import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRequestedModuleFixedDays, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays, removeZeroEffortBasisFixedDays, replaceGreenfieldFixedDayModules } from "./car2-maintenance.js";
+import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRequestedModuleFixedDays, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays, removeZeroEffortBasisFixedDays, replaceGreenfieldFixedDayModules, upsertFixedDaysFromMatrix } from "./car2-maintenance.js";
+import { packagingGreenfieldEfforts } from "./packaging-greenfield-efforts.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
 import { correctFvbAbapCustomizingEffort, mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion, splitVmpImplementationRows } from "./vmp-maintenance.js";
@@ -2102,6 +2103,39 @@ async function removeLiveNonRetailGreenfieldFixedDays() {
   }
 }
 
+async function upsertLivePackagingGreenfieldEfforts() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["upsert-packaging-greenfield-efforts-from-2026-11-13-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'fixedDays' for update`);
+    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Fixed Days data is missing");
+    const payload = upsertFixedDaysFromMatrix(result.rows[0].payload, packagingGreenfieldEfforts);
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
+      ["upsert_packaging_greenfield_efforts_from_2026_11_13_v1"]
+    );
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'fixedDays'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function restoreAndApplyGreenfieldRequestedModuleFixedDays() {
   const client = await pool.connect();
   try {
@@ -2525,6 +2559,7 @@ async function ensureDatabase() {
   await removeLiveRetiredSystemTypeFixedDays();
   await removeLivePackagingIndustryFixedDays();
   await removeLiveNonRetailGreenfieldFixedDays();
+  await upsertLivePackagingGreenfieldEfforts();
 }
 
 async function ensureBootstrapAdmin() {

@@ -9,7 +9,8 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays } from "../src/car2-maintenance.js";
+import { keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
+import { packagingGreenfieldEfforts } from "../src/packaging-greenfield-efforts.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
@@ -108,6 +109,41 @@ test("Greenfield fixed days remain only for retail without changing other implem
   const cleaned = keepGreenfieldFixedDaysOnlyForRetail(matrix);
   assert.deepEqual(cleaned, [headers, matrix[1], matrix[4], matrix[5]]);
   assert.deepEqual(keepGreenfieldFixedDaysOnlyForRetail(cleaned), cleaned);
+});
+
+test("Fixed Days source rows are upserted by their complete business key", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz", "Toplam"];
+  const matrix = [
+    headers,
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 1, 1],
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 2, 2]
+  ];
+  const source = [
+    headers,
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 9, 9],
+    ["Ambalaj", "MEDIUM", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 12, 12]
+  ];
+  const updated = upsertFixedDaysFromMatrix(matrix, source);
+  assert.deepEqual(updated, [headers, matrix[2], source[1], source[2]]);
+  assert.deepEqual(upsertFixedDaysFromMatrix(updated, source), updated);
+});
+
+test("packaging Greenfield source has unique complete keys and recalculated totals", () => {
+  const headers = packagingGreenfieldEfforts[0];
+  const rows = packagingGreenfieldEfforts.slice(1);
+  const at = Object.fromEntries(headers.map((header, index) => [header, index]));
+  const keys = rows.map(row => ["Endüstri", "Size", "Implementation Type", "System Type", "Modül"]
+    .map(header => row[at[header]]).join("::"));
+  const effortIndexes = headers.map((header, index) => ({ header, index }))
+    .filter(item => !["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Toplam"].includes(item.header))
+    .map(item => item.index);
+  assert.equal(rows.length, 120);
+  assert.equal(new Set(keys).size, rows.length);
+  assert.equal(new Set(rows.map(row => row[at.Modül])).size, 30);
+  assert.equal(rows.every(row => row[at.Endüstri] === "Ambalaj"), true);
+  assert.equal(rows.every(row => row[at["Implementation Type"]] === "Greenfield"), true);
+  assert.equal(rows.every(row => row[at["System Type"]] === "SAP S/4HANA Private Cloud"), true);
+  assert.equal(rows.every(row => effortIndexes.reduce((sum, index) => sum + Number(row[index] || 0), 0) === Number(row[at.Toplam])), true);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {

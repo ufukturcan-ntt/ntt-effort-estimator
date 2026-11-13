@@ -608,6 +608,33 @@ export function keepGreenfieldFixedDaysOnlyForRetail(matrix) {
   ];
 }
 
+export function upsertFixedDaysFromMatrix(matrix, sourceMatrix) {
+  const rows = structuredClone(matrix || []);
+  const source = structuredClone(sourceMatrix || []);
+  if (!rows.length || !source.length) return rows;
+  const headers = rows[0];
+  const sourceHeaders = source[0];
+  const at = indexes(headers);
+  const sourceAt = indexes(sourceHeaders);
+  const keyHeaders = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül"];
+  if (keyHeaders.some(header => at[header] == null || sourceAt[header] == null)) {
+    throw new Error("Fixed Days source key headers are missing");
+  }
+  const key = (row, positions) => keyHeaders
+    .map(header => String(row[positions[header]] || "").trim())
+    .join("::");
+  const sourceKeys = new Set(source.slice(1).map(row => key(row, sourceAt)));
+  const mappedSourceRows = source.slice(1).map(row => headers.map(header => {
+    const sourceIndex = sourceAt[header];
+    return sourceIndex == null ? "" : row[sourceIndex];
+  }));
+  return [
+    headers,
+    ...rows.slice(1).filter(row => !sourceKeys.has(key(row, at))),
+    ...mappedSourceRows
+  ];
+}
+
 export function removeZeroEffortBasisFixedDays(matrix) {
   const rows = structuredClone(matrix || []);
   if (!rows.length) return rows;
