@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { keepGreenfieldNttDataPosOnlyForRetail, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays } from "../src/car2-maintenance.js";
+import { keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays } from "../src/car2-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
@@ -93,6 +93,21 @@ test("packaging industry fixed days are removed without changing other industrie
   const cleaned = removePackagingIndustryFixedDays(matrix);
   assert.deepEqual(cleaned, [headers, matrix[3], matrix[4]]);
   assert.deepEqual(removePackagingIndustryFixedDays(cleaned), cleaned);
+});
+
+test("Greenfield fixed days remain only for retail without changing other implementations", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz"];
+  const matrix = [
+    headers,
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 10],
+    ["Otomotiv", "MEDIUM", "Greenfield", "SAP CAR", "CO", 20],
+    ["Konfeksiyon", "LARGE", "Greenfield", "SAP DM", "PP", 30],
+    ["Otomotiv", "X-LARGE", "Rollout", "SAP CAR", "SD", 40],
+    ["Konfeksiyon", "SMALL", "Conversion", "SAP S/4HANA Private Cloud", "MM", 50]
+  ];
+  const cleaned = keepGreenfieldFixedDaysOnlyForRetail(matrix);
+  assert.deepEqual(cleaned, [headers, matrix[1], matrix[4], matrix[5]]);
+  assert.deepEqual(keepGreenfieldFixedDaysOnlyForRetail(cleaned), cleaned);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {
