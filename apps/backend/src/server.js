@@ -15,7 +15,7 @@ import { applyCarMaintenance } from "./car-maintenance.js";
 import { applyCar2Maintenance, applyFixedDaysDocumentMaintenance, applyRequestedModuleFixedDays, applyRetailPrivateCloudFixedDays, applySmallPrivateCloudBasisZeroEfforts, removeAllPmoAndAbapFixedDays, removeObsoleteForeignTradeFixedDays, removeObsoleteLargeGreenfieldCarFixedDays, removeObsoleteMediumPrivateCloudPmoFixedDays, removeZeroEffortBasisFixedDays, replaceGreenfieldFixedDayModules } from "./car2-maintenance.js";
 import { upsertAllDevelopmentRestrictions } from "./development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "./question-identity-repair.js";
-import { correctFvbAbapCustomizingEffort, mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion } from "./vmp-maintenance.js";
+import { correctFvbAbapCustomizingEffort, mergeFvbVmpRows, removeObsoleteTeamSplitScopeQuestion, splitVmpImplementationRows } from "./vmp-maintenance.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -799,6 +799,9 @@ app.put("/api/admin/config", requireAuth, requireAdmin, async (req, res, next) =
     }
     config.restrictions = normalizeRestrictionStorage(config.restrictions);
   }
+  if (config.variableModulePhase) {
+    config.variableModulePhase = splitVmpImplementationRows(config.variableModulePhase);
+  }
   const client = await pool.connect();
   try {
     await client.query("begin");
@@ -929,7 +932,7 @@ app.put("/api/admin/:entity", requireAuth, requireAdmin, async (req, res, next) 
     if (["scopeQuestions", "developmentQuestions"].includes(req.params.entity)) {
       return res.status(409).json({ error: "Soruları ve bağlı kayıtlarını /api/admin/config üzerinden birlikte kaydedin." });
     }
-    const payload = req.body || {};
+    let payload = req.body || {};
     const expectedUpdatedAt = clientVersion(req, payload);
     if (expectedUpdatedAt) {
       const current = await query(`select updated_at from admin_config where entity = $1`, [req.params.entity]);
@@ -944,6 +947,9 @@ app.put("/api/admin/:entity", requireAuth, requireAdmin, async (req, res, next) 
       }
       payload.userApproverEmail = String(payload.userApproverEmail || "").trim();
       payload.offerApproverEmail = String(payload.offerApproverEmail || "").trim();
+    }
+    if (req.params.entity === "variableModulePhase") {
+      payload = splitVmpImplementationRows(payload);
     }
     const result = await query(
       `insert into admin_config (entity, payload)
@@ -2103,6 +2109,39 @@ async function correctLiveFvbAbapEffort() {
   }
 }
 
+async function splitLiveVmpImplementationRows() {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const marker = await client.query(
+      `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
+      ["split-vmp-implementation-types-v1"]
+    );
+    if (!marker.rowCount) {
+      await client.query("commit");
+      return;
+    }
+    const result = await client.query(`select payload from admin_config where entity = 'variableModulePhase' for update`);
+    if (!result.rowCount || !Array.isArray(result.rows[0].payload)) throw new Error("Variable + Module + Phase data is missing");
+    await client.query(
+      `insert into admin_config_backup (created_by, reason, payload)
+       select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
+      ["split-vmp-implementation-types-v1"]
+    );
+    const payload = splitVmpImplementationRows(result.rows[0].payload);
+    await client.query(
+      `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'variableModulePhase'`,
+      [JSON.stringify(payload)]
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function removeLiveObsoleteTeamSplitQuestion() {
   const entities = ["scopeQuestions", "restrictions", "scopeSizeImpacts", "variableModulePhase"];
   const client = await pool.connect();
@@ -2346,6 +2385,7 @@ async function ensureDatabase() {
   await restoreAndApplyGreenfieldRequestedModuleFixedDays();
   await mergeLiveFvbVmpRows();
   await correctLiveFvbAbapEffort();
+  await splitLiveVmpImplementationRows();
   await removeLiveObsoleteTeamSplitQuestion();
   await standardizeLiveRestrictionIdentities();
   await replaceLiveGreenfieldFixedDayModules();

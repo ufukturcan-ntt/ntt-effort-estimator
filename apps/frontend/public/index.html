@@ -3015,12 +3015,21 @@
         }
         while (cleanRow.length < cleanHeaders.length) cleanRow.push("");
         if (!cleanRow.some(value => String(value || "").trim())) return;
-        if (!isVmp) {
-          const key = cleanRow.map(value => String(value || "").trim()).join("\u001f");
-          if (seen.has(key)) return;
-          seen.add(key);
-        }
-        cleanedRows.push(cleanRow);
+        const expandedRows = isVmp
+          ? implementationTypeValues(cleanRow[cleanHeaders.indexOf("Implementation Type")]).map(implementationType => {
+              const next = [...cleanRow];
+              next[cleanHeaders.indexOf("Implementation Type")] = implementationType;
+              return next;
+            })
+          : [cleanRow];
+        expandedRows.forEach(expandedRow => {
+          if (!isVmp) {
+            const key = expandedRow.map(value => String(value || "").trim()).join("\u001f");
+            if (seen.has(key)) return;
+            seen.add(key);
+          }
+          cleanedRows.push(expandedRow);
+        });
       });
       cleanedRows.sort((a, b) => [0, 1, 2, 3].reduce((result, index) => {
         if (result) return result;
@@ -3083,6 +3092,10 @@
     function canonicalImplementationList(value = "") {
       const values = String(value || "All").split(",").map(item => canonicalImplementationType(item)).filter(Boolean);
       return [...new Set(values)].join(", ");
+    }
+
+    function implementationTypeValues(value = "") {
+      return canonicalImplementationList(value || "All").split(",").map(item => item.trim()).filter(Boolean);
     }
 
     function normalizeFixedDaysRows(rows = []) {
@@ -6475,8 +6488,11 @@
         if (normalized === "Implementation Type") return { options: ["All", ...adminDefinitionValues(1)], multiple: false };
         if (normalized === "Üst Grup") return { options: effortPhaseGroupOptions, multiple: false };
       }
-      if (["adminLocalizationRows", "adminVmpRows"].includes(bodyId) && normalized === "Implementation Type") {
+      if (bodyId === "adminLocalizationRows" && normalized === "Implementation Type") {
         return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
+      }
+      if (bodyId === "adminVmpRows" && normalized === "Implementation Type") {
+        return { options: ["All", ...adminDefinitionValues(1)], multiple: false };
       }
       if (bodyId === "adminScopeImpactRows" && normalized === "Implementation Type") {
         return { options: ["All", ...adminDefinitionValues(1)], multiple: true };
@@ -6677,6 +6693,7 @@
       const defaultRow = bodyId === "adminRestrictionsRows" ? restrictionDefaultRow(headers) : headers.map(() => "");
       if (bodyId === "adminLibraryRows") defaultRow[headers.indexOf("ID")] = newLibraryId();
       if (bodyId === "adminVmpRows" && headers.some(isDateHeader)) defaultRow[headers.findIndex(isDateHeader)] = todayInputDate();
+      if (bodyId === "adminVmpRows") defaultRow[headers.indexOf("Implementation Type")] = "All";
       if (bodyId === "adminSizeRangeRows") {
         defaultRow[headers.indexOf("Implementation Type")] = "All";
         defaultRow[headers.indexOf("System Type")] = "All";

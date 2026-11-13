@@ -11,6 +11,7 @@ import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-mo
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
+import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -28,6 +29,22 @@ test("offer statuses are constrained", () => {
   assert.equal(validOfferStatus("DRAFT"), true);
   assert.equal(validOfferStatus("APPROVED"), true);
   assert.equal(validOfferStatus("BYPASSED"), false);
+});
+
+test("VMP implementation selections are expanded without losing effort values", () => {
+  const matrix = [
+    ["Implementation Type", "Kaynak Tipi", "Hedef Modül", "Analiz", "Uyarlama"],
+    ["Greenfield, Brownfield, Migration", "Değişken", "FI", 4.5, 7],
+    ["All", "Modül", "CO", 2, 3]
+  ];
+  const expanded = splitVmpImplementationRows(matrix);
+  assert.deepEqual(expanded, [
+    matrix[0],
+    ["Greenfield", "Değişken", "FI", 4.5, 7],
+    ["Brownfield Conversion", "Değişken", "FI", 4.5, 7],
+    ["Data Migration", "Değişken", "FI", 4.5, 7],
+    ["All", "Modül", "CO", 2, 3]
+  ]);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {

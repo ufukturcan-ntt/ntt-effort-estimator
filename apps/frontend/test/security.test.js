@@ -655,6 +655,13 @@ test("VMP rows resolve question labels from persistent ids without orphan variab
   assert.deepEqual(unresolved, []);
 });
 
+test("VMP implementation type uses one selection per row and expands legacy combined values", () => {
+  assert.match(html, /bodyId === "adminVmpRows" && normalized === "Implementation Type"[\s\S]*?multiple: false/);
+  assert.match(html, /function implementationTypeValues\(value = ""\)/);
+  assert.match(html, /implementationTypeValues\(cleanRow\[cleanHeaders\.indexOf\("Implementation Type"\)\]\)/);
+  assert.match(html, /if \(bodyId === "adminVmpRows"\) defaultRow\[headers\.indexOf\("Implementation Type"\)\] = "All"/);
+});
+
 test("restriction seed ids are present and unique", () => {
   const adminDataJs = fs.readFileSync(new URL("../public/assets/admin-data.js", import.meta.url), "utf8");
   const context = { window: {} };

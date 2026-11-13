@@ -3,6 +3,41 @@ const identityHeaders = new Set([
   "Geliştirme Soru ID", "Geliştirme Sorusu", "Modül", "Hedef Modül", "Efor Bazı", "Tarih"
 ]);
 
+const implementationTypeAliases = {
+  Brownfield: "Brownfield Conversion",
+  Migration: "Data Migration",
+  Upgrade: "Release Upgrade"
+};
+
+function implementationTypeValues(value) {
+  const values = String(value || "All").split(",")
+    .map(item => String(item || "").trim())
+    .filter(Boolean)
+    .map(item => implementationTypeAliases[item] || item);
+  return [...new Set(values.length ? values : ["All"])];
+}
+
+export function splitVmpImplementationRows(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const headerIndex = rows.findIndex(row => Array.isArray(row)
+    && row.includes("Implementation Type")
+    && row.includes("Kaynak Tipi"));
+  if (headerIndex < 0) return rows;
+  const implementationIndex = rows[headerIndex].indexOf("Implementation Type");
+  return [
+    ...rows.slice(0, headerIndex + 1),
+    ...rows.slice(headerIndex + 1).flatMap(row => {
+      if (!Array.isArray(row)) return [row];
+      return implementationTypeValues(row[implementationIndex]).map(implementationType => {
+        const next = [...row];
+        next[implementationIndex] = implementationType;
+        return next;
+      });
+    })
+  ];
+}
+
 function numericEffort(value) {
   if (value == null || String(value).trim() === "") return null;
   const number = Number(String(value).trim().replace(",", "."));
