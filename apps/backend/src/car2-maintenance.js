@@ -585,6 +585,16 @@ export function removeRetiredSystemTypeFixedDays(matrix) {
   ];
 }
 
+export function removePackagingIndustryFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => String(row[at.Endüstri] || "").trim() !== "Ambalaj")
+  ];
+}
+
 export function removeZeroEffortBasisFixedDays(matrix) {
   const rows = structuredClone(matrix || []);
   if (!rows.length) return rows;

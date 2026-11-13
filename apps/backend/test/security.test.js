@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { keepGreenfieldNttDataPosOnlyForRetail, removeRetiredSystemTypeFixedDays } from "../src/car2-maintenance.js";
+import { keepGreenfieldNttDataPosOnlyForRetail, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays } from "../src/car2-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
@@ -79,6 +79,20 @@ test("retired system type fixed days are removed without changing other rows", (
   const cleaned = removeRetiredSystemTypeFixedDays(matrix);
   assert.deepEqual(cleaned, [headers, matrix[4], matrix[5]]);
   assert.deepEqual(removeRetiredSystemTypeFixedDays(cleaned), cleaned);
+});
+
+test("packaging industry fixed days are removed without changing other industries", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz"];
+  const matrix = [
+    headers,
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 10],
+    ["Ambalaj", "LARGE", "Rollout", "SAP CAR", "CO", 20],
+    ["Konfeksiyon", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "PP", 30],
+    ["Perakende", "MEDIUM", "Brownfield Conversion", "SAP CAR", "SD", 40]
+  ];
+  const cleaned = removePackagingIndustryFixedDays(matrix);
+  assert.deepEqual(cleaned, [headers, matrix[3], matrix[4]]);
+  assert.deepEqual(removePackagingIndustryFixedDays(cleaned), cleaned);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {
