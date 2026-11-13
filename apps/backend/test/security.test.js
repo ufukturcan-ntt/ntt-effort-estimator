@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { keepGreenfieldNttDataPosOnlyForRetail } from "../src/car2-maintenance.js";
+import { keepGreenfieldNttDataPosOnlyForRetail, removeRetiredSystemTypeFixedDays } from "../src/car2-maintenance.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
@@ -64,6 +64,21 @@ test("Greenfield NTT Data POS fixed days remain only for retail", () => {
     matrix[4],
     matrix[5]
   ]);
+});
+
+test("retired system type fixed days are removed without changing other rows", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz"];
+  const matrix = [
+    headers,
+    ["Perakende", "SMALL", "Greenfield", "SAP ECC", "FI", 10],
+    ["Otomotiv", "MEDIUM", "Greenfield", "SAP S/4HANA On-Premise", "CO", 20],
+    ["Ambalaj", "LARGE", "Greenfield", "SAP S/4HANA Public Cloud", "PP", 30],
+    ["Perakende", "X-LARGE", "Greenfield", "SAP S/4HANA Private Cloud", "SD", 40],
+    ["Otomotiv", "SMALL", "Rollout", "SAP CAR", "CAR", 50]
+  ];
+  const cleaned = removeRetiredSystemTypeFixedDays(matrix);
+  assert.deepEqual(cleaned, [headers, matrix[4], matrix[5]]);
+  assert.deepEqual(removeRetiredSystemTypeFixedDays(cleaned), cleaned);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {

@@ -567,6 +567,24 @@ export function keepGreenfieldNttDataPosOnlyForRetail(matrix) {
   ];
 }
 
+const removedFixedDaySystemTypes = new Set([
+  "SAP ECC",
+  "SAP S/4HANA On-Premise",
+  "SAP S/4HANA Public Cloud"
+]);
+
+export function removeRetiredSystemTypeFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => !removedFixedDaySystemTypes.has(
+      String(row[at["System Type"]] || "").trim()
+    ))
+  ];
+}
+
 export function removeZeroEffortBasisFixedDays(matrix) {
   const rows = structuredClone(matrix || []);
   if (!rows.length) return rows;
