@@ -162,7 +162,7 @@ test("packaging Greenfield and Private Cloud copies preserve the retail Public C
   assert.equal(rows.some(row => row[at.Endüstri] === "Perakende" && row[at["System Type"]] === "SAP S/4HANA Public Cloud"), false);
   assert.equal(rows.some(row => row[at.Endüstri] === "Perakende" && row[at["System Type"]] === "SAP ECC"), true);
   assert.equal(rows.some(row => row[at.Endüstri] === "Ambalaj" && row[at["System Type"]] === "SAP S/4HANA Public Cloud"), true);
-  assert.equal(rows.every(row => row[at.Geliştirme] === "" || row[at.Geliştirme] === 10), true);
+  assert.equal(rows.filter(row => row[at.Modül] === "CO" && row[at.Endüstri] !== "Perakende").every(row => row[at.Geliştirme] === 10), true);
 });
 
 test("packaging Greenfield source has unique complete keys and recalculated totals", () => {

@@ -682,6 +682,34 @@ export function copyPackagingGreenfieldAndPrivateCloudSystems(matrix, packagingS
 
   const headers = updated[0] || [];
   const at = indexes(headers);
+  const copiedIndustries = new Set(["Ambalaj", ...packagingGreenfieldTargetIndustries]);
+  const sourceRowsBySizeAndModule = new Map((packagingSource || []).slice(1).map(row => [
+    `${String(row[sourceAt.Size] || "").trim()}::${String(row[sourceAt.Modül] || "").trim()}`,
+    row
+  ]));
+  const effortHeaders = sourceHeaders.filter(header =>
+    header !== "Toplam"
+    && !["Endüstri", "Size", "Implementation Type", "System Type", "Modül"].includes(header)
+  );
+  updated = [
+    headers,
+    ...updated.slice(1).map(row => {
+      if (
+        String(row[at["Implementation Type"]] || "").trim() !== "Greenfield"
+        || String(row[at["System Type"]] || "").trim() !== "SAP S/4HANA Private Cloud"
+        || !copiedIndustries.has(String(row[at.Endüstri] || "").trim())
+      ) return row;
+      const sourceRow = sourceRowsBySizeAndModule.get(
+        `${String(row[at.Size] || "").trim()}::${String(row[at.Modül] || "").trim()}`
+      );
+      if (!sourceRow) return row;
+      const copy = [...row];
+      effortHeaders.forEach(header => {
+        if (at[header] != null && sourceAt[header] != null) copy[at[header]] = sourceRow[sourceAt[header]];
+      });
+      return copy;
+    })
+  ];
   const privateCloudRows = updated.slice(1).filter(row =>
     String(row[at["System Type"]] || "").trim() === "SAP S/4HANA Private Cloud"
   );

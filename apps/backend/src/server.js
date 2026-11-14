@@ -2142,7 +2142,7 @@ async function copyLivePackagingGreenfieldIndustriesAndPrivateCloudSystems() {
     await client.query("begin");
     const marker = await client.query(
       `insert into app_migration (name) values ($1) on conflict (name) do nothing returning name`,
-      ["copy-packaging-greenfield-industries-and-private-cloud-systems-v1"]
+      ["copy-packaging-greenfield-industries-and-private-cloud-systems-v2"]
     );
     if (!marker.rowCount) {
       await client.query("commit");
@@ -2154,7 +2154,7 @@ async function copyLivePackagingGreenfieldIndustriesAndPrivateCloudSystems() {
     await client.query(
       `insert into admin_config_backup (created_by, reason, payload)
        select null, $1, coalesce(jsonb_object_agg(entity, payload), '{}'::jsonb) from admin_config`,
-      ["copy_packaging_greenfield_industries_and_private_cloud_systems_v1"]
+      ["copy_packaging_greenfield_industries_and_private_cloud_systems_v2"]
     );
     await client.query(
       `update admin_config set payload = $1::jsonb, updated_at = now() where entity = 'fixedDays'`,
