@@ -630,6 +630,29 @@ export function removeRetailProductionFixedDays(matrix) {
   ];
 }
 
+export function replaceRetailTravelExpenseFixedDaysFromPackaging(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const headers = rows[0];
+  const at = indexes(headers);
+  const module = "Seyahat ve Masraf Yönetimi";
+  const sourceRows = rows.slice(1).filter(row =>
+    String(row[at.Endüstri] || "").trim() === "Ambalaj"
+    && String(row[at.Modül] || "").trim() === module
+    && String(row[at["System Type"]] || "").trim() !== "SAP S/4HANA Public Cloud"
+  );
+  const retained = rows.slice(1).filter(row => !(
+    String(row[at.Endüstri] || "").trim() === "Perakende"
+    && String(row[at.Modül] || "").trim() === module
+  ));
+  const copies = sourceRows.map(row => {
+    const copy = [...row];
+    copy[at.Endüstri] = "Perakende";
+    return copy;
+  });
+  return [headers, ...retained, ...copies];
+}
+
 export function upsertFixedDaysFromMatrix(matrix, sourceMatrix) {
   const rows = structuredClone(matrix || []);
   const source = structuredClone(sourceMatrix || []);

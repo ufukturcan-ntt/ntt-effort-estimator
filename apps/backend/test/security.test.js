@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { copyPackagingGreenfieldAndPrivateCloudSystems, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, packagingGreenfieldTargetIndustries, removePackagingIndustryFixedDays, removeRetailProductionFixedDays, removeRetiredSystemTypeFixedDays, retailFixedDayModulesToRemove, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
+import { copyPackagingGreenfieldAndPrivateCloudSystems, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, packagingGreenfieldTargetIndustries, removePackagingIndustryFixedDays, removeRetailProductionFixedDays, removeRetiredSystemTypeFixedDays, replaceRetailTravelExpenseFixedDaysFromPackaging, retailFixedDayModulesToRemove, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
 import { packagingGreenfieldEfforts } from "../src/packaging-greenfield-efforts.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
@@ -195,6 +195,30 @@ test("retail production Fixed Days are removed without changing other rows", () 
   const result = removeRetailProductionFixedDays(matrix);
   assert.deepEqual([...retailFixedDayModulesToRemove], ["PP", "PPDS", "COMMODITY", "MES", "MES - Connect MOM", "MII/DM"]);
   assert.deepEqual(result, [headers, matrix[3], matrix[4]]);
+});
+
+test("retail travel expense Fixed Days are replaced from packaging without Public Cloud", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz"];
+  const module = "Seyahat ve Masraf Yönetimi";
+  const matrix = [
+    headers,
+    ["Perakende", "SMALL", "Rollout", "All", module, 99],
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", module, 88],
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 8],
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", module, 10],
+    ["Ambalaj", "SMALL", "Greenfield", "SAP ECC", module, 11],
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Public Cloud", module, 12]
+  ];
+  const result = replaceRetailTravelExpenseFixedDaysFromPackaging(matrix);
+  assert.deepEqual(result, [
+    headers,
+    matrix[3],
+    matrix[4],
+    matrix[5],
+    matrix[6],
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", module, 10],
+    ["Perakende", "SMALL", "Greenfield", "SAP ECC", module, 11]
+  ]);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {
