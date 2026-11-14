@@ -647,6 +647,60 @@ export function upsertFixedDaysFromMatrix(matrix, sourceMatrix) {
   ];
 }
 
+export const packagingGreenfieldTargetIndustries = [
+  "Konfeksiyon",
+  "Otomotiv",
+  "FMCG",
+  "Kimya",
+  "İlaç",
+  "Demir & Çelik",
+  "Metal",
+  "Hizmet"
+];
+
+export const privateCloudCopyTargetSystems = [
+  "SAP ECC",
+  "SAP S/4HANA On-Premise",
+  "SAP S/4HANA Public Cloud"
+];
+
+export function copyPackagingGreenfieldAndPrivateCloudSystems(matrix, packagingSource) {
+  let updated = upsertFixedDaysFromMatrix(matrix, packagingSource);
+  const sourceHeaders = packagingSource?.[0] || [];
+  const sourceAt = indexes(sourceHeaders);
+  const industryCopies = [
+    sourceHeaders,
+    ...packagingGreenfieldTargetIndustries.flatMap(industry =>
+      (packagingSource || []).slice(1).map(row => {
+        const copy = [...row];
+        copy[sourceAt.Endüstri] = industry;
+        return copy;
+      })
+    )
+  ];
+  updated = upsertFixedDaysFromMatrix(updated, industryCopies);
+
+  const headers = updated[0] || [];
+  const at = indexes(headers);
+  const privateCloudRows = updated.slice(1).filter(row =>
+    String(row[at["System Type"]] || "").trim() === "SAP S/4HANA Private Cloud"
+  );
+  const systemCopies = [
+    headers,
+    ...privateCloudRows.flatMap(row => privateCloudCopyTargetSystems
+      .filter(systemType => !(
+        systemType === "SAP S/4HANA Public Cloud"
+        && String(row[at.Endüstri] || "").trim() === "Perakende"
+      ))
+      .map(systemType => {
+        const copy = [...row];
+        copy[at["System Type"]] = systemType;
+        return copy;
+      }))
+  ];
+  return upsertFixedDaysFromMatrix(updated, systemCopies);
+}
+
 export function removeZeroEffortBasisFixedDays(matrix) {
   const rows = structuredClone(matrix || []);
   if (!rows.length) return rows;

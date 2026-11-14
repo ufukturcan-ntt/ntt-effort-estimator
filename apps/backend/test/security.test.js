@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
+import { copyPackagingGreenfieldAndPrivateCloudSystems, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, packagingGreenfieldTargetIndustries, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
 import { packagingGreenfieldEfforts } from "../src/packaging-greenfield-efforts.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
@@ -142,6 +142,27 @@ test("Fixed Days upsert adds source effort headers missing from the live matrix"
     ["Perakende", "SMALL", 2, "", "Greenfield", "SAP S/4HANA Private Cloud", "FI"],
     ["Ambalaj", "SMALL", 9, 10, "Greenfield", "SAP S/4HANA Private Cloud", "FI"]
   ]);
+});
+
+test("packaging Greenfield and Private Cloud copies preserve the retail Public Cloud exception", () => {
+  const headers = ["Endüstri", "Size", "Analiz", "Implementation Type", "System Type", "Modül"];
+  const matrix = [
+    headers,
+    ["Perakende", "SMALL", 2, "Greenfield", "SAP S/4HANA Private Cloud", "FI"]
+  ];
+  const source = [
+    ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz", "Geliştirme", "Toplam"],
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "CO", 9, 10, 19]
+  ];
+  const copied = copyPackagingGreenfieldAndPrivateCloudSystems(matrix, source);
+  const at = Object.fromEntries(copied[0].map((header, index) => [header, index]));
+  const rows = copied.slice(1);
+  assert.equal(packagingGreenfieldTargetIndustries.length, 8);
+  assert.equal(rows.filter(row => row[at.Modül] === "CO" && row[at["System Type"]] === "SAP S/4HANA Private Cloud").length, 9);
+  assert.equal(rows.some(row => row[at.Endüstri] === "Perakende" && row[at["System Type"]] === "SAP S/4HANA Public Cloud"), false);
+  assert.equal(rows.some(row => row[at.Endüstri] === "Perakende" && row[at["System Type"]] === "SAP ECC"), true);
+  assert.equal(rows.some(row => row[at.Endüstri] === "Ambalaj" && row[at["System Type"]] === "SAP S/4HANA Public Cloud"), true);
+  assert.equal(rows.every(row => row[at.Geliştirme] === "" || row[at.Geliştirme] === 10), true);
 });
 
 test("packaging Greenfield source has unique complete keys and recalculated totals", () => {
