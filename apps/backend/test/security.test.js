@@ -9,7 +9,7 @@ import { applyPosGreenfieldEffortMaintenance, posGreenfieldEffortMaintenance } f
 import { applyConversionScopeImpactCorrections, conversionScopeImpactCorrections } from "../src/conversion-scope-impact-maintenance.js";
 import { normalizePosModuleCatalog, replaceLegacyPosModule } from "../src/pos-module-migration.js";
 import { applyCarMaintenance, carModules, carScopeQuestions } from "../src/car-maintenance.js";
-import { copyPackagingGreenfieldAndPrivateCloudSystems, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, packagingGreenfieldTargetIndustries, removePackagingIndustryFixedDays, removeRetiredSystemTypeFixedDays, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
+import { copyPackagingGreenfieldAndPrivateCloudSystems, keepGreenfieldFixedDaysOnlyForRetail, keepGreenfieldNttDataPosOnlyForRetail, packagingGreenfieldTargetIndustries, removePackagingIndustryFixedDays, removeRetailProductionFixedDays, removeRetiredSystemTypeFixedDays, retailFixedDayModulesToRemove, upsertFixedDaysFromMatrix } from "../src/car2-maintenance.js";
 import { packagingGreenfieldEfforts } from "../src/packaging-greenfield-efforts.js";
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
@@ -181,6 +181,20 @@ test("packaging Greenfield source has unique complete keys and recalculated tota
   assert.equal(rows.every(row => row[at["Implementation Type"]] === "Greenfield"), true);
   assert.equal(rows.every(row => row[at["System Type"]] === "SAP S/4HANA Private Cloud"), true);
   assert.equal(rows.every(row => effortIndexes.reduce((sum, index) => sum + Number(row[index] || 0), 0) === Number(row[at.Toplam])), true);
+});
+
+test("retail production Fixed Days are removed without changing other rows", () => {
+  const headers = ["Endüstri", "Size", "Implementation Type", "System Type", "Modül", "Analiz"];
+  const matrix = [
+    headers,
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "PP", 10],
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "MES - Connect MOM", 5],
+    ["Perakende", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "FI", 8],
+    ["Ambalaj", "SMALL", "Greenfield", "SAP S/4HANA Private Cloud", "PP", 7]
+  ];
+  const result = removeRetailProductionFixedDays(matrix);
+  assert.deepEqual([...retailFixedDayModulesToRemove], ["PP", "PPDS", "COMMODITY", "MES", "MES - Connect MOM", "MII/DM"]);
+  assert.deepEqual(result, [headers, matrix[3], matrix[4]]);
 });
 
 test("schema contains no hard-coded bootstrap password", () => {

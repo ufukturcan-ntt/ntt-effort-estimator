@@ -608,6 +608,28 @@ export function keepGreenfieldFixedDaysOnlyForRetail(matrix) {
   ];
 }
 
+export const retailFixedDayModulesToRemove = new Set([
+  "PP",
+  "PPDS",
+  "COMMODITY",
+  "MES",
+  "MES - Connect MOM",
+  "MII/DM"
+]);
+
+export function removeRetailProductionFixedDays(matrix) {
+  const rows = structuredClone(matrix || []);
+  if (!rows.length) return rows;
+  const at = indexes(rows[0]);
+  return [
+    rows[0],
+    ...rows.slice(1).filter(row => !(
+      String(row[at.Endüstri] || "").trim() === "Perakende"
+      && retailFixedDayModulesToRemove.has(String(row[at.Modül] || "").trim())
+    ))
+  ];
+}
+
 export function upsertFixedDaysFromMatrix(matrix, sourceMatrix) {
   const rows = structuredClone(matrix || []);
   const source = structuredClone(sourceMatrix || []);
