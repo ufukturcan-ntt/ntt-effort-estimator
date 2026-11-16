@@ -1286,7 +1286,7 @@
     }
 
     #allworks table {
-      min-width: 1260px;
+      min-width: 1440px;
     }
 
     #allworks th,
@@ -1295,17 +1295,21 @@
       padding-inline: 10px;
     }
 
-    #allworks th:nth-child(9),
-    #allworks td:nth-child(9) {
+    #allworks tbody td {
+      vertical-align: middle;
+    }
+
+    #allworks th:last-child,
+    #allworks td:last-child {
       min-width: 590px;
     }
 
-    #allworks td:nth-child(9) .quick-actions {
+    #allworks td:last-child .quick-actions {
       flex-wrap: nowrap;
       gap: 6px;
     }
 
-    #allworks td:nth-child(9) .button {
+    #allworks td:last-child .button {
       height: 32px;
       padding-inline: 9px;
       font-size: 12px;

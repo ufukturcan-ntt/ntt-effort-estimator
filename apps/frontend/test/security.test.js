@@ -32,6 +32,13 @@ test("offer actions distinguish owners from viewers", () => {
   assert.match(html, /if \(!isOfferOwner\(offer\)\) accessMode = "view"/);
 });
 
+test("all works action buttons remain on one table row", () => {
+  assert.match(html, /#allworks td:last-child \.quick-actions\s*\{\s*flex-wrap: nowrap/);
+  assert.match(html, /#allworks th:last-child,\s*#allworks td:last-child\s*\{\s*min-width: 590px/);
+  assert.match(html, /#allworks tbody td\s*\{\s*vertical-align: middle/);
+  assert.doesNotMatch(html, /#allworks td:nth-child\(9\) \.quick-actions/);
+});
+
 test("stored offer text is HTML escaped", () => {
   assert.match(html, /escapeHtml\(displayRecord\(row\.customer_name/);
   assert.match(html, /escapeHtml\(displayRecord\(offer\.customer_name/);
