@@ -196,6 +196,7 @@ async function isOfferApprover(userId) {
 
 async function canViewOffer(user, offer) {
   if (!user || !offer) return false;
+  if (user.is_admin) return true;
   if (offer.user_id === user.id) return true;
   if (await isOfferApprover(user.id)) return ["SUBMITTED", "APPROVED"].includes(String(offer.status || "").toUpperCase());
   return false;
@@ -482,16 +483,18 @@ app.get("/api/admin/users/:id/approve", requireApprovalToken, async (req, res, n
 app.get("/api/offers", requireAuth, async (req, res, next) => {
   try {
     const result = await query(
-      `select id, user_id, offer_no, title, customer_name, project_name, industry, implementation_type,
-              system_type, status, total_effort,
-              jsonb_build_object('version', project_definition->>'version') as project_definition,
-              updated_at,
-              (user_id = $1) as is_owner
-       from offer
-       where user_id = $1
-       order by updated_at desc
-       limit 200`,
-      [req.user.id]
+      `select o.id, o.user_id, o.offer_no, o.title, o.customer_name, o.project_name, o.industry, o.implementation_type,
+              o.system_type, o.status, o.total_effort,
+              jsonb_build_object('version', o.project_definition->>'version') as project_definition,
+              o.created_at, o.updated_at,
+              coalesce(owner.display_name, owner.email, '-') as creator_name,
+              coalesce(owner.email, '') as creator_email,
+              (o.user_id = $1) as is_owner
+       from offer o
+       left join app_user owner on owner.id = o.user_id
+       where ($2::boolean = true or o.user_id = $1)
+       order by o.updated_at desc`,
+      [req.user.id, Boolean(req.user.is_admin)]
     );
     res.json(result.rows);
   } catch (error) {

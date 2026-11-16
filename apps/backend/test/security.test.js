@@ -342,14 +342,21 @@ test("offer update SQL uses contiguous parameter numbers", () => {
 
 test("offer list endpoint returns a lightweight project definition summary", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
-  assert.match(server, /jsonb_build_object\('version', project_definition->>'version'\) as project_definition/);
+  assert.match(server, /jsonb_build_object\('version', o\.project_definition->>'version'\) as project_definition/);
 });
 
 
-test("offer list endpoint is scoped to the authenticated user", () => {
+test("offer list endpoint returns all projects to admins with creator information", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /app\.get\("\/api\/offers", requireAuth/);
-  assert.match(server, /from offer\s+where user_id = \$1\s+order by updated_at desc/s);
+  assert.match(server, /left join app_user owner on owner\.id = o\.user_id/);
+  assert.match(server, /coalesce\(owner\.display_name, owner\.email, '-'\) as creator_name/);
+  assert.match(server, /where \(\$2::boolean = true or o\.user_id = \$1\)/);
+  assert.match(server, /\[req\.user\.id, Boolean\(req\.user\.is_admin\)\]/);
+  assert.match(server, /if \(user\.is_admin\) return true/);
+  const frontend = fs.readFileSync(new URL("../../frontend/public/index.html", import.meta.url), "utf8");
+  assert.match(frontend, /createdBy: "Oluşturan"/);
+  assert.match(frontend, /row\.creator_name \|\| row\.creator_email/);
 });
 
 test("offer detail endpoint rejects unauthorized viewers", () => {

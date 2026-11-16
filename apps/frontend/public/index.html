@@ -2441,6 +2441,7 @@
                     <th>Müşteri</th>
                     <th>Endüstri</th>
                     <th>Versiyon</th>
+                    <th>Oluşturan</th>
                     <th>Durum</th>
                     <th>Toplam AG</th>
                     <th>Son Güncelleme</th>
@@ -4192,6 +4193,7 @@
         projectName: "Proje İsmi",
         customer: "Müşteri",
         industry: "Endüstri",
+        createdBy: "Oluşturan",
         status: "Durum",
         totalEffort: "Toplam AG",
         updated: "Son Güncelleme",
@@ -4406,6 +4408,7 @@
         projectName: "Project Name",
         customer: "Customer",
         industry: "Industry",
+        createdBy: "Created By",
         status: "Status",
         totalEffort: "Total AG",
         updated: "Last Update",
@@ -5462,7 +5465,7 @@
       setTexts(".home-only .metric span", [t("totalPotentialEffort"), t("topCategory")]);
       setTexts(".home-only .metric small", [t("days"), t("activeOffers")]);
       setTextContent("#allworks .panel-title", t("allWorks"));
-      setTexts("#allworks th", [t("projectNo"), t("projectName"), t("customer"), t("industry"), t("version"), t("status"), t("totalEffort"), t("updated"), t("action")]);
+      setTexts("#allworks th", [t("projectNo"), t("projectName"), t("customer"), t("industry"), t("version"), t("createdBy"), t("status"), t("totalEffort"), t("updated"), t("action")]);
       setTextContent("#allWorksFooterText", cachedOffers.length ? document.getElementById("allWorksFooterText")?.textContent || "" : t("noRecords"));
       setTexts("#allworks .list-footer .button", [t("previous"), t("next")]);
       setTextContent("#project .panel-title", t("projectDefinition"));
@@ -9405,7 +9408,7 @@
     function renderAllWorks() {
       const target = document.getElementById("allWorksRows");
       const recentTarget = document.getElementById("recentWorkGrid");
-      const visibleRows = cachedOffers.slice(0, 20);
+      const visibleRows = cachedOffers;
       const now = new Date();
       const currentMonthCount = cachedOffers.filter(row => {
         if (!row.created_at && !row.updated_at) return false;
@@ -9455,6 +9458,7 @@
             <td>${escapeHtml(displayRecord(row.customer_name || ""))}</td>
             <td>${escapeHtml(displayRecord(row.industry || ""))}</td>
             <td>${escapeHtml(offerJson(row.project_definition).version || "")}</td>
+            <td><strong>${escapeHtml(row.creator_name || row.creator_email || "-")}</strong>${row.creator_email && row.creator_email !== row.creator_name ? `<br><small>${escapeHtml(row.creator_email)}</small>` : ""}</td>
             <td><span class="status">${statusLabel(row.status)}</span></td>
             <td><strong>${fmt(row.total_effort || 0)}</strong></td>
             <td>${row.updated_at ? new Date(row.updated_at).toLocaleDateString(currentLanguage === "en" ? "en-US" : "tr-TR") : ""}</td>
