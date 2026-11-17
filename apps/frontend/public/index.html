@@ -3854,6 +3854,7 @@
       if (headerIndex < 0) return [];
       const headers = rows[headerIndex].map(cell => String(cell || "").trim());
       const implementationIndex = headers.indexOf("Implementation Type");
+      const scopeIdIndex = headers.indexOf("Kapsam Soru ID");
       const scopeIndex = headers.indexOf("Kapsam Sorusu");
       const moduleIndex = headers.findIndex(header => ["Hedef Modül", "Hedef ModÃ¼l"].includes(header));
       if (scopeIndex < 0 || moduleIndex < 0) return [];
@@ -3864,11 +3865,12 @@
       return rows.slice(headerIndex + 1).filter(row =>
         implementationIndex < 0 || implementationMatches(row[implementationIndex] || "All", implementation)
       ).map(row => {
+        const id = String(row[scopeIdIndex] || "").trim();
         const name = String(row[scopeIndex] || "").trim();
         const moduleName = String(row[moduleIndex] || "").trim();
         const values = Object.fromEntries(activePhases.map(phase => [phase, 0]));
         phaseIndexes.forEach(([phase, index]) => values[phase] = Number(row[index]) || 0);
-        return { name, moduleName, values };
+        return { id, name, moduleName, values };
       }).filter(row => row.name && row.moduleName && sumValues(row.values) > 0);
     }
 
@@ -3888,7 +3890,8 @@
       const selected = selectedScopeMultipliers(scopeAnswers);
       const activePhases = phaseHeadersForImplementation(implementation, false);
       const additions = new Map(moduleNames.map(module => [module, Object.fromEntries(activePhases.map(phase => [phase, 0]))]));
-      scopeProjectEffortDefinitions(implementation).forEach(({ name, moduleName, values }) => {
+      scopeProjectEffortDefinitions(implementation).forEach(({ id, name, moduleName, values }) => {
+        if (id === "scope-22" || normalizeQuestionName(name) === normalizeQuestionName("Entegrasyon Testi Tekrar Sayısı")) return;
         const multiplier = selected.get(name);
         if (!multiplier) return;
         const targets = moduleName === "Hepsi" ? moduleNames : (moduleSet.has(moduleName) ? [moduleName] : []);
@@ -3899,6 +3902,12 @@
         });
       });
       return additions;
+    }
+
+    function integrationTestRepeatMultiplier(scopeAnswers = {}) {
+      const question = (window.scopeQuestions || []).find(item => questionIdFor(item, "scope") === "scope-22");
+      const repeatCount = Number(question ? questionAnswer(scopeAnswers, question, "scope") : 0);
+      return Number.isFinite(repeatCount) && repeatCount > 0 ? repeatCount : 1;
     }
 
     function selectedDevelopmentMultipliers(scopeAnswers = {}, developmentAnswers = {}, options = {}) {
@@ -5952,6 +5961,7 @@
       const fixedValues = effectiveFixedEffortValues(fixedEffortState, systemType, questionAnswers.scopeQuestions);
       const selectedNames = selectedModuleNames();
       const scopeAdditions = scopeProjectEffortAdditions(questionAnswers.scopeQuestions, selectedNames);
+      const integrationTestMultiplier = integrationTestRepeatMultiplier(questionAnswers.scopeQuestions);
       const names = [...new Set([...selectedNames, ...fixedEffortModules.filter(module => fixedValues[module] > 0)])];
       const activePhases = phaseHeadersForImplementation(implementation, false);
       return names.map(name => {
@@ -5963,7 +5973,7 @@
           const sizeValue = Number(sizeRow[phase]) || 0;
           const scopeValue = Number(scopeValues[phase]) || 0;
           const calculated = (baseValue + sizeValue) * teamMultiplier + scopeValue;
-          return [phase, calculated];
+          return [phase, phase === "Entegrasyon Testi" ? calculated * integrationTestMultiplier : calculated];
         }));
         const fixedEffort = fixedValues[name] || 0;
         return { module: name, values, fixedEffort, total: sumValues(values) + fixedEffort };
@@ -8697,6 +8707,7 @@
       const selectedOfferModules = offerSelectedModules(offer);
       const selectedOfferModuleNames = selectedOfferModules.map(item => item.module);
       const scopeAdditions = scopeProjectEffortAdditions(offerJson(offer.scope_answers), selectedOfferModuleNames, implementation);
+      const integrationTestMultiplier = integrationTestRepeatMultiplier(offerJson(offer.scope_answers));
       const effortModules = [...new Map([
         ...selectedOfferModules.map(item => [item.module, item]),
         ...fixedEffortModules.filter(module => fixedValues[module] > 0).map(module => [module, { module, team: 1 }])
@@ -8705,10 +8716,10 @@
         const base = isFixedOnlyModule(module) ? {} : (fixedRows[module] || finalEffortBase[module] || {});
         const scopeValues = isFixedOnlyModule(module) ? {} : (scopeAdditions.get(module) || {});
         const activePhases = phaseHeadersForImplementation(implementation, false);
-        const values = Object.fromEntries(activePhases.map(phase => [
-          phase,
-          ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (Number(scopeValues[phase]) || 0)
-        ]));
+        const values = Object.fromEntries(activePhases.map(phase => {
+          const calculated = ((Number(base[phase]) || 0) + (Number(sizeRow[phase]) || 0)) * team + (Number(scopeValues[phase]) || 0);
+          return [phase, phase === "Entegrasyon Testi" ? calculated * integrationTestMultiplier : calculated];
+        }));
         const fixedEffort = fixedValues[module] || 0;
         const supportRow = hypercareExcludedModules.has(module) ? {} : (support[module] || {});
         const factors = [supportRow.weeks, supportRow.daysPerWeek, supportRow.shifts, supportRow.locations].map(Number);

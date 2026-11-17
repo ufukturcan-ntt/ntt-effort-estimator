@@ -148,6 +148,13 @@ test("QA is a manually entered fixed-only effort like PMO and Governance", () =>
   assert.match(html, /const hypercareExcludedModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
 });
 
+test("integration test repetitions multiply the final module integration-test effort", () => {
+  assert.match(html, /function integrationTestRepeatMultiplier\(scopeAnswers = \{\}\)/);
+  assert.match(html, /questionIdFor\(item, "scope"\) === "scope-22"/);
+  assert.match(html, /id === "scope-22" \|\| normalizeQuestionName\(name\) === normalizeQuestionName\("Entegrasyon Testi Tekrar Sayısı"\)/);
+  assert.match(html, /phase === "Entegrasyon Testi" \? calculated \* integrationTestMultiplier : calculated/g);
+});
+
 test("fixed days rows show their read-only selection context", () => {
   assert.match(html, /<th>\$\{t\("industry"\)\}<\/th><th>Size<\/th><th>\$\{t\("implementationType"\)\}<\/th><th>\$\{t\("systemType"\)\}<\/th><th>\$\{t\("module"\)\}<\/th>/);
   assert.match(html, /class="fixed-days-context">\$\{escapeHtml\(row\[indexes\.industry\] \|\| "All"\)\}<\/td>/);
