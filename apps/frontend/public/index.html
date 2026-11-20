@@ -9394,7 +9394,6 @@
 
     function workflowButtons(row) {
       const status = String(row.status || "DRAFT").toUpperCase();
-      if (!isOfferOwner(row)) return "";
       if (status === "DRAFT") {
         return `<button class="button" data-work-action="submit" data-offer-id="${row.id}" type="button">${t("submit")}</button>`;
       }
@@ -9480,11 +9479,11 @@
             <td>
               <div class="quick-actions">
                 <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
-                <button class="button" data-work-action="copy" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) ? "" : "disabled"}>${t("copy")}</button>
-                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("change")}</button>
+                <button class="button" data-work-action="copy" data-offer-id="${row.id}" type="button">${t("copy")}</button>
+                <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("change")}</button>
                 <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("delete")}</button>
-                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("recalculateEffort")}</button>
-                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) ? "" : "disabled"}>${t("print")}</button>
+                <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("recalculateEffort")}</button>
+                <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button">${t("print")}</button>
                 ${workflowButtons(row)}
               </div>
             </td>
@@ -9507,7 +9506,7 @@
             </div>
             <div class="work-actions">
               <button class="button" data-work-action="view" data-offer-id="${row.id}" type="button">${t("view")}</button>
-              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("edit")}</button>
+              <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("edit")}</button>
               <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("delete")}</button>
             </div>
           </article>
@@ -10587,7 +10586,6 @@
         return;
       }
       const definition = offerJson(offer?.project_definition);
-      if (!isOfferOwner(offer)) accessMode = "view";
       currentOfferId = offer?.id || null;
       currentOfferStatus = offer?.status || "DRAFT";
       currentOfferAccessMode = accessMode;

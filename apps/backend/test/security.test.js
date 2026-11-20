@@ -336,7 +336,7 @@ test("offer update SQL uses contiguous parameter numbers", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /total_effort = coalesce\(\$8::numeric, total_effort\)/);
   assert.match(server, /final_effort = coalesce\(\$15::jsonb, final_effort\)/);
-  assert.match(server, /and user_id = \$16/);
+  assert.doesNotMatch(server, /and user_id = \$16/);
   assert.doesNotMatch(server, /payload\.systemType,\s*null,\s*totalEffort/s);
 });
 
@@ -346,23 +346,33 @@ test("offer list endpoint returns a lightweight project definition summary", () 
 });
 
 
-test("offer list endpoint returns all projects to admins with creator information", () => {
+test("offer list endpoint returns all projects to authenticated users with creator information", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /app\.get\("\/api\/offers", requireAuth/);
   assert.match(server, /left join app_user owner on owner\.id = o\.user_id/);
   assert.match(server, /coalesce\(owner\.display_name, owner\.email, '-'\) as creator_name/);
-  assert.match(server, /where \(\$2::boolean = true or o\.user_id = \$1\)/);
-  assert.match(server, /\[req\.user\.id, Boolean\(req\.user\.is_admin\)\]/);
-  assert.match(server, /if \(user\.is_admin\) return true/);
+  assert.doesNotMatch(server, /where \(\$2::boolean = true or o\.user_id = \$1\)/);
+  assert.match(server, /order by o\.updated_at desc`,\s*\[req\.user\.id\]/);
+  assert.match(server, /return Boolean\(user && offer\)/);
   const frontend = fs.readFileSync(new URL("../../frontend/public/index.html", import.meta.url), "utf8");
   assert.match(frontend, /createdBy: "Oluşturan"/);
   assert.match(frontend, /row\.creator_name \|\| row\.creator_email/);
 });
 
-test("offer detail endpoint rejects unauthorized viewers", () => {
+test("offer detail endpoint allows authenticated collaboration", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /async function canViewOffer\(user, offer\)/);
+  assert.match(server, /return Boolean\(user && offer\)/);
   assert.match(server, /if \(!\(await canViewOffer\(req\.user, result\.rows\[0\]\)\)\) return res\.status\(403\)\.json\(\{ error: "Offer access denied" \}\)/);
+});
+
+test("authenticated users can update, copy, and submit shared offers while deletion stays owner-only", () => {
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.doesNotMatch(server, /Yalnızca kendi teklifinizi değiştirebilirsiniz/);
+  assert.doesNotMatch(server, /Yalnızca kendi teklifinizi kopyalayabilirsiniz/);
+  assert.doesNotMatch(server, /where id = \$1\s+and user_id = \$16/);
+  assert.doesNotMatch(server, /where id = \$1\s+and user_id = \$2\s+and status = 'DRAFT'/);
+  assert.match(server, /delete from offer where id = \$1 and user_id = \$2 and status <> 'APPROVED'/);
 });
 
 test("admin deletion requires confirmation and preserves unrelated orphan records", () => {

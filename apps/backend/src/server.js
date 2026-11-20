@@ -195,11 +195,7 @@ async function isOfferApprover(userId) {
 }
 
 async function canViewOffer(user, offer) {
-  if (!user || !offer) return false;
-  if (user.is_admin) return true;
-  if (offer.user_id === user.id) return true;
-  if (await isOfferApprover(user.id)) return ["SUBMITTED", "APPROVED"].includes(String(offer.status || "").toUpperCase());
-  return false;
+  return Boolean(user && offer);
 }
 
 async function sendApprovalMail(user) {
@@ -492,9 +488,8 @@ app.get("/api/offers", requireAuth, async (req, res, next) => {
               (o.user_id = $1) as is_owner
        from offer o
        left join app_user owner on owner.id = o.user_id
-       where ($2::boolean = true or o.user_id = $1)
        order by o.updated_at desc`,
-      [req.user.id, Boolean(req.user.is_admin)]
+      [req.user.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -543,7 +538,6 @@ app.post("/api/offers", requireAuth, async (req, res, next) => {
     if (payload.sourceOfferId) {
       const source = await query(`select user_id from offer where id = $1`, [payload.sourceOfferId]);
       if (!source.rowCount) return res.status(404).json({ error: "Kaynak teklif bulunamadı" });
-      if (source.rows[0].user_id !== req.user.id) return res.status(403).json({ error: "Yalnızca kendi teklifinizi kopyalayabilirsiniz" });
     }
     const totalEffort = numericValue(payload.totalEffort, "totalEffort");
     ["projectDefinition", "scopeAnswers", "developmentAnswers", "moduleSelection", "localizationSelection", "hypercareInputs", "finalEffort"]
@@ -593,7 +587,6 @@ app.put("/api/offers/:id", requireAuth, async (req, res, next) => {
     const expectedUpdatedAt = clientVersion(req, payload);
     const existing = await query(`select user_id, status, updated_at from offer where id = $1`, [req.params.id]);
     if (!existing.rowCount) return res.status(404).json({ error: "Teklif bulunamadı" });
-    if (existing.rows[0].user_id !== req.user.id) return res.status(403).json({ error: "Yalnızca kendi teklifinizi değiştirebilirsiniz" });
     if (expectedUpdatedAt && normalizedVersion(existing.rows[0].updated_at) !== expectedUpdatedAt) throw concurrencyConflict("Bu teklif başka bir kullanıcı veya ekran tarafından güncellendi. Lütfen teklifi yeniden açıp tekrar deneyin.");
     const currentStatus = String(existing.rows[0].status || "").toUpperCase();
     if (!validOfferStatus(currentStatus)) return res.status(409).json({ error: "Teklifin mevcut statüsü geçersiz" });
@@ -621,7 +614,6 @@ app.put("/api/offers/:id", requireAuth, async (req, res, next) => {
         final_effort = coalesce($15::jsonb, final_effort),
         updated_at = now()
        where id = $1
-         and user_id = $16
          and status <> 'APPROVED'
        returning *`,
       [
@@ -639,8 +631,7 @@ app.put("/api/offers/:id", requireAuth, async (req, res, next) => {
         payload.moduleSelection == null ? null : JSON.stringify(payload.moduleSelection),
         payload.localizationSelection == null ? null : JSON.stringify(payload.localizationSelection),
         payload.hypercareInputs == null ? null : JSON.stringify(payload.hypercareInputs),
-        payload.finalEffort == null ? null : JSON.stringify(payload.finalEffort),
-        req.user.id
+        payload.finalEffort == null ? null : JSON.stringify(payload.finalEffort)
       ]
     );
     if (!result.rowCount) return res.status(409).json({ error: "Onaylanmış teklif güncellenemez veya teklif bulunamadı" });
@@ -659,7 +650,6 @@ app.post("/api/offers/:id/submit", requireAuth, async (req, res, next) => {
            submitted_at = now(),
            updated_at = now()
        where id = $1
-         and user_id = $2
          and status = 'DRAFT'
        returning *`,
       [req.params.id, req.user.id]

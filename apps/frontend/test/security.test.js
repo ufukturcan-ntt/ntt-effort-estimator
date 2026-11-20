@@ -27,9 +27,11 @@ test("API client keeps authorization when sending update precondition headers", 
   assert.match(apiClient, /headers:\s*expectedUpdatedAt \? \{ "If-Match": expectedUpdatedAt \} : \{\}/);
 });
 
-test("offer actions distinguish owners from viewers", () => {
+test("shared offer actions allow collaboration while deletion remains owner-only", () => {
   assert.match(html, /function isOfferOwner\(offer\)/);
-  assert.match(html, /if \(!isOfferOwner\(offer\)\) accessMode = "view"/);
+  assert.doesNotMatch(html, /if \(!isOfferOwner\(offer\)\) accessMode = "view"/);
+  assert.match(html, /data-work-action="edit"[\s\S]*?String\(row\.status \|\| ""\)\.toUpperCase\(\) !== "APPROVED"/);
+  assert.match(html, /data-work-action="delete"[\s\S]*?isOfferOwner\(row\)/);
 });
 
 test("all works action buttons remain on one table row", () => {
