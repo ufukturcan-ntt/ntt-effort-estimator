@@ -14,6 +14,7 @@ import { packagingGreenfieldEfforts } from "../src/packaging-greenfield-efforts.
 import { allDevelopmentRestrictionTargets, upsertAllDevelopmentRestrictions } from "../src/development-restriction-maintenance.js";
 import { consolidateDuplicateScopeQuestions, remapDevelopmentAnswers, repairQuestionIdentities } from "../src/question-identity-repair.js";
 import { splitVmpImplementationRows } from "../src/vmp-maintenance.js";
+import { applyPosCashRegisterRangeMaintenance, migrateCashRegisterRangeAnswers, posCashRegisterRangeQuestions } from "../src/pos-cash-register-range-maintenance.js";
 
 test("signed access token verifies and expires", () => {
   const token = createAccessToken({ id: "user-1", is_admin: false }, "test-secret", 1_000);
@@ -263,11 +264,11 @@ test("question relationships are migrated to stable ids without overwriting exis
 
 test("POS scope maintenance restores only requested questions and removes obsolete additions", () => {
   const names = new Set(posScopeQuestionMaintenance.map(item => item.name));
-  assert.equal(posScopeQuestionMaintenance.length, 23);
+  assert.equal(posScopeQuestionMaintenance.length, 25);
   assert.equal(obsoletePosScopeQuestions.length, 15);
   assert.equal(names.has("Loyalty"), false);
   assert.equal(names.has("Mağaza Sayısı"), true);
-  assert.equal(new Set(posScopeQuestionMaintenance.map(item => item.questionId)).size, 23);
+  assert.equal(new Set(posScopeQuestionMaintenance.map(item => item.questionId)).size, 25);
 });
 
 test("POS development maintenance keeps stable ids and unique question definitions", () => {
@@ -308,7 +309,7 @@ test("fallback restrictions omit persisted row numbers and sort by question id",
   const rows = context.window.adminSeedData.restrictions;
   const idIndex = rows[0].indexOf("Question ID");
   assert.equal(rows[0].includes("No"), false);
-  assert.equal(rows.length - 1, 130);
+  assert.equal(rows.length - 1, 132);
   assert.ok(rows.slice(1).every(row => row[idIndex]));
   const ids = Array.from(rows.slice(1), row => String(row[idIndex]));
   assert.deepEqual(ids, [...ids].sort((left, right) => String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" })));
@@ -431,8 +432,8 @@ test("admin force deletion preserves linked records and every save creates a bac
 });
 
 test("POS Greenfield phase maintenance uses stable question ids and the configured module", () => {
-  assert.equal(posGreenfieldEffortMaintenance.length, 32);
-  assert.equal(new Set(posGreenfieldEffortMaintenance.map(item => item.id)).size, 32);
+  assert.equal(posGreenfieldEffortMaintenance.length, 34);
+  assert.equal(new Set(posGreenfieldEffortMaintenance.map(item => item.id)).size, 34);
   assert.equal(posGreenfieldEffortMaintenance.some(item => item.name === "Arızi müşteri satışı"), false);
   assert.equal(posGreenfieldEffortMaintenance.filter(item => item.name === "Garanti süreci").length, 1);
   assert.equal(posGreenfieldEffortMaintenance.find(item => item.id === "dev-27").values["Internal Entegrasyon Testi"], 0.5);
@@ -442,7 +443,7 @@ test("POS Greenfield phase maintenance uses stable question ids and the configur
   const twice = applyPosGreenfieldEffortMaintenance(once);
   const headers = once[0];
   const posRows = once.slice(1).filter(row => row[headers.indexOf("Hedef Modül")] === "NTT Data POS");
-  assert.equal(posRows.length, 32);
+  assert.equal(posRows.length, 34);
   assert.equal(once.length, twice.length);
   assert.equal(once[1][headers.indexOf("Analiz")], 9);
   const cashRegister = posRows.find(row => row[headers.indexOf("Kapsam Soru ID")] === "scope-110");
@@ -450,6 +451,31 @@ test("POS Greenfield phase maintenance uses stable question ids and the configur
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /applyPosGreenfieldEffortMaintenance\(result\.rows\[0\]\.payload\)/);
   assert.match(server, /await maintainPosGreenfieldEfforts\(\)/);
+});
+
+test("POS cash register count is replaced by three range questions without losing maintenance", () => {
+  const restrictions = [["Restriction ID", "Variable Type", "Question ID", "Question", "Allowed Industries", "Allowed Implementation Types", "Allowed System Types", "Active?"], ["restriction-scope-110", "Kapsam", "scope-110", "Kasa Sayısı", "Perakende", "Greenfield", "NTT POS on S4, NTT POS on CAR, Offline POS", "Yes"]];
+  const impacts = [["No", "Question ID", "Implementation Type", "System Type", "Kapsam Sorusu", "Puan", "Katsayı", "Size Etki Tipi"], [1, "scope-110", "Greenfield", "NTT POS on S4, NTT POS on CAR, Offline POS", "Kasa Sayısı", 0.5, 1, "Katsayı"]];
+  const vmp = [["Implementation Type", "Kaynak Tipi", "Kapsam Soru ID", "Kapsam Sorusu", "Hedef Modül", "Efor Bazı", "Analiz", "Yetkilendirme"], ["Greenfield", "Değişken", "scope-110", "Kasa Sayısı", "NTT Data POS", "Katsayı", 2, 0.125]];
+  const maintained = applyPosCashRegisterRangeMaintenance({
+    scopeQuestions: [{ id: "scope-110", no: 110, name: "Kasa Sayısı", variableType: "Sayı", answerType: "number" }],
+    restrictions,
+    scopeSizeImpacts: impacts,
+    variableModulePhase: vmp
+  });
+  assert.deepEqual(maintained.scopeQuestions.map(item => [item.id, item.name, item.variableType]), posCashRegisterRangeQuestions.map(item => [item.id, item.name, "Evet/Hayır"]));
+  assert.deepEqual(maintained.scopeSizeImpacts.slice(1).map(row => [row[1], row[5], row[7]]), [["scope-110", 0.5, "Sabit"], ["scope-122", 0.3, "Sabit"], ["scope-123", 0.1, "Sabit"]]);
+  assert.equal(maintained.restrictions.length, 4);
+  assert.equal(maintained.variableModulePhase.length, 4);
+  maintained.variableModulePhase.slice(1).forEach(row => {
+    assert.equal(row[4], "NTT Data POS");
+    assert.equal(row[6], 2);
+    assert.equal(row[7], 0.125);
+  });
+  assert.deepEqual(migrateCashRegisterRangeAnswers({ "scope-110": 1000 }), { "scope-110": "Hayır", "scope-122": "Hayır", "scope-123": "Evet" });
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(server, /\["pos-cash-register-ranges-v1"\]/);
+  assert.match(server, /await maintainPosCashRegisterRanges\(\)/);
 });
 
 test("scope question variable type maintenance normalizes live admin data", () => {

@@ -164,16 +164,48 @@ export const requiredScopeQuestions = [
     "sizeImpact": false,
     "category": "A. Organizasyon & Kapsam",
     "group": "Kapsam",
-    "variableType": "Sayı",
-    "name": "Kasa Sayısı",
-    "description": "Mağazalardaki toplam kasa sayısı ne kadardır?",
-    "answerType": "number",
+    "variableType": "Evet/Hayır",
+    "name": "Kasa sayısı 0-100 arasında mıdır?",
+    "description": "Kasa sayısı 0-100 arasında mıdır?",
+    "answerType": "yesno",
     "score": 0,
     "industries": "All",
     "implementationTypes": "All",
     "systemTypes": "All",
     "active": true,
     "id": "scope-110"
+  },
+  {
+    "no": 122,
+    "sizeImpact": false,
+    "category": "A. Organizasyon & Kapsam",
+    "group": "Kapsam",
+    "variableType": "Evet/Hayır",
+    "name": "Kasa sayısı 101-600 arasında mıdır?",
+    "description": "Kasa sayısı 101-600 arasında mıdır?",
+    "answerType": "yesno",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "id": "scope-122"
+  },
+  {
+    "no": 123,
+    "sizeImpact": false,
+    "category": "A. Organizasyon & Kapsam",
+    "group": "Kapsam",
+    "variableType": "Evet/Hayır",
+    "name": "Kasa sayısı 600ün üzerinde midir?",
+    "description": "Kasa sayısı 600ün üzerinde midir?",
+    "answerType": "yesno",
+    "score": 0,
+    "industries": "All",
+    "implementationTypes": "All",
+    "systemTypes": "All",
+    "active": true,
+    "id": "scope-123"
   },
   {
     "no": 111,
@@ -195,7 +227,9 @@ export const requiredScopeQuestions = [
 
 export const posScopeQuestionMaintenance = [
   ["scope-109", "Mağaza Sayısı", "Kasa operasyonlarının yürütüldüğü ne kadar mağaza bulunmaktadır?", "Sayı", "A. Organizasyon & Kapsam"],
-  ["scope-110", "Kasa Sayısı", "Mağazalardaki toplam kasa sayısı ne kadardır?", "Sayı", "A. Organizasyon & Kapsam"],
+  ["scope-110", "Kasa sayısı 0-100 arasında mıdır?", "Kasa sayısı 0-100 arasında mıdır?", "Evet/Hayır", "A. Organizasyon & Kapsam"],
+  ["scope-122", "Kasa sayısı 101-600 arasında mıdır?", "Kasa sayısı 101-600 arasında mıdır?", "Evet/Hayır", "A. Organizasyon & Kapsam"],
+  ["scope-123", "Kasa sayısı 600ün üzerinde midir?", "Kasa sayısı 600ün üzerinde midir?", "Evet/Hayır", "A. Organizasyon & Kapsam"],
   ["scope-111", "Mağaza içi depo sayısı", "Mağazalarda farklı depolar bulunuyor mu? (satış, iade vs)", "Sayı", "A. Organizasyon & Kapsam"],
   ["scope-2", "Şirket Kodu", "Farklı şirket kodu sayısı", "Sayı", ""],
   ["scope-4", "Üretim Yeri", "Farklı üretim yeri sayısı", "Sayı", ""],
@@ -284,6 +318,8 @@ export const vmpDevelopmentQuestionMaintenance = [
 
 export const posScopeImpactMaintenance = [
   { questionId: "scope-109", question: "Mağaza Sayısı", score: 0.5 },
-  { questionId: "scope-110", question: "Kasa Sayısı", score: 0.5 },
+  { questionId: "scope-110", question: "Kasa sayısı 0-100 arasında mıdır?", score: 0.5 },
+  { questionId: "scope-122", question: "Kasa sayısı 101-600 arasında mıdır?", score: 0.3 },
+  { questionId: "scope-123", question: "Kasa sayısı 600ün üzerinde midir?", score: 0.1 },
   { questionId: "scope-111", question: "Mağaza içi depo sayısı", score: 1 }
 ];

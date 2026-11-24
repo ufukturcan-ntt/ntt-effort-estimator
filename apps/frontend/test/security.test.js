@@ -545,7 +545,8 @@ test("only requested POS scope questions are bundled and seeded", () => {
     "Mağaza teslim alım süreci kullanılacak mı? (C&C)",
     "Kaç dil için ekran kullanımı olacaktır?", "Değişim süreci",
     "Satış sonrası hizmet süreci", "Garanti süreci", "Kasa kapanışı günlük yapılıyor mu?",
-    "Dış sistem entegrasyonları", "Mağaza Sayısı", "Kasa Sayısı", "Mağaza içi depo sayısı"
+    "Dış sistem entegrasyonları", "Mağaza Sayısı", "Kasa sayısı 0-100 arasında mıdır?",
+    "Kasa sayısı 101-600 arasında mıdır?", "Kasa sayısı 600ün üzerinde midir?", "Mağaza içi depo sayısı"
   ];
   const excluded = [
     "Click and Collect süreci", "Müşteri teslim et süreci kullanılacak mı? (C&C)",
@@ -568,7 +569,7 @@ test("only requested POS scope questions are bundled and seeded", () => {
     assert.equal(bundled.has(name), false, `Unexpected bundled scope question: ${name}`);
     assert.equal(seeded.has(name), false, `Unexpected seeded scope question: ${name}`);
   });
-  assert.equal(context.window.scopeQuestions.length, 88);
+  assert.equal(context.window.scopeQuestions.length, 90);
   assert.ok(context.window.scopeQuestions.filter(item => expected.includes(item.name)).every(item => item.sizeImpact === false));
 });
 
@@ -580,7 +581,9 @@ test("POS scope questions and Greenfield size impacts are seeded", () => {
   vm.runInNewContext(adminDataJs, context);
   const expectedQuestions = new Map([
     ["Mağaza Sayısı", ["scope-109", "Sayı"]],
-    ["Kasa Sayısı", ["scope-110", "Sayı"]],
+    ["Kasa sayısı 0-100 arasında mıdır?", ["scope-110", "Evet/Hayır"]],
+    ["Kasa sayısı 101-600 arasında mıdır?", ["scope-122", "Evet/Hayır"]],
+    ["Kasa sayısı 600ün üzerinde midir?", ["scope-123", "Evet/Hayır"]],
     ["Mağaza içi depo sayısı", ["scope-111", "Sayı"]]
   ]);
   for (const [name, [id, variableType]] of expectedQuestions) {
@@ -591,14 +594,14 @@ test("POS scope questions and Greenfield size impacts are seeded", () => {
   const impacts = context.window.adminSeedData.scopeSizeImpacts;
   const headers = impacts[0];
   const value = (row, header) => row[headers.indexOf(header)];
-  const expectedScores = new Map([["scope-109", 0.5], ["scope-110", 0.5], ["scope-111", 1]]);
+  const expectedScores = new Map([["scope-109", 0.5], ["scope-110", 0.5], ["scope-122", 0.3], ["scope-123", 0.1], ["scope-111", 1]]);
   for (const [id, score] of expectedScores) {
     const row = impacts.slice(1).find(item => value(item, "Question ID") === id);
     assert.equal(value(row, "Implementation Type"), "Greenfield");
     assert.equal(value(row, "System Type"), "NTT POS on S4, NTT POS on CAR, Offline POS");
     assert.equal(Number(value(row, "Puan")), score);
     assert.equal(Number(value(row, "Katsayı")), 1);
-    assert.equal(value(row, "Size Etki Tipi"), "Katsayı");
+    assert.equal(value(row, "Size Etki Tipi"), ["scope-110", "scope-122", "scope-123"].includes(id) ? "Sabit" : "Katsayı");
   }
 });
 
