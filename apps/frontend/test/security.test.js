@@ -155,11 +155,11 @@ test("fixed effort is included in the Realise upper group", () => {
   assert.match(html, /projectGroupTotals = \{ \.\.\.projectTotals, "Sabit Efor": fixedEffortPrintTotal/);
 });
 
-test("QA is a manually entered fixed-only effort like PMO and Governance", () => {
-  assert.match(html, /const fixedEffortModules = \["PMO", "Governance", "QA", "BASIS", "ABAP", "MES Development"\]/);
-  assert.match(html, /const fixedOnlyModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
-  assert.match(html, /const developmentExcludedModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
-  assert.match(html, /const hypercareExcludedModules = new Set\(\["PMO", "Governance", "QA", "BASIS", "MES Development"\]\)/);
+test("QA and Solution Architect are manually entered fixed-only efforts like PMO and Governance", () => {
+  assert.match(html, /const fixedEffortModules = \["PMO", "Governance", "QA", "Solution Architect", "BASIS", "ABAP", "MES Development"\]/);
+  assert.match(html, /const fixedOnlyModules = new Set\(\["PMO", "Governance", "QA", "Solution Architect", "BASIS", "MES Development"\]\)/);
+  assert.match(html, /const developmentExcludedModules = new Set\(\["PMO", "Governance", "QA", "Solution Architect", "BASIS", "MES Development"\]\)/);
+  assert.match(html, /const hypercareExcludedModules = new Set\(\["PMO", "Governance", "QA", "Solution Architect", "BASIS", "MES Development"\]\)/);
 });
 
 test("integration test repetitions multiply the final module integration-test effort", () => {

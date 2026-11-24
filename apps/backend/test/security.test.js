@@ -227,6 +227,16 @@ test("schema contains no hard-coded bootstrap password", () => {
   assert.doesNotMatch(schema, /admin123/);
 });
 
+test("offer creator identity is snapshotted and the known creator of NTT-2026-000031 is restored", () => {
+  const schema = fs.readFileSync(new URL("../sql/schema.sql", import.meta.url), "utf8");
+  const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
+  assert.match(schema, /alter table offer add column if not exists creator_name_snapshot text/);
+  assert.match(schema, /where offer_no = 'NTT-2026-000031'/);
+  assert.match(schema, /set creator_name_snapshot = 'Yasemin Gemici'/);
+  assert.match(server, /coalesce\(o\.creator_name_snapshot, owner\.display_name, owner\.email, '-'\) as creator_name/);
+  assert.match(server, /req\.user\.display_name \|\| req\.user\.email \|\| null/);
+});
+
 test("admin bulk save uses a database transaction", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /app\.put\("\/api\/admin\/config"/);
@@ -352,7 +362,7 @@ test("offer list endpoint returns all projects to authenticated users with creat
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /app\.get\("\/api\/offers", requireAuth/);
   assert.match(server, /left join app_user owner on owner\.id = o\.user_id/);
-  assert.match(server, /coalesce\(owner\.display_name, owner\.email, '-'\) as creator_name/);
+  assert.match(server, /coalesce\(o\.creator_name_snapshot, owner\.display_name, owner\.email, '-'\) as creator_name/);
   assert.doesNotMatch(server, /where \(\$2::boolean = true or o\.user_id = \$1\)/);
   assert.match(server, /order by o\.updated_at desc`,\s*\[req\.user\.id\]/);
   assert.match(server, /return Boolean\(user && offer\)/);

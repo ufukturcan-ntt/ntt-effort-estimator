@@ -485,8 +485,8 @@ app.get("/api/offers", requireAuth, async (req, res, next) => {
               jsonb_build_object('version', o.project_definition->>'version') as project_definition,
               (coalesce(o.final_effort, '{}'::jsonb)->'versions' ? 'V1') as has_v1,
               o.created_at, o.updated_at,
-              coalesce(owner.display_name, owner.email, '-') as creator_name,
-              coalesce(owner.email, '') as creator_email,
+              coalesce(o.creator_name_snapshot, owner.display_name, owner.email, '-') as creator_name,
+              coalesce(o.creator_email_snapshot, owner.email, '') as creator_email,
               (o.user_id = $1) as is_owner
        from offer o
        left join app_user owner on owner.id = o.user_id
@@ -549,12 +549,12 @@ app.post("/api/offers", requireAuth, async (req, res, next) => {
         user_id, offer_no, title, customer_name, project_name, industry, implementation_type,
         system_type, status, total_effort, project_definition, scope_answers,
         development_answers, module_selection, localization_selection, hypercare_inputs,
-        final_effort
+        final_effort, creator_name_snapshot, creator_email_snapshot
       ) values (
         $1, coalesce($2, next_offer_no()), $3, $4, $5, $6, $7, $8, coalesce($9, 'DRAFT'),
         coalesce($10::numeric, 0), coalesce($11::jsonb, '{}'::jsonb), coalesce($12::jsonb, '{}'::jsonb),
         coalesce($13::jsonb, '{}'::jsonb), coalesce($14::jsonb, '{}'::jsonb), coalesce($15::jsonb, '{}'::jsonb),
-        coalesce($16::jsonb, '{}'::jsonb), coalesce($17::jsonb, '{}'::jsonb)
+        coalesce($16::jsonb, '{}'::jsonb), coalesce($17::jsonb, '{}'::jsonb), $18, $19
       )
       returning *`,
       [
@@ -574,7 +574,9 @@ app.post("/api/offers", requireAuth, async (req, res, next) => {
         JSON.stringify(payload.moduleSelection || {}),
         JSON.stringify(payload.localizationSelection || {}),
         JSON.stringify(payload.hypercareInputs || {}),
-        JSON.stringify(payload.finalEffort || {})
+        JSON.stringify(payload.finalEffort || {}),
+        req.user.display_name || req.user.email || null,
+        req.user.email || null
       ]
     );
     res.status(201).json(result.rows[0]);

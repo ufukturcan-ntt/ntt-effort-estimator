@@ -59,6 +59,23 @@ create table if not exists offer (
   updated_at timestamptz not null default now()
 );
 
+alter table offer add column if not exists creator_name_snapshot text;
+alter table offer add column if not exists creator_email_snapshot text;
+
+update offer o
+set creator_name_snapshot = coalesce(o.creator_name_snapshot, u.display_name, u.email),
+    creator_email_snapshot = coalesce(o.creator_email_snapshot, u.email)
+from app_user u
+where o.user_id = u.id
+  and (o.creator_name_snapshot is null or o.creator_email_snapshot is null);
+
+-- This offer was created by Yasemin Gemici. Keep the immutable creator label
+-- even if another user later edits the shared offer or the user relation changes.
+update offer
+set creator_name_snapshot = 'Yasemin Gemici'
+where offer_no = 'NTT-2026-000031'
+  and creator_name_snapshot is distinct from 'Yasemin Gemici';
+
 update offer
 set offer_no = 'NTT-' || substring(offer_no from 5)
 where offer_no like 'EST-%';
