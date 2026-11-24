@@ -217,6 +217,10 @@ test("new offer always starts with an empty module selection", () => {
   assert.match(html, /resetSelectableState\("new", null, \{ render: false \}\);\s*clearModuleSelectionState\(\);/s);
 });
 
+test("new offer clears stale question controls before lazy rendering", () => {
+  assert.match(html, /questionAnswers\.scopeQuestions = \{\};\s*questionAnswers\.developmentQuestions = \{\};\s*librarySelections\.clear\(\);\s*\["scopeQuestions", "developmentQuestions"\]\.forEach\(targetId => \{\s*const target = document\.getElementById\(targetId\);\s*if \(target\) target\.replaceChildren\(\);/s);
+});
+
 test("question restriction rows preserve question values by stable id", () => {
   assert.match(html, /const displayName = questionDisplayName\(questionType, questionId, question\)/);
   assert.match(html, /\.filter\(row => row\[3\] \|\| row\[4\]\)/);

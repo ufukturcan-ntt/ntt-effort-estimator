@@ -10732,6 +10732,10 @@
         questionAnswers.scopeQuestions = {};
         questionAnswers.developmentQuestions = {};
         librarySelections.clear();
+        ["scopeQuestions", "developmentQuestions"].forEach(targetId => {
+          const target = document.getElementById(targetId);
+          if (target) target.replaceChildren();
+        });
       }
       if (options.render !== false) {
         renderModuleGroups();
