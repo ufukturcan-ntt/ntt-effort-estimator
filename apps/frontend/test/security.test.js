@@ -36,9 +36,18 @@ test("shared offer actions allow collaboration while deletion remains owner-only
 
 test("all works action buttons remain on one table row", () => {
   assert.match(html, /#allworks td:last-child \.quick-actions\s*\{\s*flex-wrap: nowrap/);
-  assert.match(html, /#allworks th:last-child,\s*#allworks td:last-child\s*\{\s*min-width: 590px/);
+  assert.match(html, /#allworks th:last-child,\s*#allworks td:last-child\s*\{\s*min-width: 700px/);
   assert.match(html, /#allworks tbody td\s*\{\s*vertical-align: middle/);
   assert.doesNotMatch(html, /#allworks td:nth-child\(9\) \.quick-actions/);
+});
+
+test("final effort versions persist calculated V0 and editable V1", () => {
+  assert.match(html, /function currentCalculatedEffortVersion\(previous = \{\}\)/);
+  assert.match(html, /versions:\s*\{ \.\.\.storedVersions, V0: v0 \}/);
+  assert.match(html, /data-work-action="effort-version"/);
+  assert.match(html, /id="effortVersionRows"/);
+  assert.match(html, /V1:\s*effortVersionSnapshot\(rows, "V1", existingVersions\.V1 \|\| \{\}\)/);
+  assert.match(html, /const isApproved = String\(offer\.status \|\| ""\)\.toUpperCase\(\) === "APPROVED"/);
 });
 
 test("stored offer text is HTML escaped", () => {

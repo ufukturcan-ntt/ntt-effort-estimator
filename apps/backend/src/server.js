@@ -482,6 +482,7 @@ app.get("/api/offers", requireAuth, async (req, res, next) => {
       `select o.id, o.user_id, o.offer_no, o.title, o.customer_name, o.project_name, o.industry, o.implementation_type,
               o.system_type, o.status, o.total_effort,
               jsonb_build_object('version', o.project_definition->>'version') as project_definition,
+              (coalesce(o.final_effort, '{}'::jsonb)->'versions' ? 'V1') as has_v1,
               o.created_at, o.updated_at,
               coalesce(owner.display_name, owner.email, '-') as creator_name,
               coalesce(owner.email, '') as creator_email,

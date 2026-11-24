@@ -343,6 +343,7 @@ test("offer update SQL uses contiguous parameter numbers", () => {
 test("offer list endpoint returns a lightweight project definition summary", () => {
   const server = fs.readFileSync(new URL("../src/server.js", import.meta.url), "utf8");
   assert.match(server, /jsonb_build_object\('version', o\.project_definition->>'version'\) as project_definition/);
+  assert.match(server, /coalesce\(o\.final_effort, '\{\}'::jsonb\)->'versions' \? 'V1'\) as has_v1/);
 });
 
 

@@ -531,6 +531,24 @@
       line-height: 1.45;
     }
 
+    .effort-version-box {
+      width: min(1180px, 96vw);
+      max-height: 92vh;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+    }
+
+    .effort-version-table {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .effort-version-table table { min-width: 940px; }
+    .effort-version-table th { position: sticky; top: 0; z-index: 1; background: #eef3fb; }
+    .effort-version-table input { width: 110px; text-align: right; }
+    .effort-version-total { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+    .effort-version-total strong { color: var(--blue); }
+
     .app:not(.work-open) {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1301,7 +1319,7 @@
 
     #allworks th:last-child,
     #allworks td:last-child {
-      min-width: 590px;
+      min-width: 700px;
     }
 
     #allworks td:last-child .quick-actions {
@@ -2853,6 +2871,29 @@
         <button class="button primary" id="printFormatPdf" type="button">PDF</button>
         <button class="button primary" id="printFormatExcel" type="button">Excel</button>
         <button class="button" id="printFormatCancel" type="button">Vazgeç</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-modal" id="effortVersionModal" role="dialog" aria-modal="true" aria-labelledby="effortVersionTitle">
+    <div class="confirm-box effort-version-box">
+      <div>
+        <h3 id="effortVersionTitle">V1 Efor Sürümü</h3>
+        <p id="effortVersionDescription">V0 sistem hesabıdır. V1 alanlarını manuel değiştirip ayrı kaydedebilirsiniz.</p>
+      </div>
+      <div class="effort-version-total">
+        <span>V0 Toplam: <strong id="effortVersionV0Total">0</strong> gün</span>
+        <span>V1 Toplam: <strong id="effortVersionV1Total">0</strong> gün</span>
+      </div>
+      <div class="effort-version-table">
+        <table>
+          <thead><tr><th>Kategori</th><th>Kalem</th><th>Modül / Bağlam</th><th>Faz</th><th>V0</th><th>V1</th></tr></thead>
+          <tbody id="effortVersionRows"></tbody>
+        </table>
+      </div>
+      <div class="quick-actions">
+        <button class="button primary" id="effortVersionSave" type="button">V1'i Kaydet</button>
+        <button class="button" id="effortVersionCancel" type="button">Kapat</button>
       </div>
     </div>
   </div>
@@ -8668,6 +8709,156 @@
       }
     }
 
+    function effortVersionRow(category, item, context, phase, value) {
+      const normalizedValue = Number(value) || 0;
+      return {
+        key: [category, item, context, phase].map(part => String(part || "").replace(/\|/g, "/")).join("|"),
+        category: String(category || ""),
+        item: String(item || ""),
+        context: String(context || ""),
+        phase: String(phase || ""),
+        value: normalizedValue
+      };
+    }
+
+    function effortVersionSnapshot(rows, label, previous = {}) {
+      const normalizedRows = rows.map(row => ({ ...row, value: Number(row.value) || 0 }));
+      const now = new Date().toISOString();
+      return {
+        label,
+        source: label === "V0" ? "calculated" : "manual",
+        baseVersion: label === "V1" ? "V0" : "",
+        createdAt: previous.createdAt || now,
+        updatedAt: now,
+        rows: normalizedRows,
+        total: normalizedRows.reduce((sum, row) => sum + row.value, 0)
+      };
+    }
+
+    function currentCalculatedEffortVersion(previous = {}) {
+      const phases = currentPhaseHeaders(false);
+      const rows = [];
+      finalRowsForSelectedModules().forEach(row => {
+        phases.forEach(phase => rows.push(effortVersionRow("Proje", row.module, row.module, phase, row.values[phase])));
+        rows.push(effortVersionRow("Proje", row.module, row.module, "Sabit Efor", row.fixedEffort));
+        rows.push(effortVersionRow("Proje", row.module, row.module, "Hypercare", hypercareValue(row.module)));
+        rows.push(effortVersionRow("Proje", row.module, row.module, "Canlı Destek", hypercareState.get(row.module)?.goliveDays));
+      });
+      activeLocalizations().forEach(row => {
+        phases.forEach(phase => rows.push(effortVersionRow("Lokalizasyon", row.country, row.module, phase, row.values[phase])));
+      });
+      const development = developmentEffortSummary();
+      [...development.displayGrouped.entries()].forEach(([name, values]) => {
+        development.moduleNames.forEach(module => rows.push(effortVersionRow("Geliştirme", name, module, "Geliştirme", values[module])));
+      });
+      return effortVersionSnapshot(rows, "V0", previous);
+    }
+
+    function calculatedEffortVersionForOffer(offer, previous = {}) {
+      const definition = offerJson(offer?.project_definition);
+      const implementation = offer?.implementation_type || definition.implementation || "All";
+      const phases = phaseHeadersForImplementation(implementation, false);
+      const rows = [];
+      const projectRows = projectEffortRowsForOffer(offer);
+      projectRows.forEach(row => {
+        phases.forEach(phase => rows.push(effortVersionRow("Proje", row.module, row.module, phase, row.values[phase])));
+        rows.push(effortVersionRow("Proje", row.module, row.module, "Sabit Efor", row.fixedEffort));
+        rows.push(effortVersionRow("Proje", row.module, row.module, "Hypercare", row.hypercare));
+        rows.push(effortVersionRow("Proje", row.module, row.module, "Canlı Destek", row.golive));
+      });
+      offerLocalizationRows(offer, projectRows.map(row => row.module)).forEach(row => {
+        phases.forEach(phase => rows.push(effortVersionRow("Lokalizasyon", row.country, row.module, phase, row.values[phase])));
+      });
+      const developmentModules = developmentModuleNames(projectRows.map(row => row.module));
+      developmentEffortRowsForOffer(offer, developmentModules).forEach(row => {
+        developmentModules.forEach(module => rows.push(effortVersionRow("Geliştirme", row.name, module, "Geliştirme", row.values[module])));
+      });
+      return effortVersionSnapshot(rows, "V0", previous);
+    }
+
+    function offerEffortVersions(offer) {
+      return offerJson(offer?.final_effort).versions || {};
+    }
+
+    function offerHasV1(offer) {
+      return Boolean(offer?.has_v1 || offerEffortVersions(offer).V1);
+    }
+
+    let effortVersionEditorOffer = null;
+    let effortVersionEditorV0 = null;
+    let effortVersionEditorV1 = null;
+
+    function updateEffortVersionEditorTotal() {
+      const total = [...document.querySelectorAll("#effortVersionRows [data-v1-value]")]
+        .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+      setText("effortVersionV1Total", fmt(total));
+      return total;
+    }
+
+    function closeEffortVersionEditor() {
+      document.getElementById("effortVersionModal")?.classList.remove("is-open");
+      effortVersionEditorOffer = null;
+      effortVersionEditorV0 = null;
+      effortVersionEditorV1 = null;
+    }
+
+    function openEffortVersionEditor(offer) {
+      const versions = offerEffortVersions(offer);
+      const v0 = calculatedEffortVersionForOffer(offer, versions.V0 || {});
+      const isApproved = String(offer.status || "").toUpperCase() === "APPROVED";
+      const savedV1ByKey = new Map((versions.V1?.rows || []).map(row => [row.key, row]));
+      const v1Rows = v0.rows.map(row => ({ ...row, value: Number(savedV1ByKey.get(row.key)?.value ?? row.value) || 0 }));
+      effortVersionEditorOffer = offer;
+      effortVersionEditorV0 = v0;
+      effortVersionEditorV1 = effortVersionSnapshot(v1Rows, "V1", versions.V1 || {});
+      setText("effortVersionTitle", `${offer.offer_no || ""} · ${versions.V1 ? "V1" : "V1 Oluştur"}`);
+      setText("effortVersionDescription", currentLanguage === "en"
+        ? "V0 is the system calculation. Edit the V1 values and save them separately."
+        : "V0 sistem hesabıdır. V1 değerlerini manuel değiştirip ayrı kaydedebilirsiniz.");
+      setText("effortVersionV0Total", fmt(v0.total));
+      setText("effortVersionV1Total", fmt(effortVersionEditorV1.total));
+      const body = document.getElementById("effortVersionRows");
+      body.innerHTML = v0.rows.map((row, index) => `
+        <tr>
+          <td>${escapeHtml(displayRecord(row.category))}</td>
+          <td>${escapeHtml(displayRecord(row.item))}</td>
+          <td>${escapeHtml(displayRecord(row.context))}</td>
+          <td>${escapeHtml(displayPhase(row.phase))}</td>
+          <td>${fmt(row.value)}</td>
+          <td><input type="number" min="0" step="0.001" data-v1-value="${index}" value="${Number(effortVersionEditorV1.rows[index]?.value) || 0}" ${isApproved ? "disabled" : ""} /></td>
+        </tr>
+      `).join("");
+      body.querySelectorAll("[data-v1-value]").forEach(input => input.addEventListener("input", updateEffortVersionEditorTotal));
+      document.getElementById("effortVersionSave").style.display = isApproved ? "none" : "inline-flex";
+      document.getElementById("effortVersionModal")?.classList.add("is-open");
+    }
+
+    async function saveEffortVersionV1(button) {
+      if (!effortVersionEditorOffer || !effortVersionEditorV0 || !effortVersionEditorV1) return;
+      const inputs = [...document.querySelectorAll("#effortVersionRows [data-v1-value]")];
+      const rows = effortVersionEditorV1.rows.map((row, index) => ({ ...row, value: Math.max(Number(inputs[index]?.value) || 0, 0) }));
+      const payload = recalculatedOfferPayload(effortVersionEditorOffer);
+      const existingVersions = offerEffortVersions(effortVersionEditorOffer);
+      payload.expectedUpdatedAt = effortVersionEditorOffer.updated_at || "";
+      payload.finalEffort.versions = {
+        ...existingVersions,
+        V0: effortVersionEditorV0,
+        V1: effortVersionSnapshot(rows, "V1", existingVersions.V1 || {})
+      };
+      button.disabled = true;
+      try {
+        const saved = await window.EffortApi.updateOffer(effortVersionEditorOffer.id, payload);
+        saved.has_v1 = true;
+        mergeCachedOffer(saved);
+        offersLoadedAt = Date.now();
+        renderAllWorks();
+        closeEffortVersionEditor();
+        alert(currentLanguage === "en" ? "V1 effort version saved." : "V1 efor sürümü kaydedildi.");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
     function offerSelectedModules(offer) {
       const selection = offerJson(offer.module_selection);
       return Object.entries(selection)
@@ -9345,6 +9536,9 @@
       const definition = offerJson(offer.project_definition);
       const finalEffort = recalculatedOfferEffort(offer);
       const fixedEfforts = offerFixedEfforts(offer);
+      const storedFinalEffort = offerJson(offer.final_effort);
+      const storedVersions = storedFinalEffort.versions || {};
+      const v0 = calculatedEffortVersionForOffer(offer, storedVersions.V0 || {});
       return {
         expectedUpdatedAt: offer.updated_at || "",
         title: offer.title || offer.project_name || definition.project || "Yeni Teklif",
@@ -9367,7 +9561,8 @@
           fixedEffortTotal: effectiveFixedEffortTotal(fixedEfforts, offer.system_type || definition.system || "", offerJson(offer.scope_answers)),
           librarySelections: offerJson(offer.final_effort).librarySelections || [],
           fixedEffortInclusion: offerJson(offer.final_effort).fixedEffortInclusion || { ABAP: offerAbapFixedEffortIncluded(offer) ? "included" : "notIncluded" },
-          abapFixedEffortIncluded: offerAbapFixedEffortIncluded(offer)
+          abapFixedEffortIncluded: offerAbapFixedEffortIncluded(offer),
+          versions: { ...storedVersions, V0: v0 }
         }
       };
     }
@@ -9378,6 +9573,7 @@
       const baseProject = payload.projectName || definition.project || payload.title || "Yeni Teklif";
       const copiedProject = `${baseProject} - Kopya`;
       definition.project = copiedProject;
+      const copiedV0 = effortVersionSnapshot(payload.finalEffort.versions?.V0?.rows || [], "V0");
       return {
         ...payload,
         sourceOfferId: offer.id,
@@ -9386,7 +9582,8 @@
         status: "DRAFT",
         title: copiedProject,
         projectName: copiedProject,
-        projectDefinition: definition
+        projectDefinition: definition,
+        finalEffort: { ...payload.finalEffort, versions: { V0: copiedV0 } }
       };
     }
 
@@ -9483,6 +9680,7 @@
                 <button class="button primary" data-work-action="edit" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("change")}</button>
                 <button class="button danger" data-work-action="delete" data-offer-id="${row.id}" type="button" ${isOfferOwner(row) && String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("delete")}</button>
                 <button class="button" data-work-action="recalculate" data-offer-id="${row.id}" type="button" ${String(row.status || "").toUpperCase() !== "APPROVED" ? "" : "disabled"}>${t("recalculateEffort")}</button>
+                <button class="button primary" data-work-action="effort-version" data-offer-id="${row.id}" type="button">${offerHasV1(row) ? (currentLanguage === "en" ? "View V1" : "V1 Görüntüle") : (currentLanguage === "en" ? "Create V1" : "V1 Oluştur")}</button>
                 <button class="button" data-work-action="print" data-offer-id="${row.id}" type="button">${t("print")}</button>
                 ${workflowButtons(row)}
               </div>
@@ -9622,6 +9820,18 @@
                 button.textContent = originalText;
               }
             });
+          }
+          if (action === "effort-version") {
+            button.disabled = true;
+            try {
+              const offer = await getOfferDetail(offerId);
+              openEffortVersionEditor(offer);
+            } catch (error) {
+              console.error(error);
+              alert(`${currentLanguage === "en" ? "Effort version could not be opened" : "Efor sürümü açılamadı"}: ${error.message}`);
+            } finally {
+              button.disabled = false;
+            }
           }
           if (action === "backlog") {
             const summary = cachedOffers.find(offer => offer.id === offerId);
@@ -10084,6 +10294,9 @@
       const fixedEfforts = fixedEffortValues();
       const hypercareInputs = Object.fromEntries([...hypercareState.entries()]);
       const effortTotals = currentEffortTotals();
+      const existingOffer = currentOfferId ? cachedOffers.find(offer => offer.id === currentOfferId) : null;
+      const storedVersions = offerEffortVersions(existingOffer);
+      const v0 = currentCalculatedEffortVersion(storedVersions.V0 || {});
       return {
         userId: currentUser?.id,
         title: projectName || customerName || "Yeni Teklif",
@@ -10119,7 +10332,8 @@
           abapFixedEffortIncluded,
           hypercareTotal: effortTotals.support.hypercare,
           goliveTotal: effortTotals.support.golive,
-          grandTotal: effortTotals.grandTotal
+          grandTotal: effortTotals.grandTotal,
+          versions: { ...storedVersions, V0: v0 }
         }
       };
     }
@@ -10868,6 +11082,16 @@
     document.getElementById("cancelNavigationButton").addEventListener("click", () => {
       pendingNavigation = null;
       closeUnsavedModal();
+    });
+
+    document.getElementById("effortVersionCancel")?.addEventListener("click", closeEffortVersionEditor);
+    document.getElementById("effortVersionSave")?.addEventListener("click", async event => {
+      try {
+        await saveEffortVersionV1(event.currentTarget);
+      } catch (error) {
+        console.error(error);
+        alert(`${currentLanguage === "en" ? "V1 could not be saved" : "V1 kaydedilemedi"}: ${error.message}`);
+      }
     });
 
     document.querySelectorAll(".tab").forEach(button => {
