@@ -2864,6 +2864,9 @@
     <div class="confirm-box">
       <h3 id="printFormatTitle">Çıktı Formatı</h3>
       <p id="printFormatDescription">Teklif raporunu hangi dosya tipinde oluşturmak istiyorsunuz?</p>
+      <label><span id="printVersionLabel">Efor versiyonu</span>
+        <select class="select" id="printEffortVersion"></select>
+      </label>
       <div class="quick-actions">
         <button class="button primary" id="printFormatPdf" type="button">PDF</button>
         <button class="button primary" id="printFormatExcel" type="button">Excel</button>
@@ -9174,16 +9177,48 @@
       );
     }
 
-    function offerPrintHtml(offer) {
+    function offerReportEffortData(offer, versionLabel = "V0") {
       const definition = offerJson(offer.project_definition);
       const implementation = offer.implementation_type || definition.implementation || "All";
-      const activePhases = phaseHeadersForImplementation(implementation, false);
+      const versions = offerEffortVersions(offer);
+      const snapshot = versionLabel === "V1"
+        ? versions.V1
+        : (versions.V0 || calculatedEffortVersionForOffer(offer));
+      if (!snapshot?.rows) throw new Error(currentLanguage === "en" ? `${versionLabel} effort version was not found.` : `${versionLabel} efor versiyonu bulunamadı.`);
+      const indexed = snapshot.rows;
+      const projectSource = indexed.filter(row => row.category === "Proje");
+      const configuredPhases = phaseHeadersForImplementation(implementation, false);
+      const storedPhases = [...new Set(projectSource.map(row => row.phase).filter(phase => !["Sabit Efor", "Hypercare", "Canlı Destek"].includes(phase)))];
+      const activePhases = [...configuredPhases.filter(phase => storedPhases.includes(phase)), ...storedPhases.filter(phase => !configuredPhases.includes(phase))];
+      const moduleNames = [...new Set(projectSource.map(row => row.item))];
+      const valueFor = (rows, predicate) => Number(rows.find(predicate)?.value) || 0;
+      const projectRows = moduleNames.map(module => ({
+        module,
+        values: Object.fromEntries(activePhases.map(phase => [phase, valueFor(projectSource, row => row.item === module && row.phase === phase)])),
+        fixedEffort: valueFor(projectSource, row => row.item === module && row.phase === "Sabit Efor"),
+        hypercare: valueFor(projectSource, row => row.item === module && row.phase === "Hypercare"),
+        golive: valueFor(projectSource, row => row.item === module && row.phase === "Canlı Destek")
+      }));
+      const localizationSource = indexed.filter(row => row.category === "Lokalizasyon");
+      const localizationGroups = [...new Map(localizationSource.map(row => [`${row.context}|${row.item}`, { module: row.context, country: row.item }])).values()];
+      const localizationRows = localizationGroups.map(group => ({
+        ...group,
+        values: Object.fromEntries(activePhases.map(phase => [phase, valueFor(localizationSource, row => row.context === group.module && row.item === group.country && row.phase === phase)]))
+      }));
+      const developmentSource = indexed.filter(row => row.category === "Geliştirme");
+      const developmentModules = [...new Set(developmentSource.map(row => row.context))];
+      const developmentRows = [...new Set(developmentSource.map(row => row.item))].map(name => ({
+        name,
+        values: Object.fromEntries(developmentModules.map(module => [module, valueFor(developmentSource, row => row.item === name && row.context === module)]))
+      }));
+      return { versionLabel, implementation, activePhases, projectRows, developmentModules, developmentRows, localizationRows };
+    }
+
+    function offerPrintHtml(offer, versionLabel = "V0") {
+      const definition = offerJson(offer.project_definition);
+      const reportEffort = offerReportEffortData(offer, versionLabel);
+      const { implementation, activePhases, projectRows, developmentModules, developmentRows, localizationRows } = reportEffort;
       const projectGroupPhases = [...activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"];
-      const projectRows = projectEffortRowsForOffer(offer);
-      const moduleNames = projectRows.map(row => row.module);
-      const developmentModules = developmentModuleNames(moduleNames);
-      const developmentRows = developmentEffortRowsForOffer(offer, developmentModules);
-      const localizationRows = offerLocalizationRows(offer, moduleNames);
       const scopeScore = offerScopeScore(offer);
       const size = projectSizeFromScore(scopeScore, {
         industry: offer.industry || definition.industry || "All",
@@ -9209,6 +9244,7 @@
         ["Size", size.label],
         [t("scopeScore"), fmt(scopeScore)],
         [t("status"), statusLabel(offer.status)],
+        [currentLanguage === "en" ? "Effort version" : "Efor versiyonu", versionLabel],
         [t("updated"), offer.updated_at ? new Date(offer.updated_at).toLocaleDateString(dateLocale) : ""]
       ];
       const projectTableRows = projectRows.map(row => {
@@ -9284,7 +9320,7 @@
         <html lang="${currentLanguage === "en" ? "en" : "tr"}">
         <head>
           <meta charset="utf-8">
-          <title>${escapeHtml(offer.offer_no || t("printDocumentTitle"))} PDF</title>
+          <title>${escapeHtml(offer.offer_no || t("printDocumentTitle"))} ${versionLabel} PDF</title>
           <style>
             @page { size: A4 landscape; margin: 12mm; }
             * { box-sizing: border-box; }
@@ -9324,8 +9360,8 @@
               <span>${new Date().toLocaleDateString(dateLocale)}</span>
             </div>
           </header>
-          <h1>${escapeHtml(offer.offer_no || "")} · ${escapeHtml(offer.project_name || offer.title || t("printDocumentTitle"))}</h1>
-          <div class="meta">${escapeHtml(t("printOutputLead"))}</div>
+          <h1>${escapeHtml(offer.offer_no || "")} · ${escapeHtml(offer.project_name || offer.title || t("printDocumentTitle"))} · ${versionLabel}</h1>
+          <div class="meta">${escapeHtml(t("printOutputLead"))} · ${versionLabel}</div>
           <h2>Project Definition</h2>
           <table class="info-table"><tbody>${infoRows.map(([key, value]) => `<tr><th>${escapeHtml(key)}</th><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody></table>
           <h2>${escapeHtml(t("finalSummary"))}</h2>
@@ -9340,15 +9376,19 @@
         </html>`;
     }
 
-    function choosePrintFormat() {
+    function choosePrintFormat(offer) {
       const modal = document.getElementById("printFormatModal");
       const pdfButton = document.getElementById("printFormatPdf");
       const excelButton = document.getElementById("printFormatExcel");
       const cancelButton = document.getElementById("printFormatCancel");
-      if (!modal || !pdfButton || !excelButton || !cancelButton) return Promise.resolve(null);
+      const versionSelect = document.getElementById("printEffortVersion");
+      if (!modal || !pdfButton || !excelButton || !cancelButton || !versionSelect) return Promise.resolve(null);
       setText("printFormatTitle", t("printFormatTitle"));
-      setText("printFormatDescription", t("printFormatDescription"));
+      setText("printFormatDescription", currentLanguage === "en" ? "Select the effort version and output format." : "Efor versiyonunu ve çıktı formatını seçin.");
+      setText("printVersionLabel", currentLanguage === "en" ? "Effort version" : "Efor versiyonu");
       setText("printFormatCancel", t("cancel"));
+      const hasV1 = Boolean(offerEffortVersions(offer).V1);
+      versionSelect.innerHTML = `<option value="V0">V0 · ${currentLanguage === "en" ? "System calculation" : "Sistem hesabı"}</option>${hasV1 ? `<option value="V1">V1 · ${currentLanguage === "en" ? "Manual version" : "Manuel versiyon"}</option>` : ""}`;
       modal.classList.add("is-open");
       return new Promise(resolve => {
         const finish = result => {
@@ -9366,9 +9406,9 @@
             return;
           }
           printWindow.document.write(`<p style='font-family:Arial,sans-serif'>${escapeHtml(t("pdfPreparing"))}...</p>`);
-          finish({ format: "pdf", printWindow });
+          finish({ format: "pdf", version: versionSelect.value, printWindow });
         };
-        excelButton.onclick = () => finish({ format: "excel", printWindow: null });
+        excelButton.onclick = () => finish({ format: "excel", version: versionSelect.value, printWindow: null });
         cancelButton.onclick = () => finish(null);
       });
     }
@@ -9408,9 +9448,9 @@
       return Number.isFinite(number) ? number : safeText;
     }
 
-    function buildOfferReportWorkbook(offer) {
+    function buildOfferReportWorkbook(offer, versionLabel = "V0") {
       if (!window.XLSX) throw new Error(currentLanguage === "en" ? "Excel component could not be loaded." : "Excel bileşeni yüklenemedi.");
-      const reportDocument = new DOMParser().parseFromString(offerPrintHtml(offer), "text/html");
+      const reportDocument = new DOMParser().parseFromString(offerPrintHtml(offer, versionLabel), "text/html");
       const rows = [];
       const rowTypes = [];
       const contentMerges = [];
@@ -9589,22 +9629,22 @@
       return workbook;
     }
 
-    async function exportOfferReportWorkbook(offer) {
+    async function exportOfferReportWorkbook(offer, versionLabel = "V0") {
       await ensureXlsxLoaded();
-      const workbook = buildOfferReportWorkbook(offer);
+      const workbook = buildOfferReportWorkbook(offer, versionLabel);
       const safeName = String(offer.offer_no || offer.project_name || t("offer"))
         .replace(/[\\/:*?"<>|]+/g, "-")
         .trim();
-      downloadXlsxWorkbook(workbook, `${safeName}-${currentLanguage === "en" ? "Offer-Report" : "Teklif-Raporu"}.xlsx`);
+      downloadXlsxWorkbook(workbook, `${safeName}-${versionLabel}-${currentLanguage === "en" ? "Offer-Report" : "Teklif-Raporu"}.xlsx`);
     }
 
-    function printOfferPdf(offer, printWindow = window.open("", "_blank")) {
+    function printOfferPdf(offer, printWindow = window.open("", "_blank"), versionLabel = "V0") {
       if (!printWindow) {
         alert(t("pdfPopupBlocked"));
         return;
       }
       printWindow.document.open();
-      printWindow.document.write(offerPrintHtml(offer));
+      printWindow.document.write(offerPrintHtml(offer, versionLabel));
       printWindow.document.close();
       printWindow.focus();
       setTimeout(() => printWindow.print(), 300);
@@ -9894,19 +9934,20 @@
             });
           }
           if (action === "print") {
-            const selection = await choosePrintFormat();
-            if (!selection) return;
             button.disabled = true;
             const originalText = button.textContent;
-            button.textContent = selection.format === "pdf" ? t("pdfPreparingButton") : t("excelPreparing");
+            let selection = null;
             try {
               const offer = await getOfferDetail(offerId);
-              if (selection.format === "pdf") printOfferPdf(offer, selection.printWindow);
-              else await exportOfferReportWorkbook(offer);
+              selection = await choosePrintFormat(offer);
+              if (!selection) return;
+              button.textContent = selection.format === "pdf" ? t("pdfPreparingButton") : t("excelPreparing");
+              if (selection.format === "pdf") printOfferPdf(offer, selection.printWindow, selection.version);
+              else await exportOfferReportWorkbook(offer, selection.version);
             } catch (error) {
               console.error(error);
-              selection.printWindow?.close();
-              alert(selection.format === "pdf" ? t("pdfFailed") : `${t("excelFailed")} ${error.message}`);
+              selection?.printWindow?.close();
+              alert(`${currentLanguage === "en" ? "Output could not be prepared" : "Çıktı hazırlanamadı"}: ${error.message}`);
             } finally {
               button.disabled = false;
               button.textContent = originalText;

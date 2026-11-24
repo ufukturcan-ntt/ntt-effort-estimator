@@ -760,16 +760,20 @@ test("print action offers PDF and Excel report formats", () => {
   assert.match(html, /id="printFormatModal"/);
   assert.match(html, /id="printFormatPdf"/);
   assert.match(html, /id="printFormatExcel"/);
-  assert.match(html, /const selection = await choosePrintFormat\(\)/);
+  assert.match(html, /id="printEffortVersion"/);
+  assert.match(html, /selection = await choosePrintFormat\(offer\)/);
+  assert.match(html, /versionSelect\.innerHTML = `<option value="V0"/);
+  assert.match(html, /<option value="V1">V1/);
+  assert.match(html, /printOfferPdf\(offer, selection\.printWindow, selection\.version\)/);
   assert.match(html, /selection\.format === "pdf" \? t\("pdfPreparingButton"\) : t\("excelPreparing"\)/);
 });
 
 test("Excel print report mirrors the PDF report sections", () => {
-  assert.match(html, /function buildOfferReportWorkbook\(offer\)/);
-  assert.match(html, /new DOMParser\(\)\.parseFromString\(offerPrintHtml\(offer\), "text\/html"\)/);
+  assert.match(html, /function buildOfferReportWorkbook\(offer, versionLabel = "V0"\)/);
+  assert.match(html, /new DOMParser\(\)\.parseFromString\(offerPrintHtml\(offer, versionLabel\), "text\/html"\)/);
   assert.match(html, /querySelectorAll\("h2"\)/);
   assert.match(html, /currentLanguage === "en" \? "Offer Report" : "Teklif Raporu"/);
-  assert.match(html, /exportOfferReportWorkbook\(offer\)/);
+  assert.match(html, /exportOfferReportWorkbook\(offer, selection\.version\)/);
 });
 
 test("Excel report sanitizes project text and validates merge ranges", () => {
@@ -787,7 +791,7 @@ test("Excel exports use an explicit browser download instead of SheetJS writeFil
 });
 
 test("offer report defines grouped project phases in its own scope", () => {
-  assert.match(html, /function offerPrintHtml\(offer\) \{[\s\S]*?const activePhases = phaseHeadersForImplementation\(implementation, false\);\s*const projectGroupPhases = \[\.\.\.activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"\];/);
+  assert.match(html, /function offerPrintHtml\(offer, versionLabel = "V0"\) \{[\s\S]*?const \{ implementation, activePhases, projectRows, developmentModules, developmentRows, localizationRows \} = reportEffort;\s*const projectGroupPhases = \[\.\.\.activePhases, "Sabit Efor", "Hypercare", "Canlı Destek", "Toplam"\];/);
   const backlogBody = html.match(/function buildBacklogWorkbook\(offer\) \{([\s\S]*?)\n    \}/)?.[1] || "";
   assert.doesNotMatch(backlogBody, /projectGroupPhases/);
 });
