@@ -45,7 +45,10 @@ test("final effort versions persist calculated V0 and editable V1", () => {
   assert.match(html, /function currentCalculatedEffortVersion\(previous = \{\}\)/);
   assert.match(html, /versions:\s*\{ \.\.\.storedVersions, V0: v0 \}/);
   assert.match(html, /data-work-action="effort-version"/);
-  assert.match(html, /id="effortVersionRows"/);
+  assert.match(html, /id="effortVersionProjectRows"/);
+  assert.match(html, /id="effortVersionLocalizationRows"/);
+  assert.match(html, /id="effortVersionDevelopmentRows"/);
+  assert.match(html, /function renderEffortVersionEditor\(isApproved\)/);
   assert.match(html, /V1:\s*effortVersionSnapshot\(rows, "V1", existingVersions\.V1 \|\| \{\}\)/);
   assert.match(html, /const isApproved = String\(offer\.status \|\| ""\)\.toUpperCase\(\) === "APPROVED"/);
 });

@@ -532,20 +532,17 @@
     }
 
     .effort-version-box {
-      width: min(1180px, 96vw);
-      max-height: 92vh;
+      width: min(1500px, 98vw);
+      max-height: 96vh;
       grid-template-rows: auto auto minmax(0, 1fr) auto;
     }
 
-    .effort-version-table {
+    .effort-version-content {
       overflow: auto;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      padding: 2px;
     }
 
-    .effort-version-table table { min-width: 940px; }
-    .effort-version-table th { position: sticky; top: 0; z-index: 1; background: #eef3fb; }
-    .effort-version-table input { width: 110px; text-align: right; }
+    .effort-version-content .effort-table input { width: 88px; text-align: right; }
     .effort-version-total { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
     .effort-version-total strong { color: var(--blue); }
 
@@ -2885,11 +2882,36 @@
         <span>V0 Toplam: <strong id="effortVersionV0Total">0</strong> gün</span>
         <span>V1 Toplam: <strong id="effortVersionV1Total">0</strong> gün</span>
       </div>
-      <div class="effort-version-table">
-        <table>
-          <thead><tr><th>Kategori</th><th>Kalem</th><th>Modül / Bağlam</th><th>Faz</th><th>V0</th><th>V1</th></tr></thead>
-          <tbody id="effortVersionRows"></tbody>
-        </table>
+      <div class="effort-version-content">
+        <div class="effort-stack">
+          <section class="panel">
+            <div class="panel-head"><h3 class="panel-title">Proje eforları</h3><span class="pill">V1 Final Effort</span></div>
+            <div class="table-wrap compact-table effort-table"><table><thead id="effortVersionProjectHead"></thead><tbody id="effortVersionProjectRows"></tbody></table></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3 class="panel-title">Lokalizasyon eforları</h3><span class="pill">Modül x Ülke x Faz</span></div>
+            <div class="table-wrap compact-table effort-table"><table><thead id="effortVersionLocalizationHead"></thead><tbody id="effortVersionLocalizationRows"></tbody></table></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3 class="panel-title">Geliştirme eforları</h3><span class="pill">Geliştirme x Modül</span></div>
+            <div class="table-wrap compact-table effort-table"><table><thead id="effortVersionDevelopmentHead"></thead><tbody id="effortVersionDevelopmentRows"></tbody></table></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h3 class="panel-title">Final özet</h3><span class="pill"><span id="effortVersionSummaryGrandTotal">0</span>g</span></div>
+            <div class="summary-grid">
+              <div class="metric"><span>Standart proje eforu</span><b id="effortVersionProjectTotal">0</b><small>seçili modüller</small></div>
+              <div class="metric"><span>Sabit efor</span><b id="effortVersionFixedTotal">0</b><small>ayrı sütun</small></div>
+              <div class="metric"><span>Geliştirme eforu</span><b id="effortVersionDevelopmentTotal">0</b><small>geliştirme matrisi</small></div>
+              <div class="metric"><span>Lokalizasyon eforu</span><b id="effortVersionLocalizationTotal">0</b><small>seçili ülkeler</small></div>
+              <div class="metric"><span>Hypercare + Go-Live eforu</span><b id="effortVersionSupportTotal">0</b><small>destek planı</small></div>
+              <div class="metric"><span>Toplam efor</span><b id="effortVersionSummaryTotal">0</b><small>tüm efor kalemleri</small></div>
+            </div>
+          </section>
+          <section class="dashboard-grid">
+            <div class="panel"><div class="panel-head"><h3 class="panel-title">Efor dağılımı</h3><span class="pill">Kategori</span></div><div class="mini-bars" id="effortVersionMixDashboard"></div></div>
+            <div class="panel"><div class="panel-head"><h3 class="panel-title">Çözüm grubu eforları</h3><span class="pill">Core / IP / Advanced</span></div><div class="mini-bars" id="effortVersionSolutionDashboard"></div></div>
+          </section>
+        </div>
       </div>
       <div class="quick-actions">
         <button class="button primary" id="effortVersionSave" type="button">V1'i Kaydet</button>
@@ -8788,11 +8810,110 @@
     let effortVersionEditorV0 = null;
     let effortVersionEditorV1 = null;
 
+    function effortVersionInput(index, table, column, group, isApproved) {
+      const row = effortVersionEditorV1.rows[index];
+      const v0Value = effortVersionEditorV0.rows[index]?.value || 0;
+      return `<input type="number" min="0" step="0.001" data-v1-value="${index}" data-v1-table="${table}" data-v1-column="${column}" data-v1-group="${group}" value="${Number(row?.value) || 0}" title="V0: ${fmt(v0Value)}" ${isApproved ? "disabled" : ""} />`;
+    }
+
     function updateEffortVersionEditorTotal() {
-      const total = [...document.querySelectorAll("#effortVersionRows [data-v1-value]")]
-        .reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+      const inputs = [...document.querySelectorAll("#effortVersionModal [data-v1-value]")];
+      const sumInputs = selected => selected.reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+      document.querySelectorAll("#effortVersionModal [data-v1-row-total]").forEach(cell => {
+        cell.textContent = fmt(sumInputs(inputs.filter(input => input.dataset.v1Group === cell.dataset.v1RowTotal)));
+      });
+      document.querySelectorAll("#effortVersionModal [data-v1-column-total]").forEach(cell => {
+        cell.textContent = fmt(sumInputs(inputs.filter(input => input.dataset.v1Table === cell.dataset.v1Table && input.dataset.v1Column === cell.dataset.v1ColumnTotal)));
+      });
+      document.querySelectorAll("#effortVersionModal [data-v1-table-total]").forEach(cell => {
+        cell.textContent = fmt(sumInputs(inputs.filter(input => input.dataset.v1Table === cell.dataset.v1TableTotal)));
+      });
+      const projectInputs = inputs.filter(input => input.dataset.v1Table === "project");
+      const localizationInputs = inputs.filter(input => input.dataset.v1Table === "localization");
+      const developmentInputs = inputs.filter(input => input.dataset.v1Table === "development");
+      const fixedInputs = projectInputs.filter(input => effortVersionEditorV1.rows[Number(input.dataset.v1Value)]?.phase === "Sabit Efor");
+      const supportInputs = projectInputs.filter(input => ["Hypercare", "Canlı Destek"].includes(effortVersionEditorV1.rows[Number(input.dataset.v1Value)]?.phase));
+      const projectTotal = sumInputs(projectInputs.filter(input => !supportInputs.includes(input)));
+      const fixedTotal = sumInputs(fixedInputs);
+      const supportTotal = sumInputs(supportInputs);
+      const localizationTotal = sumInputs(localizationInputs);
+      const developmentTotal = sumInputs(developmentInputs);
+      const total = projectTotal + supportTotal + localizationTotal + developmentTotal;
+      setText("effortVersionProjectTotal", fmt(projectTotal));
+      setText("effortVersionFixedTotal", fmt(fixedTotal));
+      setText("effortVersionSupportTotal", fmt(supportTotal));
+      setText("effortVersionLocalizationTotal", fmt(localizationTotal));
+      setText("effortVersionDevelopmentTotal", fmt(developmentTotal));
+      setText("effortVersionSummaryGrandTotal", fmt(total));
+      setText("effortVersionSummaryTotal", fmt(total));
       setText("effortVersionV1Total", fmt(total));
+      renderMiniBars("effortVersionMixDashboard", [
+        [displayRecord("Standart efor"), projectTotal, "var(--blue)"],
+        [displayRecord("Geliştirme eforu"), developmentTotal, "var(--amber)"],
+        [displayRecord("Hypercare + Go-Live eforu"), supportTotal, "var(--green)"],
+        [displayRecord("Lokalizasyon eforu"), localizationTotal, "#6658d3"],
+        [displayRecord("Toplam efor"), total, "var(--ink)"]
+      ]);
+      const groupTotals = { S4Core: 0, "NTT Own IP": 0, "Advanced Solution": 0 };
+      projectInputs.filter(input => !supportInputs.includes(input)).forEach(input => {
+        const module = effortVersionEditorV1.rows[Number(input.dataset.v1Value)]?.item;
+        const group = moduleCatalog.find(item => item.module === module)?.group || "Advanced Solution";
+        groupTotals[group] = (groupTotals[group] || 0) + (Number(input.value) || 0);
+      });
+      renderMiniBars("effortVersionSolutionDashboard", [
+        ["S4Core", groupTotals.S4Core, "var(--blue)"],
+        ["NTT Own IP", groupTotals["NTT Own IP"], "var(--green)"],
+        [displayRecord("Advanced Solution"), groupTotals["Advanced Solution"], "var(--amber)"]
+      ]);
       return total;
+    }
+
+    function renderEffortVersionEditor(isApproved) {
+      const indexedRows = effortVersionEditorV1.rows.map((row, index) => ({ row, index }));
+      const projectRows = indexedRows.filter(item => item.row.category === "Proje");
+      const localizationRows = indexedRows.filter(item => item.row.category === "Lokalizasyon");
+      const developmentRows = indexedRows.filter(item => item.row.category === "Geliştirme");
+      const specialProjectPhases = ["Sabit Efor", "Hypercare", "Canlı Destek"];
+      const projectPhases = [...new Set(projectRows.map(item => item.row.phase).filter(phase => !specialProjectPhases.includes(phase)))];
+      const projectColumns = [...projectPhases, ...specialProjectPhases];
+      const implementation = effortVersionEditorOffer?.implementation_type || offerJson(effortVersionEditorOffer?.project_definition).implementation || "All";
+      const projectHead = document.getElementById("effortVersionProjectHead");
+      projectHead.innerHTML = `${phaseGroupHeaderRow(implementation, [...projectColumns, "Toplam"], 1, 0, true)}<tr><th>${displayRecord("Modül")}</th>${projectPhases.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Sabit Efor")}</th><th>Hypercare</th><th>Go-Live Support</th><th>${displayRecord("Toplam")}</th></tr>`;
+      const projectModules = [...new Set(projectRows.map(item => item.row.item))];
+      document.getElementById("effortVersionProjectRows").innerHTML = projectModules.map((module, groupIndex) => {
+        const group = `project-${groupIndex}`;
+        const cells = projectColumns.map((phase, column) => {
+          const item = projectRows.find(entry => entry.row.item === module && entry.row.phase === phase);
+          return `<td>${item ? effortVersionInput(item.index, "project", column, group, isApproved) : ""}</td>`;
+        }).join("");
+        return `<tr><td><span class="module-chip"><span class="module-initial">${initials(module)}</span>${escapeHtml(module)}</span></td>${cells}<td><strong data-v1-row-total="${group}">0</strong></td></tr>`;
+      }).join("") + `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${projectColumns.map((_, column) => `<td><strong data-v1-table="project" data-v1-column-total="${column}">0</strong></td>`).join("")}<td><strong data-v1-table-total="project">0</strong></td></tr>`;
+
+      const localizationPhases = [...new Set(localizationRows.map(item => item.row.phase))];
+      document.getElementById("effortVersionLocalizationHead").innerHTML = `${phaseGroupHeaderRow(implementation, localizationPhases, 2, 1)}<tr><th>${displayRecord("Modül")}</th><th>${displayRecord("Ülke")}</th>${localizationPhases.map(phase => `<th>${displayPhase(phase)}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
+      const localizationGroups = [...new Map(localizationRows.map(item => [`${item.row.context}|${item.row.item}`, { module: item.row.context, country: item.row.item }])).values()];
+      document.getElementById("effortVersionLocalizationRows").innerHTML = localizationGroups.length ? localizationGroups.map((entry, groupIndex) => {
+        const group = `localization-${groupIndex}`;
+        const cells = localizationPhases.map((phase, column) => {
+          const item = localizationRows.find(candidate => candidate.row.context === entry.module && candidate.row.item === entry.country && candidate.row.phase === phase);
+          return `<td>${item ? effortVersionInput(item.index, "localization", column, group, isApproved) : ""}</td>`;
+        }).join("");
+        return `<tr><td><span class="module-chip"><span class="module-initial">${initials(entry.module)}</span>${escapeHtml(entry.module)}</span></td><td>${escapeHtml(displayRecord(entry.country))}</td>${cells}<td><strong data-v1-row-total="${group}">0</strong></td></tr>`;
+      }).join("") + `<tr><td colspan="2"><strong>${displayRecord("Toplam")}</strong></td>${localizationPhases.map((_, column) => `<td><strong data-v1-table="localization" data-v1-column-total="${column}">0</strong></td>`).join("")}<td><strong data-v1-table-total="localization">0</strong></td></tr>` : `<tr><td colspan="${localizationPhases.length + 3}">${currentLanguage === "en" ? "Localization selection is pending." : "Lokalizasyon seçimi yapılmadı."}</td></tr>`;
+
+      const developmentModules = [...new Set(developmentRows.map(item => item.row.context))];
+      const developmentNames = [...new Set(developmentRows.map(item => item.row.item))];
+      document.getElementById("effortVersionDevelopmentHead").innerHTML = `<tr><th>${displayRecord("Geliştirme")}</th>${developmentModules.map(module => `<th>${escapeHtml(module)}</th>`).join("")}<th>${displayRecord("Toplam")}</th></tr>`;
+      document.getElementById("effortVersionDevelopmentRows").innerHTML = developmentNames.length ? developmentNames.map((name, groupIndex) => {
+        const group = `development-${groupIndex}`;
+        const cells = developmentModules.map((module, column) => {
+          const item = developmentRows.find(candidate => candidate.row.item === name && candidate.row.context === module);
+          return `<td>${item ? effortVersionInput(item.index, "development", column, group, isApproved) : ""}</td>`;
+        }).join("");
+        return `<tr><td><strong>${escapeHtml(displayRecord(name))}</strong></td>${cells}<td><strong data-v1-row-total="${group}">0</strong></td></tr>`;
+      }).join("") + `<tr><td><strong>${displayRecord("Toplam")}</strong></td>${developmentModules.map((_, column) => `<td><strong data-v1-table="development" data-v1-column-total="${column}">0</strong></td>`).join("")}<td><strong data-v1-table-total="development">0</strong></td></tr>` : `<tr><td colspan="${developmentModules.length + 2}">${currentLanguage === "en" ? "Selection is pending for development effort." : "Geliştirme eforu için seçim bekleniyor."}</td></tr>`;
+      document.querySelectorAll("#effortVersionModal [data-v1-value]").forEach(input => input.addEventListener("input", updateEffortVersionEditorTotal));
+      updateEffortVersionEditorTotal();
     }
 
     function closeEffortVersionEditor() {
@@ -8817,26 +8938,16 @@
         : "V0 sistem hesabıdır. V1 değerlerini manuel değiştirip ayrı kaydedebilirsiniz.");
       setText("effortVersionV0Total", fmt(v0.total));
       setText("effortVersionV1Total", fmt(effortVersionEditorV1.total));
-      const body = document.getElementById("effortVersionRows");
-      body.innerHTML = v0.rows.map((row, index) => `
-        <tr>
-          <td>${escapeHtml(displayRecord(row.category))}</td>
-          <td>${escapeHtml(displayRecord(row.item))}</td>
-          <td>${escapeHtml(displayRecord(row.context))}</td>
-          <td>${escapeHtml(displayPhase(row.phase))}</td>
-          <td>${fmt(row.value)}</td>
-          <td><input type="number" min="0" step="0.001" data-v1-value="${index}" value="${Number(effortVersionEditorV1.rows[index]?.value) || 0}" ${isApproved ? "disabled" : ""} /></td>
-        </tr>
-      `).join("");
-      body.querySelectorAll("[data-v1-value]").forEach(input => input.addEventListener("input", updateEffortVersionEditorTotal));
+      renderEffortVersionEditor(isApproved);
       document.getElementById("effortVersionSave").style.display = isApproved ? "none" : "inline-flex";
       document.getElementById("effortVersionModal")?.classList.add("is-open");
     }
 
     async function saveEffortVersionV1(button) {
       if (!effortVersionEditorOffer || !effortVersionEditorV0 || !effortVersionEditorV1) return;
-      const inputs = [...document.querySelectorAll("#effortVersionRows [data-v1-value]")];
-      const rows = effortVersionEditorV1.rows.map((row, index) => ({ ...row, value: Math.max(Number(inputs[index]?.value) || 0, 0) }));
+      const inputs = [...document.querySelectorAll("#effortVersionModal [data-v1-value]")];
+      const valuesByIndex = new Map(inputs.map(input => [Number(input.dataset.v1Value), Math.max(Number(input.value) || 0, 0)]));
+      const rows = effortVersionEditorV1.rows.map((row, index) => ({ ...row, value: valuesByIndex.get(index) ?? row.value }));
       const payload = recalculatedOfferPayload(effortVersionEditorOffer);
       const existingVersions = offerEffortVersions(effortVersionEditorOffer);
       payload.expectedUpdatedAt = effortVersionEditorOffer.updated_at || "";
